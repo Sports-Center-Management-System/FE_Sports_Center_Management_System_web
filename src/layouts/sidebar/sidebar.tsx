@@ -5,7 +5,6 @@ import {
   Dumbbell,
   FileBadge,
   Calendar,
-  Sparkles,
 } from "lucide-react";
 import { AICoachCard } from "./ai-coach-card";
 import { cn } from "@/lib/utils";
@@ -25,7 +24,7 @@ export interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
-  activeTab = "my-membership",
+  activeTab = "booking",
   onTabChange,
   className,
 }) => {
@@ -40,14 +39,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside
       className={cn(
-        "flex h-screen w-64 flex-col justify-between border-r border-slate-100 bg-white shadow-[1px_0_4px_rgba(0,0,0,0.02)]",
+        "flex h-screen w-64 flex-col justify-between border-r border-slate-100 bg-white shadow-[1px_0_4px_rgba(0,0,0,0.02)] shrink-0 overflow-y-auto select-none",
         className
       )}
     >
-      {/* Brand Header */}
-      <div>
+      {/* Brand Header & Navigation List */}
+      <div className="flex flex-col">
+        {/* Logo */}
         <div className="flex items-center gap-3 px-6 py-7">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#008b74] text-white shadow-md shadow-[#008b74]/20">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#008b74] text-white shadow-md shadow-[#008b74]/20 shrink-0">
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -100,8 +100,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </nav>
       </div>
 
-      {/* Bottom AI Widget */}
-      <AICoachCard />
+      {/* Bottom AI Widget (Pinned cleanly to bottom) */}
+      <div className="pt-6 pb-2 shrink-0">
+        <AICoachCard />
+      </div>
     </aside>
   );
 };

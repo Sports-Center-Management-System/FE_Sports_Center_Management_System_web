@@ -1,7 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { DashboardLayout } from "@/layouts/dashboard-layout";
-import { MyMembershipPage } from "@/features/members";
+import { BookingPage } from "@/features/classes-schedule";
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -11,15 +11,15 @@ export const AppRoutes: React.FC = () => {
           path="/"
           element={
             <DashboardLayout>
-              <MyMembershipPage />
+              <BookingPage />
             </DashboardLayout>
           }
         />
         <Route
-          path="/members/my-membership"
+          path="/booking"
           element={
             <DashboardLayout>
-              <MyMembershipPage />
+              <BookingPage />
             </DashboardLayout>
           }
         />
