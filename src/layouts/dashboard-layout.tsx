@@ -16,7 +16,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     "health-profile": "Hồ sơ sức khỏe",
     packages: "Gói tập luyện",
     "my-membership": "Hội viên của tôi",
-    booking: "Đặt lịch tập với huấn luyện viên",
+    booking: "Lịch tập luyện của tôi",
   };
 
   return (
@@ -31,7 +31,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       <div className="flex flex-1 flex-col h-screen overflow-hidden">
         {/* Fixed Top Header */}
         <Header
-          title={tabTitles[activeTab] || "Đặt lịch tập với huấn luyện viên"}
+          title={tabTitles[activeTab] || "Lịch tập luyện của tôi"}
           userName="Nguyễn Minh Khang"
           userRoleLabel="Thành viên Premium"
           userAvatar="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80"
