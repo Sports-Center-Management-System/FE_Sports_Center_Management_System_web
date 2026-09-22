@@ -21,4 +21,65 @@ body {
 
 button {
   letter-spacing: 0;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Mint Cream #E8F8F5 - Làm nền tổng thể cho toàn App */
+    --background: 169 57% 94%;
+
+    /* Slate Charcoal #0F172A - Màu chữ chính */
+    --foreground: 222 47% 11%;
+
+    /* White Surface #FFFFFF - Màu nền của Card, form */
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    /* Popover (Dropdown, Select, Dialog) */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Fresh Wellness Mint #10B981 - Màu nút bấm chính, highlight */
+    --primary: 160 84% 40%;
+    --primary-foreground: 0 0% 100%; /* Chữ màu trắng trên nền Mint */
+
+    /* Sky Aqua Blue #0EA5E9 - Màu phụ, nút phụ, tag */
+    --secondary: 199 89% 48%;
+    --secondary-foreground: 0 0% 100%; /* Chữ màu trắng trên nền Blue */
+
+    /* Muted - Các vùng xám nhẹ/mint nhạt cho border hoặc disable */
+    --muted: 169 20% 90%;
+    --muted-foreground: 215 16% 47%;
+
+    /* Accent - Dùng cho hover các item */
+    --accent: 169 30% 90%;
+    --accent-foreground: 160 84% 40%;
+
+    /* Cảnh báo / Hủy (Đỏ nhạt) */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Border và viền input đồng màu pastel nhẹ */
+    --border: 169 20% 85%;
+    --input: 169 20% 85%;
+
+    /* Ring màu mint khi focus input */
+    --ring: 160 84% 40%;
+
+    /* Chỉnh độ bo góc (Border Radius) to hơn để tạo cảm giác "Soft/Pastel" */
+    --radius: 0.75rem; /* Bo góc 12px */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    /* Khai báo sử dụng font Inter */
+    @apply bg-background text-foreground font-sans;
+    font-family: "Inter", sans-serif;
+  }
 }
