@@ -13,6 +13,8 @@ export default {
         "2xl": "1400px",
       },
     },
+  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  theme: {
     extend: {
       colors: {
         border: "hsl(var(--border))",
@@ -57,4 +59,5 @@ export default {
     },
   },
   plugins: [],
+  plugins: [require("tailwindcss-animate")],
 };
