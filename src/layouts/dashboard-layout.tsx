@@ -9,12 +9,12 @@ export interface DashboardLayoutProps {
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   children,
 }) => {
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("shifts");
 
   const tabTitles: Record<string, string> = {
     overview: "Tổng quan điều hành",
+    shifts: "Phân ca trực Lễ tân",
     invoices: "Quản lý Doanh thu & Hóa đơn",
-    schedules: "Lịch trực & Điều phối Ca tập",
     lockers: "Trạng thái Tủ đồ & Check-in",
     members: "Quản lý Hồ sơ Hội viên",
   };
@@ -31,7 +31,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       <div className="flex flex-1 flex-col h-screen overflow-hidden">
         {/* Fixed Top Header */}
         <Header
-          title={tabTitles[activeTab] || "Tổng quan điều hành"}
+          title={tabTitles[activeTab] || "Phân ca trực Lễ tân"}
           userName="Võ Thành Nam"
           userRoleLabel="Ban Giám Đốc (CENTER_MANAGER)"
           userAvatar="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80"

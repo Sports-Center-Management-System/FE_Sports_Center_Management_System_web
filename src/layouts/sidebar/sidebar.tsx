@@ -1,12 +1,10 @@
 import React from "react";
 import {
   LayoutDashboard,
-  Receipt,
   CalendarCheck,
+  Receipt,
   Lock,
   Users,
-  ShieldAlert,
-  Sparkles,
 } from "lucide-react";
 import { AICoachCard } from "./ai-coach-card";
 import { cn } from "@/lib/utils";
@@ -26,14 +24,14 @@ export interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
-  activeTab = "overview",
+  activeTab = "shifts",
   onTabChange,
   className,
 }) => {
   const navItems: NavItem[] = [
     { id: "overview", label: "Tổng quan điều hành", icon: LayoutDashboard },
+    { id: "shifts", label: "Phân ca trực Lễ tân", icon: CalendarCheck },
     { id: "invoices", label: "Doanh thu & Hóa đơn", icon: Receipt },
-    { id: "schedules", label: "Lịch trực & Ca tập", icon: CalendarCheck },
     { id: "lockers", label: "Tủ đồ & Check-in", icon: Lock },
     { id: "members", label: "Quản lý hội viên", icon: Users },
   ];

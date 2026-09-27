@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { DashboardLayout } from "@/layouts/dashboard-layout";
+import { ReceptionShiftSchedulingPage } from "@/features/reception-checkin";
 import { ManagerDashboardPage } from "@/features/analytics";
 
 export const AppRoutes: React.FC = () => {
@@ -11,7 +12,15 @@ export const AppRoutes: React.FC = () => {
           path="/"
           element={
             <DashboardLayout>
-              <ManagerDashboardPage />
+              <ReceptionShiftSchedulingPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/shifts"
+          element={
+            <DashboardLayout>
+              <ReceptionShiftSchedulingPage />
             </DashboardLayout>
           }
         />
@@ -23,7 +32,7 @@ export const AppRoutes: React.FC = () => {
             </DashboardLayout>
           }
         />
-        {/* Fallback to home */}
+        {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
