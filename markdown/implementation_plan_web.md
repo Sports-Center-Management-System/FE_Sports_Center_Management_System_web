@@ -1,241 +1,184 @@
-# KẾ HOẠCH TRIỂN KHAI — FRONTEND WEB PORTAL
-## SPORTS CENTER MANAGEMENT SYSTEM (GYM - BOXING - YOGA - DANCING)
+﻿# Kế hoạch triển khai Frontend Web Portal — Sports Center Management System
 
-> **Phiên bản:** Release 5.0 Production Architecture  
-> **Đối tượng người dùng:** Bao phủ toàn diện **cả 5 vai trò** trong hệ sinh thái:  
-> 1. `ADMIN` (Kỹ thuật & Giám sát hệ thống)  
-> 2. `CENTER_MANAGER` (Điều hành kinh doanh & Quản trị trung tâm)  
-> 3. `RECEPTIONIST` (Dịch vụ khách hàng, POS & Check-in quầy)  
-> 4. `COACH` (Lịch dạy, Điểm danh & Soạn giáo án Desktop)  
-> 5. `MEMBER` (Tra cứu thời khóa biểu, Đặt lớp & Theo dõi thể chất InBody Web)  
-> **Bộ giao diện:** 22 Màn hình Web chuẩn hóa (`W01` – `W22`) kèm đầy đủ Action Modals / Drawers cho các thao tác CUD.  
-> **Công nghệ cốt lõi:** React 18+ (Vite) + TypeScript + TailwindCSS + shadcn/ui + TanStack Query v5 + Zustand + Socket.io Client.  
-> **Kiến trúc mã nguồn:** Atomic Design (Atoms/Molecules tại `components/`) kết hợp **Feature-Sliced Architecture** (theo Domain/Modules tại `features/`).
+Cập nhật: 28/09/2026. Phạm vi: 22 màn hình W01–W22 cho ADMIN, CENTER_MANAGER, RECEPTIONIST, COACH và MEMBER.
 
----
+## 1. Trạng thái dự án và nguồn đối chiếu
 
-## 1. CẤU TRÚC THƯ MỤC DỰ ÁN CHUẨN HÓA
+- Web hiện là scaffold React 19.2, Vite 8.3, TypeScript 6, ESLint 10; src mới có App/main/CSS/assets mẫu. Chưa triển khai màn hình nghiệp vụ, router, API client hoặc auth store.
+- Backend phase 1–5 đã merge/push vào dev tại d44829d, NestJS 12 + Prisma V5 (29 models) + PostgreSQL + Redis auth + Socket.IO. Bản kiểm chứng gần nhất: 104 HTTP endpoints, 13 unit tests; integration 25/25 là bằng chứng của lần kiểm chứng phase 1–5 trước đó.
+- BullMQ đã được loại bỏ. Redis phục vụ authentication, không phải queue hoặc khóa booking. Backend mục tiêu triển khai trên EC2/Docker/Nginx; hạ tầng chưa được xác nhận đã deploy.
+- AI/RAG/SSE, scheduler/Cron, FCM, quản trị secrets tích hợp và payment gateway chưa triển khai. Không tạo UI hoạt động giả hoặc gọi API chưa tồn tại.
 
-Cấu trúc thư mục được phân định rõ ràng giữa tầng hiển thị Atomic chung và các phân hệ nghiệp vụ độc lập theo Role & Feature:
+Nguồn hợp đồng hiện hành: [backend report](../../backend/markdown/backend_phases_1_5_report.md), [deployment](../../backend/markdown/backend_deployment_new.md), [controllers/DTO](../../backend/src/modules), Swagger /docs và artifact backend/.tmp/backend-openapi.json sau npm run test:openapi. Đối chiếu mục tiêu nghiệp vụ với [screen list](../../erd/WEB_PORTAL_SCREEN_LIST.md), [business rules](../../erd/business_rule_final.md), [API contract](../../erd/API_CONTRACT.md). Khi tài liệu mục tiêu khác code, ghi backlog rõ ràng; không suy diễn endpoint/payload đã tồn tại.
+
+## 2. Kiến trúc web mục tiêu
+
+Giữ React/Vite/TypeScript hiện có. Router, TanStack Query, Zustand, socket.io-client, Axios, Tailwind/shadcn và công cụ biểu đồ/form là dependency dự kiến, chưa được cài. Chọn phiên bản tương thích với package hiện tại khi triển khai, không tự mặc định React 18 hoặc cấu hình Tailwind cũ.
 
 ```text
-frontend-web/
-├── public/
-│   ├── favicon.ico
-│   └── assets/                        # Static logos, icons, diagrams
+web/
+├── markdown/implementation_plan_web.md
 ├── src/
-│   ├── assets/                        # SVG icons, system illustrations
-│   │
-│   ├── components/                    # TẦNG ATOMIC DESIGN TÁI SỬ DỤNG TOÀN DỰ ÁN
-│   │   ├── ui/                        # [Atoms/Molecules] shadcn/ui primitives
-│   │   │   ├── button.tsx
-│   │   │   ├── input.tsx
-│   │   │   ├── select.tsx
-│   │   │   ├── dialog.tsx
-│   │   │   ├── sheet.tsx              # Drawers (dành cho JSON Diff W04 & Member Details W16)
-│   │   │   ├── table.tsx
-│   │   │   ├── badge.tsx
-│   │   │   ├── tabs.tsx
-│   │   │   ├── card.tsx
-│   │   │   ├── calendar.tsx
-│   │   │   └── toast.tsx
-│   │   ├── common/                    # [Molecules / Organisms] Khối giao diện dùng chung
-│   │   │   ├── data-table/            # TanStack Table wrapper (paging, sorting, server filter)
-│   │   │   ├── stat-card.tsx          # Card chỉ số KPI, Doanh thu, Tỷ lệ lấp đầy
-│   │   │   ├── confirm-modal.tsx      # Modal cảnh báo xóa/vô hiệu hóa/đóng băng thẻ
-│   │   │   ├── search-input.tsx       # Ô tra cứu debounce (tìm hội viên, tìm logs)
-│   │   │   ├── status-badge.tsx       # Badge hiển thị trạng thái chuẩn (ACTIVE, FROZEN, CANCELLED...)
-│   │   │   └── json-diff-viewer.tsx   # Visual JSON diff (before vs after state cho W04)
-│   │   └── feedback/                  # Loading skeleton, Error boundary, Empty data state
-│   │
-│   ├── layouts/                       # [Templates] Layout chuẩn hóa theo Role & Quyền hạn
-│   │   ├── auth-layout.tsx            # Khung căn giữa cho W01 Login
-│   │   ├── admin-layout.tsx           # Sidebar Dark Theme kỹ thuật (W02 - W05: Server, CM, Audit, Config)
-│   │   ├── manager-layout.tsx         # Sidebar Dashboard kinh doanh (W06 - W12, W18: Summary, Staff, Shifts, Plans, Timetable, POS Analytics)
-│   │   ├── receptionist-layout.tsx    # Giao diện quầy Lễ tân (W13 - W17: POS Nhanh, Check-in Cổng, Quản lý Tủ đồ, InBody)
-│   │   ├── coach-layout.tsx           # Giao diện Huấn luyện viên (W19 - W20: Lịch giảng dạy, Quản lý học viên, Soạn giáo án Desktop)
-│   │   └── member-layout.tsx          # Giao diện Hội viên Web (W21 - W22: Thời khóa biểu đặt lớp, Hồ sơ thẻ tập & Biểu đồ InBody)
-│   │
-│   ├── features/                      # TẦNG TÍNH NĂNG NGHIỆP VỤ (FEATURE-SLICED DOMAINS)
-│   │   │
-│   │   ├── auth/                      # [W01] Authentication & Profile chung
-│   │   │   ├── components/            # LoginForm, ForgotPasswordModal
-│   │   │   ├── hooks/                 # useAuth, useLoginMutation, useLogout
-│   │   │   └── services/              # auth.service.ts (/api/v1/auth/*)
-│   │   │
-│   │   ├── admin-system/              # [W02, W04, W05] IT Support & System Monitoring
-│   │   │   ├── components/            # SystemMetricsGauge, BullMQQueueStatus, AuditLogsTable, JsonDiffDrawer, IntegrationConfigForm
-│   │   │   ├── hooks/                 # useSystemMetricsQuery, useAuditLogsQuery, useUpdateConfigMutation
-│   │   │   └── services/              # admin.service.ts
-│   │   │
-│   │   ├── center-managers/           # [W03] Quản lý & Phân quyền Center Manager
-│   │   │   ├── components/            # ManagerListTable, ManagerFormModal, DeactivateManagerDialog
-│   │   │   ├── hooks/                 # useCenterManagersQuery, useCreateManagerMutation, useDeleteManagerMutation
-│   │   │   └── types/                 # center-manager.dto.ts
-│   │   │
-│   │   ├── manager-dashboard/         # [W06] Dashboard Điều hành Kinh doanh
-│   │   │   ├── components/            # RevenueSplitCard, OccupancyChart, LockerStatusGrid, ActiveShiftsWidget
-│   │   │   ├── hooks/                 # useManagerSummaryQuery
-│   │   │   └── services/              # analytics.service.ts
-│   │   │
-│   │   ├── staff-management/          # [W18] Quản lý Tài khoản Nhân sự (Staff & Coach)
-│   │   │   ├── components/            # StaffAccountsTable, CreateStaffModal, EditStaffModal, DeactivateStaffDialog
-│   │   │   └── hooks/                 # useStaffAccountsQuery, useCreateStaffMutation, useUpdateStaffMutation
-│   │   │
-│   │   ├── staff-shifts/              # [W07] Phân ca trực Lễ tân
-│   │   │   ├── components/            # ShiftCalendarView, ShiftFormModal, ChangeShiftModal, DeleteShiftDialog
-│   │   │   └── hooks/                 # useStaffShiftsQuery, useCreateShiftMutation, useUpdateShiftMutation
-│   │   │
-│   │   ├── coaches-specialties/       # [W08] Huấn Luyện Viên, Chuyên Môn Kỹ Thuật & Biểu Phí
-│   │   │   ├── components/            # CoachListTable, SpecialtyManagerModal, AssignSpecialtyDialog, CoachRateSetupModal
-│   │   │   └── hooks/                 # useSpecialtiesQuery, useAssignSpecialtyMutation, useCoachRateMutation
-│   │   │
-│   │   ├── membership-plans/          # [W09] Cấu hình Gói cước (4 Môn & 4 Hạng Vé)
-│   │   │   ├── components/            # PlanCardGrid, PlanFormModal, PlanEditModal, DeactivatePlanDialog
-│   │   │   └── hooks/                 # usePlansQuery, useCreatePlanMutation, useUpdatePlanMutation
-│   │   │
-│   │   ├── schedules-timetable/       # [W10, W21] Xếp Lịch & Đặt Chỗ Lớp Nhóm (Timetable)
-│   │   │   ├── components/            # TimetableWeeklyGrid, CreateScheduleModal, RescheduleModal, CancelScheduleDialog, MemberBookClassModal
-│   │   │   └── hooks/                 # useSchedulesQuery, useCreateScheduleMutation, useUpdateScheduleMutation, useBookClassMutation
-│   │   │
-│   │   ├── facilities-lockers/        # [W11] Cơ sở vật chất, Phòng tập & Bản đồ Tủ đồ
-│   │   │   ├── components/            # RoomEquipmentTable, LockerFloorMapView, LockerStatusToggleModal
-│   │   │   └── hooks/                 # useLockersQuery, useUpdateLockerStatusMutation
-│   │   │
-│   │   ├── reports-kpi/               # [W12] Báo cáo Doanh thu (Base/PT) & Chấm công HLV
-│   │   │   ├── components/            # RevenueAnalyticsChart, CoachKpiTable, RoomUtilizationReport
-│   │   │   └── hooks/                 # useRevenueReportQuery, useKpiReportQuery
-│   │   │
-│   │   ├── reception-desk/            # [W13] Bàn làm việc tổng hợp Lễ tân (Front-Desk)
-│   │   │   ├── components/            # RecentCheckinFeed, UpcomingClassesAlert, LockerAvailabilityPill
-│   │   │   └── hooks/                 # useReceptionSummaryQuery, useRealtimeAttendanceSocket
-│   │   │
-│   │   ├── gate-checkin/              # [W14] Quét mã Check-in Cổng, Cấp Tủ Đồ & Khăn
-│   │   │   ├── components/            # QrScannerReader, QuickPhoneLookup, LockerAssignSuccessCard, TowelIssuedCheckbox
-│   │   │   └── hooks/                 # useGateCheckinMutation
-│   │   │
-│   │   ├── pos-billing/               # [W15] Điểm bán vé POS (Gói VIP + PT Add-on)
-│   │   │   ├── components/            # PlanSelector, CoachRateCalculator, AddonSessionsInput, VietQrModal, InvoicePrintPreview
-│   │   │   └── hooks/                 # useCreateVipSubscriptionMutation, useCreatePtAddonMutation
-│   │   │
-│   │   ├── members-management/        # [W16, W22] Quản trị Thẻ, Hồ sơ Hội viên & Lịch sử
-│   │   │   ├── components/            # MemberSearchTable, MemberProfileDrawer, FreezeSubscriptionModal, ForceReturnLockerDialog, SubscriptionsOverviewCard
-│   │   │   └── hooks/                 # useMembersLookupQuery, useFreezeSubscriptionMutation, useReturnLockerMutation, useMySubscriptionQuery
-│   │   │
-│   │   ├── inbody-tracking/           # [W17, W22] Nhập & Theo dõi Chỉ số Thể chất InBody
-│   │   │   ├── components/            # InbodyEntryForm, InbodyEditLogModal, MemberInbodyHistoryChart, ProgressLineChart
-│   │   │   └── hooks/                 # useCreateInbodyMutation, useUpdateInbodyMutation, useInbodyProgressQuery
-│   │   │
-│   │   └── coach-portal/              # [W19, W20] Phân hệ Huấn luyện viên Desktop
-│   │       ├── components/            # CoachCalendarGrid, AvailabilitySlotModal, ClassAttendanceTable, PtClientsList, DesktopWorkoutBuilder
-│   │       └── hooks/                 # useCoachAvailabilityMutation, useClassAttendanceMutation, useWorkoutPlansMutation
-│   │
-│   ├── routes/                        # HỆ THỐNG ĐỊNH TUYẾN PHÂN QUYỀN (REACT ROUTER v6)
-│   │   ├── index.tsx                  # Root Router Provider
-│   │   ├── protected-route.tsx        # Guard kiểm tra Token hợp lệ & Tự refresh token
-│   │   ├── role-guard.tsx             # RBAC Guard: ADMIN, CENTER_MANAGER, RECEPTIONIST, COACH, MEMBER
-│   │   └── routes.config.ts           # Khai báo metadata danh mục 22 màn hình
-│   │
-│   ├── services/                      # CẤU HÌNH GIAO TIẾP BACKEND
-│   │   ├── api-client.ts              # Axios instance với BaseURL, Timeout, Headers
-│   │   ├── token.service.ts           # Quản lý Access Token trong bộ nhớ, Refresh Token Cookie/Storage
-│   │   ├── socket.service.ts          # Socket.io Client lắng nghe sự kiện Check-in/Điểm danh Realtime
-│   │   └── error-handler.ts           # Interceptor bắt chuẩn mã lỗi API (`INVALID_CREDENTIALS`, `CONFLICT_SCHEDULE`...)
-│   │
-│   ├── stores/                        # GLOBAL STATE NHẸ VỚI ZUSTAND
-│   │   ├── auth.store.ts              # State phiên đăng nhập, current user info, active role
-│   │   ├── ui.store.ts                # Sidebar collapse, Toast, Theme mode
-│   │   └── reception.store.ts         # Cache nhanh trạng thái tủ đồ và quầy check-in
-│   │
-│   ├── types/                         # KHAI BÁO TYPE SCRIPT CHUẨN HÓA DỰA TRÊN DTO BACKEND
-│   │   ├── auth.types.ts
-│   │   ├── member.types.ts
-│   │   ├── subscription.types.ts
-│   │   ├── schedule.types.ts
-│   │   ├── locker.types.ts
-│   │   ├── inbody.types.ts
-│   │   ├── workout.types.ts
-│   │   └── api-response.types.ts      # `{ success: boolean, statusCode: number, data: T, errorCode?: string }`
-│   │
+│   ├── components/
+│   │   ├── ui/                 # Primitive UI
+│   │   ├── common/             # Table, dialog, stat card, status badge
+│   │   └── feedback/           # Loading, empty, error, unavailable
+│   ├── layouts/               # Auth + layout theo 5 role
+│   ├── features/
+│   │   ├── auth/
+│   │   ├── admin-system/
+│   │   ├── center-managers/
+│   │   ├── manager-dashboard/
+│   │   ├── staff-management/
+│   │   ├── staff-shifts/
+│   │   ├── coaches-specialties/
+│   │   ├── membership-plans/
+│   │   ├── schedules-timetable/
+│   │   ├── facilities-lockers/
+│   │   ├── reports-kpi/
+│   │   ├── reception-desk/
+│   │   ├── gate-checkin/
+│   │   ├── pos-billing/
+│   │   ├── members-management/
+│   │   ├── inbody-tracking/
+│   │   └── coach-portal/
+│   ├── routes/                 # ProtectedRoute, RoleGuard, route metadata
+│   ├── services/               # api-client, token, socket, error adapters
+│   ├── stores/                 # Auth/UI; dữ liệu server nằm trong Query cache
+│   ├── types/                  # DTO/enums/response theo backend
 │   ├── App.tsx
 │   └── main.tsx
-├── tailwind.config.js
-├── vite.config.ts
 └── package.json
 ```
 
----
+Đây là cấu trúc đích, không phải thư mục đã tồn tại. Mỗi feature tách components/hooks/services/types khi cần; không tạo hàng loạt file rỗng chỉ để khớp cây. Shared UI tái sử dụng, logic nghiệp vụ nằm ở feature.
 
-## 2. MA TRẬN ÁNH XẠ 22 MÀN HÌNH WEB $\leftrightarrow$ PHÂN HỆ VÀ API CONTRACT
+## 3. Ma trận 22 màn hình và API thực tế
 
-Toàn bộ 22 màn hình web được thiết kế tương thích 100% với đặc tả tại `WEB_PORTAL_SCREEN_LIST.md` và `API_CONTRACT.md`:
+Mọi API trong bảng có prefix /api/v1. ADMIN quản trị kỹ thuật/CM, không được mặc định hưởng mọi quyền nghiệp vụ. UI guard hỗ trợ trải nghiệm; backend vẫn là nơi enforce RBAC và ownership.
 
-| Mã MH | Tên Màn Hình & Phân Hệ | Vai Trò Cho Phép | Thao Tác Nghiệp Vụ Chính (Modals & Actions) | API Endpoints Sử Dụng |
-| :---: | :--- | :---: | :--- | :--- |
-| **W01** | **Đăng Nhập Quản Trị & Hội Viên** | Mọi vai trò Web | Đăng nhập Email/Pass, nhận Token + Refresh Token (Redis TTL 7 ngày), Đăng xuất. | `POST /api/v1/auth/login`<br>`POST /api/v1/auth/logout`<br>`POST /api/v1/auth/refresh` |
-| **W02** | **Dashboard Giám Sát Kỹ Thuật** | `ADMIN` | Biểu đồ tải CPU, RAM, Redis active sessions, kết nối Supabase Pooler, tỷ lệ lỗi 5xx. | `GET /api/v1/analytics/system-metrics`<br>`GET /api/v1/health` |
-| **W03** | **Quản Lý Center Manager** | `ADMIN` | Thêm mới CM (`POST`), Sửa thông tin CM (`PUT`), Khóa/Vô hiệu hóa CM (`DELETE`). | `GET /api/v1/users/center-managers`<br>`POST /api/v1/users/center-managers`<br>`PUT /api/v1/users/center-managers/:id`<br>`DELETE /api/v1/users/center-managers/:id` |
-| **W04** | **Nhật Ký Kiểm Toán (Audit Trail)** | `ADMIN` | Lọc audit trail theo bảng/user/ngày; Drawer hiển thị trực quan JSON diff (before vs after). | `GET /api/v1/audit-logs` |
-| **W05** | **Cấu Hình Tích Hợp & API Keys** | `ADMIN` | Quản lý API Key Gemini AI, Google FCM, cổng thanh toán VietQR / VNPay. | `GET /api/v1/config/integrations`<br>`PUT /api/v1/config/integrations` |
-| **W06** | **Dashboard Điều Hành Trung Tâm** | `CENTER_MANAGER`| Doanh thu ngày/tháng (tách rõ Base & PT), hội viên mới, tỷ lệ kín phòng, tỷ lệ tủ đồ. | `GET /api/v1/analytics/manager-summary`<br>`GET /api/v1/analytics/revenue` |
-| **W07** | **Phân Ca Trực Lễ Tân** | `CENTER_MANAGER`| Xếp lịch ca trực tuần (`POST`), Đổi ca (`PUT` - kiểm tra GiST chống trùng giờ), Hủy ca (`DELETE`). | `POST /api/v1/staff-shifts`<br>`PUT /api/v1/staff-shifts/:id`<br>`DELETE /api/v1/staff-shifts/:id` |
-| **W08** | **Quản Lý HLV, Chuyên Môn & Biểu Phí** | `CENTER_MANAGER`| Quản lý danh mục chuyên môn (CRUD), Gán chuyên môn cho Coach, Cài đặt biểu phí/buổi (GiST chống trùng ngày). | `GET /api/v1/specialties`<br>`POST /api/v1/specialties`<br>`PUT /api/v1/specialties/:id`<br>`DELETE /api/v1/specialties/:id`<br>`POST /api/v1/coaches/:id/specialties`<br>`POST /api/v1/coaches/:id/rates` |
-| **W09** | **Cấu Hình Gói Tập (4 Môn)** | `CENTER_MANAGER`| Tạo gói cước (`POST` - trigger DB kiểm tra môn hợp lệ), Chỉnh sửa gói (`PUT`), Ngừng bán gói (`DELETE` soft-delete). | `GET /api/v1/memberships/plans`<br>`POST /api/v1/memberships/plans`<br>`PUT /api/v1/memberships/plans/:id`<br>`DELETE /api/v1/memberships/plans/:id` |
-| **W10** | **Xếp Thời Khóa Biểu Lớp Nhóm** | `CENTER_MANAGER`| Lịch tuần lớp nhóm, Mở lớp (`POST`), Đổi lịch/phòng/HLV (`PUT` - GiST & Lock chống đụng lịch), Hủy lớp (`DELETE`). | `POST /api/v1/schedules`<br>`PUT /api/v1/schedules/:id`<br>`DELETE /api/v1/schedules/:id` |
-| **W11** | **Quản Lý Cơ Sở Vật Chất & Tủ Đồ**| `CENTER_MANAGER`| Quản lý phòng tập, thiết bị, Bản đồ tủ đồ Nam/Nữ/VIP, Chuyển trạng thái tủ sang `MAINTENANCE` (`PUT`). | `PUT /api/v1/lockers/:id/status` |
-| **W12** | **Báo Cáo Doanh Thu & KPI** | `CENTER_MANAGER`| Báo cáo doanh thu Base vs PT theo môn, Chấm công số ca dạy của HLV, Tần suất lấp đầy phòng. | `GET /api/v1/analytics/revenue`<br>`GET /api/v1/analytics/kpi` |
-| **W13** | **Bàn Làm Việc Lễ Tân (Front-Desk)** | `RECEPTIONIST` | Bảng điều khiển quầy: Feed điểm danh thời gian thực (Socket.io), Lớp học sắp diễn ra, Số tủ trống. | Lắng nghe WebSocket sự kiện điểm danh |
-| **W14** | **Check-in Cổng, Cấp Tủ & Khăn** | `RECEPTIONIST` | Quét mã QR/Nhập SĐT, chạy SP `sp_gate_checkin_with_amenities`, cấp tủ đồ `SKIP LOCKED`, ghi nhận khăn tập. | `POST /api/v1/attendances/gate-checkin` |
-| **W15** | **Bán Vé POS & Mua Giờ PT Add-on** | `RECEPTIONIST` | Thu ngân POS: Bán gói VIP (`Base + 12 * Coach Rate`), Nạp thêm giờ PT Add-on, Sinh mã VietQR, In hóa đơn. | `POST /api/v1/billing/subscriptions/vip`<br>`POST /api/v1/billing/subscriptions/:id/pt-addon` |
-| **W16** | **Tra Cứu & Quản Lý Hội Viên** | `RECEPTIONIST` | Tra cứu theo SĐT/Tên/Mã; Sửa hồ sơ (`PUT`), Đóng băng/Mở thẻ `ACTIVE` $\leftrightarrow$ `FROZEN` (`PUT`), Trả tủ cưỡng bức (`PUT`). | `GET /api/v1/users/members`<br>`PUT /api/v1/users/profile/me`<br>`PUT /memberships/subscriptions/:id/status`<br>`PUT /lockers/assignments/:id/return` |
-| **W17** | **Nhập Chỉ Số InBody Định Kỳ** | `RECEPTIONIST`, `COACH` | Nhập kết quả đo (Cân nặng, % Mỡ, Cơ, Mỡ nội tạng), Chỉnh sửa số liệu đo trong vòng 24h nếu nhập nhầm. | `POST /api/v1/inbody/logs`<br>`PUT /api/v1/inbody/logs/:id` |
-| **W18** | **Quản Lý Tài Khoản Nhân Sự** | `CENTER_MANAGER`| Thêm mới tài khoản Lễ tân & HLV (`POST`), Cập nhật thông tin/Đổi mật khẩu (`PUT`), Khóa tài khoản (`DELETE`). | `GET /api/v1/users/members`<br>`POST /api/v1/auth/register` |
-| **W19** | **Lịch Giảng Dạy & Điểm Danh Web**| `COACH` | Lưới lịch tuần lớp nhóm & ca kèm PT; Mở slot rảnh (`POST`), Hủy slot rảnh (`DELETE`), Điểm danh lớp (`POST`/`PUT`). | `POST /api/v1/coaches/availability`<br>`DELETE /api/v1/coaches/availability/:id`<br>`POST /api/v1/attendances/class-checkin`<br>`PUT /api/v1/attendances/class-checkin/:id` |
-| **W20** | **Quản Lý Học Viên & Giáo Án Desktop**| `COACH` | Xem danh sách học viên PT, tiến độ InBody; Giao diện kéo thả soạn giáo án bài tập Desktop (`POST`/`PUT`/`DELETE`). | `POST /api/v1/workout-plans`<br>`PUT /api/v1/workout-plans/:id`<br>`DELETE /api/v1/workout-plans/:id`<br>`GET /api/v1/inbody/my-progress` |
-| **W21** | **Thời Khóa Biểu & Đặt Lớp Web** | `MEMBER` | Lưới lịch 7 ngày trung tâm; Lọc theo môn/HLV/phòng; Đặt chỗ lớp nhóm (`POST`), Đặt lịch PT (`POST`), Hủy lịch trước 2h (`PUT`). | `GET /api/v1/schedules`<br>`POST /api/v1/bookings/group-class`<br>`POST /api/v1/bookings/pt`<br>`PUT /api/v1/bookings/:id/cancel` |
-| **W22** | **Hồ Sơ Thẻ Tập & Biểu Đồ InBody**| `MEMBER` | Xem số dư 2 loại quota độc lập, hạn dùng thẻ, lịch sử quẹt cổng, biểu đồ đường trực quan theo dõi cân nặng/mỡ/cơ InBody. | `GET /api/v1/users/profile/me`<br>`GET /api/v1/inbody/my-progress` |
+| Mã | Màn hình / quyền chính | API và phạm vi tích hợp |
+| --- | --- | --- |
+| W01 | Login — 5 role | POST /auth/login, /auth/refresh, /auth/logout; GET /users/profile/me. Forgot password chưa có API; POST /auth/register chỉ tạo MEMBER, không tạo nhân sự. |
+| W02 | System metrics — ADMIN | GET /analytics/system-metrics, /health. Chỉ hiển thị uptime, CPU microseconds, memoryUsage bytes, nodeVersion, DB/Redis UP/DOWN từ response thực tế. Chưa có DB activeConnections, Redis session count, disk, tỷ lệ 5xx hoặc BullMQ metrics. CPU tích lũy không phải phần trăm tải tức thời. |
+| W03 | Center Managers — ADMIN | GET/POST /users/center-managers; PUT/DELETE /users/center-managers/:id. DELETE vô hiệu hóa, không xóa vật lý. |
+| W04 | Audit — ADMIN | GET /audit-logs. API hiện lấy tối đa 100 bản ghi gần nhất; filter/paging server và JSON before/after chỉ triển khai khi response hỗ trợ. Không dựng diff từ dữ liệu thiếu. |
+| W05 | Integrations — ADMIN | Backlog: /config/integrations chưa có. Không thu thập/hiển thị API secrets bằng UI chưa được backend hỗ trợ; cấu hình deployment thuộc môi trường server. |
+| W06 | Dashboard — CENTER_MANAGER | GET /analytics/manager-summary, /analytics/revenue, /cancellation-requests; PUT /cancellation-requests/:id/review. Chỉ dựng widget từ dữ liệu thực tế; locker/shift có thể dùng API danh mục tương ứng. |
+| W07 | Staff shifts — CENTER_MANAGER | GET/POST /staff-shifts; PUT/DELETE /staff-shifts/:id. Hiển thị overlap error từ backend. |
+| W08 | Coaches/specialties/rates/DSS — CENTER_MANAGER | GET /coaches, /specialties; CRUD /specialties; POST /coaches/:id/specialties; GET/POST /coaches/:id/rates; PUT/DELETE /coaches/:id/rates/:rateId; GET /coach-penalties; PUT /coach-penalties/:id/review. Không tự quyết định giảm giá/đình chỉ từ điểm DSS. |
+| W09 | Plans — CENTER_MANAGER | GET/POST /memberships/plans; PUT/DELETE /memberships/plans/:id. Ngừng bán không sửa số tiền/quota hợp đồng đã mua. |
+| W10 | Group timetable — CENTER_MANAGER | GET/POST /schedules; PUT/DELETE /schedules/:id; danh mục classes/rooms/coaches. DELETE chỉ cho lịch chưa có booking/request history, không dùng như hủy hàng loạt booking. Hủy khẩn cấp đi qua request/review. |
+| W11 | Facilities/lockers — CENTER_MANAGER | /rooms, /equipment theo CRUD backend; GET/POST /lockers; PUT /lockers/:id/status. Enum/DTO theo schema, không tự đặt tên status. |
+| W12 | Revenue/KPI — CENTER_MANAGER | GET /analytics/revenue, /analytics/kpi. Không suy diễn rating/commission hoặc KPI chưa có model. |
+| W13 | Reception desk — RECEPTIONIST | Socket.IO + GET /lockers, /schedules, /cancellation-requests; PUT /cancellation-requests/:id/review. Không dùng Supabase Realtime hoặc gửi is_frontdesk_override: server suy ra quyền/override. Không gọi manager-summary bằng role lễ tân. |
+| W14 | Gate/locker/towel — RECEPTIONIST | GET /users/members?q=...; POST /attendances/gate-checkin. QR/phone chỉ là đầu vào tìm userId; browser không chạy stored procedure trực tiếp. |
+| W15 | POS — RECEPTIONIST | POST /billing/purchase, /billing/subscriptions/vip, /billing/subscriptions/:id/pt-addon, /billing/subscriptions/:id/renew; GET /billing/invoices. Ghi nhận CASH/BANK_TRANSFER/CARD tại quầy, chưa có VietQR/VNPay xác nhận thanh toán tự động. |
+| W16 | Members/subscriptions — RECEPTIONIST | GET /users/members?q=...; GET /users/:id; PUT /users/members/:id; GET /memberships/subscriptions?memberId=...; PUT /memberships/subscriptions/:id/status; PUT /lockers/assignments/:id/return. /users/profile/me chỉ sửa chính người đang đăng nhập. |
+| W17 | InBody — RECEPTIONIST/COACH | POST /inbody/logs; PUT /inbody/logs/:id; GET /inbody/my-progress?memberId=...; COACH chịu ownership backend. Cửa sổ sửa 24 giờ do server quyết định. |
+| W18 | Staff — CENTER_MANAGER | GET /users/staff; POST /users với role COACH/RECEPTIONIST; PUT/DELETE /users/staff/:id. Không dùng auth/register hoặc users/members cho tạo/list nhân sự. |
+| W19 | Coach schedule/attendance — COACH | GET /coaches/today-schedule, /coaches/availability/mine, /bookings; POST /coaches/availability; DELETE /coaches/availability/:id; POST /attendances/class-checkin; PUT /attendances/class-checkin/:id; POST /coaches/cancellation-requests. Không gọi dữ liệu today-schedule là lịch tuần đầy đủ nếu response không bao phủ. |
+| W20 | PT members/manual workouts — COACH | GET /bookings, /users/:id, /memberships/subscriptions?memberId=..., /inbody/my-progress?memberId=..., /workout-plans, /exercise-knowledge; POST /workout-plans; PUT/DELETE /workout-plans/:id. Chỉ truy cập hội viên được phân công; giáo án thủ công đã có, AI chưa có. |
+| W21 | Timetable/booking — MEMBER | GET /schedules, /coaches/availability, /bookings; POST /bookings/group-class, /bookings/pt; PUT /bookings/:id/cancel. Hủy muộn vẫn có thể giải phóng chỗ trước giờ bắt đầu nhưng không hoàn quota. |
+| W22 | Member profile/progress — MEMBER | GET/PUT /users/profile/me; GET /memberships/subscriptions, /inbody/my-progress, /attendances, /billing/invoices, /workout-plans, /lockers/my-assignments. Chỉ dữ liệu bản thân theo backend. |
 
----
+Các GET danh sách hiện có thể trả array và có giới hạn; không giả định mọi route nhận page/search/sort. Khi cần filter tuần/môn chưa có server parameter, thực hiện client filter trên tập đã tải và ghi rõ giới hạn; không trình bày như dữ liệu đầy đủ toàn hệ thống.
 
-## 3. THIẾT KẾ CÁC MÔ HÌNH DỮ LIỆU FRONTEND & QUẢN TRỊ TRẠNG THÁI
+## 4. API client và dữ liệu
 
-### 3.1. Quản lý Phiên làm việc (Auth State) & Token Lifecycle
-* **Access Token:** Lưu trữ trong bộ nhớ ứng dụng (Zustand Memory Store), thời hạn sống ngắn (15 phút).
-* **Refresh Token:** Lưu trữ trên Cookie an toàn (`HttpOnly, Secure, SameSite=Strict`) hoặc Redis quản trị phía server.
-* **Axios Interceptor:**
-  * Bắt mã phản hồi HTTP `401 Unauthorized`.
-  * Thực hiện cơ chế hàng đợi xử lý song song (`queue promises`) để gọi API `/api/v1/auth/refresh`.
-  * Cập nhật Token mới vào Zustand Store và retry lại request cũ một cách thông suốt, không gây gián đoạn cho nhân viên thu ngân/lễ tân.
+Success envelope: { success: true, statusCode, data, timestamp }. Error envelope: { success: false, statusCode, errorCode, message, timestamp, path }; message có thể là string hoặc array lỗi validation. Không ép hai envelope dùng chung data luôn tồn tại.
 
-### 3.2. Quản lý Bộ nhớ đệm dữ liệu từ xa (Server Cache - TanStack Query)
-* **Query Key Serialization:** Chuẩn hóa quy tắc đặt tên key theo mảng phân cấp:
-  * `['members', { search, page, status }]`
-  * `['schedules', { weekNumber, roomId, coachId }]`
-  * `['lockers', { zone, status }]`
-  * `['coach-availability', { coachId, weekNumber }]`
-  * `['my-progress', { userId }]`
-* **Optimistic Updates & Mutation Hooks:**
-  * Thao tác đổi trạng thái tủ đồ `AVAILABLE` $\rightarrow$ `MAINTENANCE` (W11) hoặc Đóng băng thẻ `ACTIVE` $\rightarrow$ `FROZEN` (W16) được cập nhật giao diện ngay lập tức trong khi chờ phản hồi API.
-  * Tự động hoàn tác (`rollback`) và hiển thị thông báo lỗi Toast nếu Backend trả về mã lỗi nghiệp vụ (ví dụ: `LOCKER_IN_USE` hay `INVALID_STATUS_TRANSITION`).
+DTO camelCase, UUID dạng string, boolean/số đúng kiểu. Validation backend từ chối field ngoài DTO và không tự chuyển mọi string thành number/boolean. Decimal tiền từ Prisma có thể là string trong JSON: định nghĩa adapter rõ ràng, không tính lại hóa đơn bằng float rồi coi là giá chốt.
 
-### 3.3. Tầng Giao tiếp Thời gian thực (Realtime WebSocket)
-* Tích hợp `socket.io-client` tại màn hình quầy lễ tân **W13** và màn hình giảng dạy HLV **W19**:
-  * Sự kiện `attendance:gate-entered`: Cập nhật trực tiếp thẻ điểm danh của hội viên vào danh sách vừa vào cổng.
-  * Sự kiện `attendance:class-checked`: Hiển thị thông báo khi HLV hoàn tất điểm danh lớp học từ Web hoặc Mobile.
-  * Sự kiện `locker:released`: Tự động nhảy số đếm tủ đồ còn trống trên widget của quầy Lễ tân.
+- /auth/login: email/password; data chứa user, accessToken, refreshToken, tokenType, expiresIn.
+- /auth/refresh: { refreshToken }; thay cả accessToken và refreshToken sau rotation.
+- /billing/purchase: { memberId, planId, coachId?, paymentMethod, transactionRef? }.
+- /billing/subscriptions/vip: { userId, planId, coachId?, paymentMethod, transactionRef? }.
+- /billing/subscriptions/:id/pt-addon: { addonSessions, paymentMethod, transactionRef? }.
+- /bookings/group-class: { scheduleId, memberId?, equipmentId? }; MEMBER không được giả danh hội viên khác.
+- /bookings/pt: { coachAvailabilityId, disciplineId, memberId?, equipmentId? }.
+- /attendances/gate-checkin: { userId, preferredZone?, towelIssued?, notes? }; zone MALE_LOCKER/FEMALE_LOCKER/VIP_AREA.
+- /attendances/class-checkin: { bookingId, status, notes? }; cập nhật bỏ bookingId, dùng attendance id.
+- /cancellation-requests/:id/review: { action: 'APPROVE' | 'REJECT', rejectionReason? }; REJECT cần lý do, không gửi đồng thời approve và action.
+- /coaches/cancellation-requests: bookingId hoặc scheduleId theo target, reasonMessage ít nhất 20 ký tự; internalNote không hiển thị cho MEMBER.
 
----
+Các DTO còn lại lấy từ Swagger/controllers hiện tại trước khi viết form. Enum đọc từ backend schema, không dùng nhãn UI làm giá trị request.
 
-## 4. KẾ HOẠCH TRIỂN KHAI THEO CÁC GIAI ĐOẠN (SPRINT PHASES)
+## 5. Authentication, session và quyền
 
-- *Sử dụng sheet để nhất quán công việc*
+Access token 15 phút lưu trong bộ nhớ; refresh token 7 ngày hiện được backend trả JSON và client gửi body. Redis chỉ lưu hash/session phía server, không thay thế việc client giữ refresh token.
 
----
+Backend hiện chưa cấp HttpOnly cookie. Browser không tự tạo cookie HttpOnly bằng JavaScript. Mặc định kế hoạch web lưu cả cặp token trong memory, reload yêu cầu đăng nhập lại. Nếu cần lưu phiên qua reload/tab, phải chốt cơ chế riêng: BFF/cookie backend hoặc storage browser với rủi ro XSS được đánh giá; không tự quảng bá sessionStorage/localStorage là cookie an toàn.
 
-## 5. BẢNG TIÊU CHÍ NGHIỆM THU (ACCEPTANCE CRITERIA)
-1. **Phân quyền chặt chẽ:** Đảm bảo 100% các màn hình và menu điều hướng được bảo vệ bởi đúng quyền hạn RBAC tương ứng (`ADMIN`, `CENTER_MANAGER`, `RECEPTIONIST`, `COACH`, `MEMBER`).
-2. **Xử lý bất đồng bộ & Khóa:** Tất cả các thao tác nhạy cảm (Check-in cấp tủ đồ, Xếp lớp học, Mua gói VIP, Đặt lịch PT) phải bắt được chính xác mã lỗi nghiệp vụ từ Backend và hiển thị Toast/Alert thân thiện, không bị crash ứng dụng.
-3. **Hiệu năng & Tương tác:** Thời gian tải trang ban đầu $\le 1.8\text{s}$, phản hồi tìm kiếm hội viên debounce $\le 300\text{ms}$, sự kiện realtime quẹt cổng hiển thị lên màn hình W13 với độ trễ $\le 500\text{ms}$.
-4. **Chuẩn mã hóa & Clean Code:** 100% mã nguồn tuân thủ TypeScript Strict Mode, không có `any`, cấu trúc Feature-Sliced rõ ràng và dễ bảo trì.
+- Refresh single-flight: các request 401 trong cùng session chờ một promise refresh, sau đó retry tối đa một lần. Không refresh lại trên login/refresh lỗi hoặc 403/409/503.
+- Phối hợp giữa tab nếu sau này chia sẻ refresh token: hai tab rotation cùng token có thể kích hoạt replay và thu hồi session. In-flight request không được ghi token lại sau logout/session thay đổi.
+- Refresh thất bại do session không hợp lệ: xóa token, Query cache và socket, về login. 503 session-store unavailable là lỗi dịch vụ, không diễn giải thành sai mật khẩu.
+- Logout gọi backend khi token còn dùng được và luôn dọn client state; xử lý thất bại mạng rõ ràng vì xóa local không bảo đảm thu hồi server thành công.
+- Lấy profile từ /users/profile/me; không tin role từ local storage để quyết định quyền thực tế. ADMIN chỉ quản lý CM, CM quản lý nhân sự/hội viên; role không được đổi tùy ý trong form edit.
 
+## 6. Cache và nghiệp vụ cần giữ
 
+Query key có user/session scope và filter; server data trong TanStack Query, Zustand chỉ auth/UI. Xóa cache khi logout hoặc đổi user; không để dữ liệu quầy/CM lộ cho MEMBER sau chuyển phiên.
+
+Booking, check-in, thanh toán, quota, duyệt hủy dùng kết quả server; khóa submit khi pending và không optimistic cộng/trừ tài nguyên. Mutation mạng timeout có thể đã commit: refetch trước retry thao tác không idempotent. Optimistic chỉ cho trường hiển thị ít rủi ro, có rollback và invalidate.
+
+- GYM không có lớp nhóm. Yoga/Boxing tối đa 10; Dancing tối đa 20, còn chịu sức chứa phòng.
+- Quota nhóm và PT độc lập; hợp đồng có thời hạn/môn/HLV phù hợp. Chọn hợp đồng/quota do server quyết định.
+- Giá VIP = base + 12 × rate hiện hành; UI preview không thay hóa đơn snapshot server. Add-on/gia hạn cũng lấy giá chốt từ response.
+- Lịch OPEN/FULL là trạng thái có hoạt động; FULL không cho đặt thêm. PT không đặt slot đã booked/emergency-cancelled.
+- Hủy trước giờ bắt đầu luôn giải phóng tài nguyên; còn ít nhất 2 giờ hoàn quota, dưới 2 giờ không hoàn, đã bắt đầu từ chối. UI phải diễn đạt đúng thay vì cấm mọi hủy muộn.
+- Freeze/unfreeze theo ngày Việt Nam; không tự tính endDate chuẩn bằng múi giờ browser.
+- Gate không trừ thêm quota lớp/PT; booking trong ngày có thể cho vào dù quota đã dùng hết. Không tự từ chối chỉ vì counter bằng 0.
+- Quét lại cùng lượt có tủ không cấp trùng; tủ cũ chưa trả phải xử lý trước lượt mới. Hiển thị assignedLocker null khi không có tủ, không giả định mọi check-in đều có locker.
+
+## 7. Realtime Socket.IO
+
+Kết nối tới API origin với namespace /realtime, handshake auth: { token: accessToken }, transport path mặc định /socket.io/. Server gán room user:<id>/role:<role>; client không tự join room tùy ý. Không đăng ký Supabase Realtime cho cancellation_requests.
+
+| Event hiện có | Xử lý web |
+| --- | --- |
+| booking.updated | Invalidate bookings/subscriptions liên quan |
+| schedule.updated | Invalidate lịch; payload có currentEnrolled/capacity/status |
+| cancellation.requested | Cập nhật danh sách chờ duyệt theo quyền |
+| cancellation.reviewed | Refetch request và dữ liệu liên quan |
+| session.cancelled | Refetch lịch/booking/quota |
+| gate.checked-in | Cập nhật feed, refetch attendance/locker |
+| attendance.updated | Refetch điểm danh được phép |
+| pong | Phản hồi ping và kiểm tra kết nối |
+
+Không dùng attendance:gate-entered, attendance:class-checked hoặc locker:released vì backend chưa phát các event đó. Trả tủ qua REST phải invalidate locker ngay; có thể polling để đồng bộ thay đổi từ quầy khác khi thiếu event.
+
+Đăng ký listener một lần và cleanup; khi token đổi cập nhật handshake/reconnect, không reconnect vô hạn bằng token cũ. Sau reconnect refetch dữ liệu vì event chỉ trong bộ nhớ, không replay bền vững. Socket.IO không thay RBAC API hoặc là nguồn duy nhất cho số dư/sĩ số.
+
+## 8. Cấu hình và phát hành web
+
+VITE_API_BASE_URL trỏ HTTPS API origin + /api/v1; VITE_SOCKET_URL trỏ origin để client thêm /realtime, không thêm /api/v1 vào namespace Socket.IO. Dev thường dùng backend :3000 và web :5173; thêm đúng origin web vào CORS_ORIGINS (backend mặc định localhost:3001 không tự khớp Vite).
+
+Biến VITE_* công khai trong bundle: chỉ URL/cấu hình UI, không JWT secrets, database password, Redis hoặc Gemini/FCM keys. Web không truy cập DB/Redis trực tiếp. Hosting web có thể tách khỏi EC2 backend; cấu hình SPA route fallback và HTTPS/WSS, không coi kế hoạch backend là deployment frontend đã hoàn thành.
+
+## 9. Roadmap triển khai và git flow
+
+1. Foundation: feature/web-foundation — cài thư viện cần thiết, design primitives, router/layout 5 role, API envelope/error adapters và DTO.
+2. Auth: feature/web-auth — W01, profile, session lifecycle, guard, refresh single-flight, cleanup cache/socket; forgot password vẫn backlog.
+3. Admin/manager: feature/web-admin-manager — W02–W04, W06–W12, W18; W05 hiển thị trạng thái chưa hỗ trợ hoặc ẩn action, không fake integration.
+4. Reception: feature/web-reception — W13–W17, POS, freeze/return locker, InBody; tích hợp realtime và xử lý tranh chấp.
+5. Coach/member: feature/web-coach-member — W19–W22, giáo án thủ công, bookings/PT/cancel, profile/progress.
+6. Validation/release: feature/web-validation — kiểm tra 5 role, ownership, lỗi/concurrency, keyboard/responsive, production build, tích hợp HTTPS/reconnect. AI/scheduler/FCM chỉ thêm khi backend tương ứng đã có.
+
+Các nhánh trên là đề xuất, chưa được tạo. Web hiện ở main; thống nhất dev làm nhánh tích hợp trước khi implement. Mỗi feature tách commit theo convention, review/kiểm tra trước merge; không tự merge/push trong lượt cập nhật tài liệu này.
+
+## 10. Tiêu chí nghiệm thu
+
+- [ ] npm run build và npm run lint trên web đạt sau implementation; tài liệu này không xác nhận các UI đã hoàn thành.
+- [ ] 5 role chỉ thấy route/action đúng quyền, backend 403/ownership được xử lý; không dùng ADMIN như superuser nghiệp vụ.
+- [ ] Payload/response đúng Swagger; không gọi endpoint AI/integrations/payment chưa có hoặc metrics giả.
+- [ ] Refresh đồng thời chỉ gửi một request cho cùng token; reload/logout/session revoked hoạt động theo chính sách đã chốt, cache không rò giữa user.
+- [ ] POS, booking, hủy, freeze, locker, điểm danh và InBody hiển thị kết quả server; duplicate-submit/timeout/409 được xử lý.
+- [ ] Socket namespace/event đúng, cleanup không nhân listener, token expiry/reconnect/refetch được kiểm chứng.
+- [ ] UI có loading/empty/error/unavailable, form validation và keyboard navigation; drawer/modal không chứa dữ liệu nội bộ ngoài quyền.
+- [ ] Hiệu năng đo trên môi trường thiết bị/mạng xác định. Mục tiêu tải ban đầu 1,8 giây và realtime 500 ms là mục tiêu đo, không bảo đảm hiện tại; debounce 300 ms không phải latency tìm kiếm server.
+- [ ] Production có HTTPS, SPA fallback và CORS thực tế, không đưa secret vào bundle.
+
+## 11. Nhật ký đồng bộ ngày 28/09/2026
+
+Giữ mục tiêu 22 màn hình và cấu trúc theo feature; cập nhật stack thực tế, đánh dấu web scaffold và backlog backend. Sửa staff/member endpoints, payload POS/check-in/review, response envelope, token JSON thay cookie giả định, tên event Socket.IO, ownership, hủy muộn/quota và giới hạn metrics/pagination. Loại bỏ BullMQ dashboard, Supabase Realtime cho request hủy và thanh toán tự động chưa được implement. Chỉ thay đổi tài liệu này; không cài thư viện, sửa code web/backend hoặc phát hành frontend.
