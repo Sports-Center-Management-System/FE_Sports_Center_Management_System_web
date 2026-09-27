@@ -32,6 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const navItems: NavItem[] = [
     { id: "overview", label: "Tổng quan điều hành", icon: LayoutDashboard },
+    { id: "schedule", label: "Thời khóa biểu lớp nhóm", icon: CalendarCheck },
     { id: "packages", label: "Cấu hình gói tập ", icon: Layers },
     { id: "coaches", label: "HLV & Biểu phí", icon: Award },
     { id: "shifts", label: "Phân ca trực Lễ tân", icon: CalendarCheck },

@@ -1,70 +1,180 @@
-// Schedule Types
-export type BookingSessionStatus = "UPCOMING" | "COMPLETED" | "CANCELLED";
+export type GroupDiscipline = "YOGA" | "BOXING" | "DANCING";
 
-export interface CoachInfo {
+// Legacy Member Booking Types
+export interface ScheduleFilterTab {
   id: string;
+  label: string;
+  count: number;
+}
+
+export interface BookingCoach {
+  id?: string;
   name: string;
-  specialty: string;
-  avatarUrl: string;
-  rating: number;
   phone?: string;
+  avatarUrl: string;
+  specialty: string;
+  rating: number;
 }
 
 export interface BookingSession {
   id: string;
   bookingCode: string;
   sessionTitle: string;
-  category: "PT_1ON1" | "PILATES" | "YOGA" | "GROUPX" | "BOXING";
-  coach: CoachInfo;
-  date: string; // e.g. "2026-09-24"
-  dateLabel: string; // e.g. "Thứ 5, 24/09/2026"
-  timeSlot: string; // e.g. "18:00 - 19:30"
-  location: string; // e.g. "Phòng PT VIP 02 - Tầng 3"
-  status: BookingSessionStatus;
-  statusLabel: string;
+  category?: string;
+  servicePackageName?: string;
+  packageName?: string;
   workoutGoal?: string;
-  packageName: string;
-  remainingHoursBeforeSession: number; // For cancellation policy check
+  discipline?: string;
+  coach: BookingCoach;
+  coachName?: string;
+  coachCode?: string;
+  coachTitle?: string;
+  coachAvatar?: string;
+  rating?: number;
+  sessionDate?: string;
+  date?: string;
+  dateLabel: string;
+  timeSlot: string;
+  startTime?: string;
+  location: string;
+  status: "UPCOMING" | "COMPLETED" | "CANCELLED";
+  statusLabel: string;
+  remainingHoursBeforeSession: number;
   notes?: string;
-}
-
-export interface ScheduleFilterTab {
-  id: "ALL" | "UPCOMING" | "COMPLETED" | "CANCELLED";
-  label: string;
-  count: number;
-}
-
-// Booking Step Types
-export interface DateOption {
-  dayOfWeek: string;
-  dateNumber: number;
-  fullDate: string;
-  isAvailable?: boolean;
-}
-
-export interface TimeSlotOption {
-  id: string;
-  startTime: string;
-  endTime: string;
-  label: string;
-  isAvailable?: boolean;
 }
 
 export interface Coach {
   id: string;
   name: string;
-  specialty: string;
+  fullName?: string;
   avatarUrl: string;
+  specialty: string;
   rating: number;
-  reviewCount: number;
+  ratingCount?: number;
+  reviewCount?: number;
+  completedSessions: number;
+  experienceYears: number;
   isAssigned?: boolean;
-  assignedLabel?: string;
-  experienceYears?: number;
+  isAvailableToday?: boolean;
+}
+
+export interface DateOption {
+  fullDate: string;
+  date?: string;
+  dayOfWeek: string;
+  dateNumber: number | string;
+  formattedDate?: string;
+  isAvailable?: boolean;
+  isToday?: boolean;
+}
+
+export interface TimeSlotOption {
+  id: string;
+  label: string;
+  time?: string;
+  isAvailable?: boolean;
+  remainingSlots?: number;
 }
 
 export interface BookingState {
-  selectedDate: DateOption;
-  selectedTimeSlot: TimeSlotOption;
-  selectedCoach: Coach;
-  servicePackageName: string;
+  selectedDiscipline?: string;
+  selectedCoach?: Coach | null;
+  selectedDate?: DateOption | null;
+  selectedTimeSlot?: TimeSlotOption | null;
+  servicePackageName?: string;
+  notes?: string;
+}
+
+export interface ClassDefinition {
+  id: string;
+  name: string;
+  discipline: GroupDiscipline;
+  defaultDurationMinutes: number;
+  description: string;
+}
+
+export interface TrainingRoom {
+  id: string;
+  code: string; // e.g. ROOM-YOGA-01
+  name: string;
+  discipline: GroupDiscipline | "MULTI";
+  maxCapacity: number;
+  status: "AVAILABLE" | "MAINTENANCE";
+}
+
+export interface CoachUser {
+  id: string;
+  coachCode: string; // e.g. COACH-01
+  fullName: string;
+  phone: string;
+  specialties: GroupDiscipline[];
+}
+
+export interface ClassSchedule {
+  id: string;
+  scheduleCode: string; // e.g. SCH-YOG-2101
+  classId: string;
+  className: string;
+  discipline: GroupDiscipline;
+  disciplineLabel: string;
+  roomId: string;
+  roomCode: string;
+  roomName: string;
+  coachId: string;
+  coachCode: string;
+  coachName: string;
+  date: string; // YYYY-MM-DD
+  dayLabel: string; // e.g. Thứ 2, 21/09
+  startTime: string; // HH:mm
+  endTime: string; // HH:mm
+  slotId: string; // e.g. slot-morning-1
+  capacity: number;
+  enrolledCount: number; // For cancel restriction check
+  status: "SCHEDULED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  notes?: string;
+}
+
+export interface DayColumn {
+  date: string; // YYYY-MM-DD
+  dayOfWeek: string; // Thứ 2, Thứ 3...
+  dateNumber: number; // 21, 22...
+  isToday: boolean;
+}
+
+export interface ScheduleSlot {
+  id: string;
+  name: string;
+  startTime: string;
+  endTime: string;
+  period: "MORNING" | "AFTERNOON" | "EVENING";
+  label: string;
+}
+
+export interface CreateSchedulePayload {
+  classId: string;
+  roomId: string;
+  coachId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  capacity: number;
+  notes?: string;
+}
+
+export interface UpdateSchedulePayload {
+  id: string;
+  roomId: string;
+  coachId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  capacity: number;
+  notes?: string;
+}
+
+export interface GiSTConflictResult {
+  hasConflict: boolean;
+  conflictType?: "ROOM_CONFLICT" | "COACH_CONFLICT" | "INVALID_TIME";
+  conflictingSchedule?: ClassSchedule;
+  message?: string;
 }

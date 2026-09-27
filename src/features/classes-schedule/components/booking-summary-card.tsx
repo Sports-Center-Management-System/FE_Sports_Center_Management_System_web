@@ -33,20 +33,20 @@ export const BookingSummaryCard: React.FC<BookingSummaryCardProps> = ({
 
           <div className="flex items-center justify-between border-b border-slate-50 pb-3">
             <span className="text-slate-500">Huấn luyện viên:</span>
-            <span className="font-bold text-slate-900">{selectedCoach.name}</span>
+            <span className="font-bold text-slate-900">{selectedCoach?.name || "Chưa chọn"}</span>
           </div>
 
           <div className="flex items-center justify-between border-b border-slate-50 pb-3">
             <span className="text-slate-500">Ngày tập:</span>
             <span className="font-bold text-[#008b74]">
-              {selectedDate.dayOfWeek}, ngày {selectedDate.dateNumber} này
+              {selectedDate ? `${selectedDate.dayOfWeek}, ngày ${selectedDate.dateNumber} này` : "Chưa chọn"}
             </span>
           </div>
 
           <div className="flex items-center justify-between border-b border-slate-50 pb-3">
             <span className="text-slate-500">Khung giờ:</span>
             <span className="font-bold text-[#008b74]">
-              {selectedTimeSlot.label}
+              {selectedTimeSlot?.label || "Chưa chọn"}
             </span>
           </div>
         </div>

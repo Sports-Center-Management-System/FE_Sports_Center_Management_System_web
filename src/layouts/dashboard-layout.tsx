@@ -9,10 +9,11 @@ export interface DashboardLayoutProps {
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   children,
 }) => {
-  const [activeTab, setActiveTab] = useState("packages");
+  const [activeTab, setActiveTab] = useState("schedule");
 
   const tabTitles: Record<string, string> = {
     overview: "Tổng quan điều hành",
+    schedule: "Thời Khóa Biểu Lớp Nhóm (Yoga, Boxing, Dancing)",
     packages: "Cấu Hình Gói Tập ",
     coaches: "Quản lý HLV, Chuyên Môn & Biểu Phí",
     shifts: "Phân ca trực Lễ tân",

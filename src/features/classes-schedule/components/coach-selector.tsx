@@ -33,7 +33,7 @@ export const CoachSelector: React.FC<CoachSelectorProps> = ({
           return b.rating - a.rating;
         }
         if (sortBy === "reviews") {
-          return b.reviewCount - a.reviewCount;
+          return (b.reviewCount || 0) - (a.reviewCount || 0);
         }
         if (sortBy === "experience") {
           return (b.experienceYears || 0) - (a.experienceYears || 0);
