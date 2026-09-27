@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { DashboardLayout } from "@/layouts/dashboard-layout";
+import { FacilitiesManagementPage } from "@/features/facilities";
 import { ClassesSchedulePage } from "@/features/classes-schedule";
 import { MembershipPlanManagementPage } from "@/features/membership-plans";
 import { CoachManagementPage } from "@/features/coaches";
@@ -15,7 +16,23 @@ export const AppRoutes: React.FC = () => {
           path="/"
           element={
             <DashboardLayout>
-              <ClassesSchedulePage />
+              <FacilitiesManagementPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/lockers"
+          element={
+            <DashboardLayout>
+              <FacilitiesManagementPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/facilities"
+          element={
+            <DashboardLayout>
+              <FacilitiesManagementPage />
             </DashboardLayout>
           }
         />

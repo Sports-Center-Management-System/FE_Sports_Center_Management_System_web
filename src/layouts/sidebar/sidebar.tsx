@@ -37,7 +37,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: "coaches", label: "HLV & Biểu phí", icon: Award },
     { id: "shifts", label: "Phân ca trực Lễ tân", icon: CalendarCheck },
     { id: "invoices", label: "Doanh thu & Hóa đơn", icon: Receipt },
-    { id: "lockers", label: "Tủ đồ & Check-in", icon: Lock },
+    { id: "lockers", label: "Cơ sở vật chất & Tủ đồ", icon: Lock },
     { id: "members", label: "Quản lý hội viên", icon: Users },
   ];
 
