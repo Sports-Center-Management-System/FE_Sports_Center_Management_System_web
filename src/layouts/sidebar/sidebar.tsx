@@ -6,6 +6,7 @@ import {
   Lock,
   Users,
   Award,
+  Layers,
 } from "lucide-react";
 import { AICoachCard } from "./ai-coach-card";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const navItems: NavItem[] = [
     { id: "overview", label: "Tổng quan điều hành", icon: LayoutDashboard },
+    { id: "packages", label: "Cấu hình gói tập ", icon: Layers },
     { id: "coaches", label: "HLV & Biểu phí", icon: Award },
     { id: "shifts", label: "Phân ca trực Lễ tân", icon: CalendarCheck },
     { id: "invoices", label: "Doanh thu & Hóa đơn", icon: Receipt },

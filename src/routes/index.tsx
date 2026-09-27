@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { DashboardLayout } from "@/layouts/dashboard-layout";
+import { MembershipPlanManagementPage } from "@/features/membership-plans";
 import { CoachManagementPage } from "@/features/coaches";
 import { ReceptionShiftSchedulingPage } from "@/features/reception-checkin";
 import { ManagerDashboardPage } from "@/features/analytics";
@@ -13,7 +14,15 @@ export const AppRoutes: React.FC = () => {
           path="/"
           element={
             <DashboardLayout>
-              <CoachManagementPage />
+              <MembershipPlanManagementPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/packages"
+          element={
+            <DashboardLayout>
+              <MembershipPlanManagementPage />
             </DashboardLayout>
           }
         />
