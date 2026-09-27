@@ -9,14 +9,14 @@ export interface DashboardLayoutProps {
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   children,
 }) => {
-  const [activeTab, setActiveTab] = useState("booking");
+  const [activeTab, setActiveTab] = useState("overview");
 
   const tabTitles: Record<string, string> = {
-    home: "Trang chủ",
-    "health-profile": "Hồ sơ sức khỏe",
-    packages: "Gói tập luyện",
-    "my-membership": "Hội viên của tôi",
-    booking: "Lịch tập luyện của tôi",
+    overview: "Tổng quan điều hành",
+    invoices: "Quản lý Doanh thu & Hóa đơn",
+    schedules: "Lịch trực & Điều phối Ca tập",
+    lockers: "Trạng thái Tủ đồ & Check-in",
+    members: "Quản lý Hồ sơ Hội viên",
   };
 
   return (
@@ -31,10 +31,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       <div className="flex flex-1 flex-col h-screen overflow-hidden">
         {/* Fixed Top Header */}
         <Header
-          title={tabTitles[activeTab] || "Lịch tập luyện của tôi"}
-          userName="Nguyễn Minh Khang"
-          userRoleLabel="Thành viên Premium"
-          userAvatar="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80"
+          title={tabTitles[activeTab] || "Tổng quan điều hành"}
+          userName="Võ Thành Nam"
+          userRoleLabel="Ban Giám Đốc (CENTER_MANAGER)"
+          userAvatar="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80"
         />
 
         {/* Scrollable Page Body */}

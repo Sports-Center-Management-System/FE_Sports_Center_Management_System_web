@@ -1,7 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { DashboardLayout } from "@/layouts/dashboard-layout";
-import { SchedulePage } from "@/features/classes-schedule";
+import { ManagerDashboardPage } from "@/features/analytics";
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -11,19 +11,19 @@ export const AppRoutes: React.FC = () => {
           path="/"
           element={
             <DashboardLayout>
-              <SchedulePage />
+              <ManagerDashboardPage />
             </DashboardLayout>
           }
         />
         <Route
-          path="/schedule"
+          path="/dashboard"
           element={
             <DashboardLayout>
-              <SchedulePage />
+              <ManagerDashboardPage />
             </DashboardLayout>
           }
         />
-        {/* Fallback */}
+        {/* Fallback to home */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

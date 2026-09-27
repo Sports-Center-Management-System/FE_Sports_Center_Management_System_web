@@ -1,10 +1,12 @@
 import React from "react";
 import {
-  Home,
-  UserCheck,
-  Dumbbell,
-  FileBadge,
-  Calendar,
+  LayoutDashboard,
+  Receipt,
+  CalendarCheck,
+  Lock,
+  Users,
+  ShieldAlert,
+  Sparkles,
 } from "lucide-react";
 import { AICoachCard } from "./ai-coach-card";
 import { cn } from "@/lib/utils";
@@ -24,16 +26,16 @@ export interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
-  activeTab = "booking",
+  activeTab = "overview",
   onTabChange,
   className,
 }) => {
   const navItems: NavItem[] = [
-    { id: "home", label: "Trang chủ", icon: Home },
-    { id: "health-profile", label: "Hồ sơ sức khỏe", icon: UserCheck },
-    { id: "packages", label: "Gói tập luyện", icon: Dumbbell },
-    { id: "my-membership", label: "Thành viên của tôi", icon: FileBadge },
-    { id: "booking", label: "Đặt lịch tập", icon: Calendar },
+    { id: "overview", label: "Tổng quan điều hành", icon: LayoutDashboard },
+    { id: "invoices", label: "Doanh thu & Hóa đơn", icon: Receipt },
+    { id: "schedules", label: "Lịch trực & Ca tập", icon: CalendarCheck },
+    { id: "lockers", label: "Tủ đồ & Check-in", icon: Lock },
+    { id: "members", label: "Quản lý hội viên", icon: Users },
   ];
 
   return (
@@ -100,7 +102,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </nav>
       </div>
 
-      {/* Bottom AI Widget (Pinned cleanly to bottom) */}
+      {/* Bottom Executive Assistant Widget */}
       <div className="pt-6 pb-2 shrink-0">
         <AICoachCard />
       </div>

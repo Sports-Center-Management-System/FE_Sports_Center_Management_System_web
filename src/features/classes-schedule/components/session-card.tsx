@@ -73,11 +73,7 @@ export const SessionCard: React.FC<SessionCardProps> = ({
         <h4 className="mt-3 text-base font-bold tracking-tight text-slate-900 leading-snug">
           {session.sessionTitle}
         </h4>
-        {session.workoutGoal && (
-          <p className="mt-1 text-xs text-slate-500 line-clamp-1">
-            Mục tiêu: <span className="text-slate-700 font-medium">{session.workoutGoal}</span>
-          </p>
-        )}
+     
 
         {/* Date & Time info */}
         <div className="mt-4 space-y-2 rounded-xl bg-[#f8fafc] p-3 text-xs text-slate-700">
