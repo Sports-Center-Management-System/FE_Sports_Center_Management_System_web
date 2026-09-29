@@ -1,0 +1,233 @@
+import React, { useState } from "react";
+import { User, Phone, Mail, Lock, Eye, EyeOff, UserPlus, AlertCircle, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/auth-context";
+import { AuthUser } from "../types/auth.types";
+
+export interface RegisterFormProps {
+  onSuccess?: (user: AuthUser) => void;
+  onSwitchToLogin?: () => void;
+}
+
+export const RegisterForm: React.FC<RegisterFormProps> = ({
+  onSuccess,
+  onSwitchToLogin,
+}) => {
+  const { register } = useAuth();
+
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Client-side validations
+    if (!fullName.trim() || !phone.trim() || !email.trim() || !password) {
+      setErrorMessage("Vui lòng điền đầy đủ các trường thông tin bắt buộc.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setErrorMessage("Mật khẩu phải có độ dài tối thiểu 6 ký tự.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setErrorMessage("Mật khẩu xác nhận không khớp. Vui lòng kiểm tra lại.");
+      return;
+    }
+
+    // Basic phone validation (at least 9-11 digits)
+    const cleanPhone = phone.trim().replace(/\s+/g, "");
+    if (!/^[0-9]{9,12}$/.test(cleanPhone)) {
+      setErrorMessage("Số điện thoại không hợp lệ (yêu cầu từ 9 đến 11 chữ số).");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setErrorMessage(null);
+
+      const user = await register({
+        fullName: fullName.trim(),
+        phone: cleanPhone,
+        email: email.trim().toLowerCase(),
+        password,
+      });
+
+      onSuccess?.(user);
+    } catch (err: any) {
+      const status = err?.response?.status;
+      const beData = err?.response?.data;
+      const beMsg = beData?.message || err?.message;
+
+      if (status === 409 || beMsg?.includes("already exists") || beMsg?.includes("CONFLICT")) {
+        setErrorMessage("Địa chỉ email hoặc số điện thoại đã được đăng ký. Vui lòng sử dụng tài khoản khác hoặc đăng nhập.");
+      } else if (Array.isArray(beMsg)) {
+        setErrorMessage(beMsg.join(", "));
+      } else if (typeof beMsg === "string") {
+        setErrorMessage(beMsg);
+      } else {
+        setErrorMessage("Đăng ký tài khoản không thành công. Vui lòng thử lại sau.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3.5">
+      {/* Error alert banner */}
+      {errorMessage && (
+        <div className="flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 animate-in fade-in-50">
+          <AlertCircle className="h-4 w-4 shrink-0 text-rose-600 mt-0.5" />
+          <p className="flex-1 leading-relaxed font-medium">{errorMessage}</p>
+        </div>
+      )}
+
+      {/* Full Name */}
+      <div>
+        <label className="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1">
+          Họ và tên
+        </label>
+        <div className="relative">
+          <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            required
+            autoComplete="name"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder="Nguyễn Văn A"
+            className="w-full rounded-xl border border-slate-200 bg-[#f8fafc] py-2.5 pl-10 pr-4 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:border-[#008b74] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#008b74] transition-all"
+          />
+        </div>
+      </div>
+
+      {/* Phone Number */}
+      <div>
+        <label className="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1">
+          Số điện thoại
+        </label>
+        <div className="relative">
+          <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+          <input
+            type="tel"
+            required
+            autoComplete="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="0912345678"
+            className="w-full rounded-xl border border-slate-200 bg-[#f8fafc] py-2.5 pl-10 pr-4 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:border-[#008b74] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#008b74] transition-all"
+          />
+        </div>
+      </div>
+
+      {/* Email */}
+      <div>
+        <label className="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1">
+          Địa chỉ Email
+        </label>
+        <div className="relative">
+          <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+          <input
+            type="email"
+            required
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="hoivien@example.com"
+            className="w-full rounded-xl border border-slate-200 bg-[#f8fafc] py-2.5 pl-10 pr-4 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:border-[#008b74] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#008b74] transition-all"
+          />
+        </div>
+      </div>
+
+      {/* Password Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* Password */}
+        <div>
+          <label className="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1">
+            Mật khẩu
+          </label>
+          <div className="relative">
+            <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+            <input
+              type={showPassword ? "text" : "password"}
+              required
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Tối thiểu 6 ký tự"
+              className="w-full rounded-xl border border-slate-200 bg-[#f8fafc] py-2.5 pl-10 pr-9 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:border-[#008b74] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#008b74] transition-all"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1"
+              title={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+            >
+              {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Confirm Password */}
+        <div>
+          <label className="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1">
+            Xác nhận mật khẩu
+          </label>
+          <div className="relative">
+            <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+            <input
+              type={showPassword ? "text" : "password"}
+              required
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Nhập lại mật khẩu"
+              className="w-full rounded-xl border border-slate-200 bg-[#f8fafc] py-2.5 pl-10 pr-4 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:border-[#008b74] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#008b74] transition-all"
+            />
+          </div>
+        </div>
+      </div>
+
+      
+
+      {/* Submit Button */}
+      <Button
+        type="submit"
+        variant="mint"
+        disabled={isSubmitting}
+        className="w-full rounded-xl py-3 text-xs font-bold shadow-md shadow-emerald-700/10 flex items-center justify-center gap-2 mt-2"
+      >
+        {isSubmitting ? (
+          <span>Đang tạo tài khoản...</span>
+        ) : (
+          <>
+            <UserPlus className="h-4 w-4" />
+            <span>Đăng ký tài khoản hội viên</span>
+          </>
+        )}
+      </Button>
+
+      {/* Switch to Login link */}
+      <div className="pt-2 text-center text-xs text-slate-500">
+        Đã có tài khoản?{" "}
+        <button
+          type="button"
+          onClick={onSwitchToLogin}
+          className="font-bold text-[#008b74] hover:underline inline-flex items-center gap-1 ml-1"
+        >
+          <ArrowLeft className="h-3 w-3" />
+          Đăng nhập ngay
+        </button>
+      </div>
+    </form>
+  );
+};

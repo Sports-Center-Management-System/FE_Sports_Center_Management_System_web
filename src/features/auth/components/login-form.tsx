@@ -1,1 +1,187 @@
-export {};
+import React, { useState } from "react";
+import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle, ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/auth-context";
+import { AuthUser } from "../types/auth.types";
+
+export interface LoginFormProps {
+  onSuccess?: (user: AuthUser) => void;
+  onSwitchToRegister?: () => void;
+}
+
+export const LoginForm: React.FC<LoginFormProps> = ({
+  onSuccess,
+  onSwitchToRegister,
+}) => {
+  const { login } = useAuth();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !password) {
+      setErrorMessage("Vui lòng điền đầy đủ email và mật khẩu.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setErrorMessage(null);
+      const user = await login({ email, password });
+      onSuccess?.(user);
+    } catch (err: any) {
+      const beMessage =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Đăng nhập không thành công. Vui lòng kiểm tra lại tài khoản.";
+
+      if (
+        beMessage === "INVALID_CREDENTIALS" ||
+        beMessage?.includes("INVALID_CREDENTIALS")
+      ) {
+        setErrorMessage("Email hoặc mật khẩu không chính xác. Vui lòng thử lại.");
+      } else if (Array.isArray(beMessage)) {
+        setErrorMessage(beMessage.join(", "));
+      } else {
+        setErrorMessage(beMessage);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Quick helper to fill test accounts
+  const handleQuickFill = (testEmail: string) => {
+    setEmail(testEmail);
+    setPassword("Password123!");
+    setErrorMessage(null);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Error alert banner */}
+      {errorMessage && (
+        <div className="flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 animate-in fade-in-50">
+          <AlertCircle className="h-4 w-4 shrink-0 text-rose-600 mt-0.5" />
+          <p className="flex-1 leading-relaxed font-medium">{errorMessage}</p>
+        </div>
+      )}
+
+      {/* Email Input */}
+      <div>
+        <label className="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1.5">
+          Địa chỉ Email
+        </label>
+        <div className="relative">
+          <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+          <input
+            type="email"
+            required
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="member@example.com"
+            className="w-full rounded-xl border border-slate-200 bg-[#f8fafc] py-2.5 pl-10 pr-4 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:border-[#008b74] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#008b74] transition-all"
+          />
+        </div>
+      </div>
+
+      {/* Password Input */}
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="block text-xs font-bold text-slate-700 uppercase tracking-tight">
+            Mật khẩu
+          </label>
+        </div>
+        <div className="relative">
+          <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+          <input
+            type={showPassword ? "text" : "password"}
+            required
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Tối thiểu 6 ký tự"
+            className="w-full rounded-xl border border-slate-200 bg-[#f8fafc] py-2.5 pl-10 pr-10 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:border-[#008b74] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#008b74] transition-all"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1"
+            title={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+          >
+            {showPassword ? (
+              <EyeOff className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Submit Button */}
+      <Button
+        type="submit"
+        variant="mint"
+        disabled={isSubmitting}
+        className="w-full rounded-xl py-3 text-xs font-bold shadow-md shadow-emerald-700/10 flex items-center justify-center gap-2 mt-2"
+      >
+        {isSubmitting ? (
+          <span>Đang xác thực...</span>
+        ) : (
+          <>
+            <LogIn className="h-4 w-4" />
+            <span>Đăng nhập hệ thống</span>
+          </>
+        )}
+      </Button>
+
+      {/* Quick Demo Credentials Panel */}
+      <div className="pt-2 border-t border-slate-100">
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+          Tài khoản kiểm thử nhanh (Demo):
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => handleQuickFill("member.john@example.com")}
+            className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-emerald-50 text-[#008b74] border border-emerald-200 hover:bg-emerald-100 transition-colors"
+          >
+            Hội viên (Member)
+          </button>
+          <button
+            type="button"
+            onClick={() => handleQuickFill("manager@sportscenter.com")}
+            className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 transition-colors"
+          >
+            Giám Đốc (Manager)
+          </button>
+          <button
+            type="button"
+            onClick={() => handleQuickFill("receptionist@sportscenter.com")}
+            className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200 hover:bg-sky-100 transition-colors"
+          >
+            Lễ Tân (Desk)
+          </button>
+        </div>
+      </div>
+
+      {/* Switch to Register link */}
+      <div className="pt-2 text-center text-xs text-slate-500">
+        Chưa có tài khoản hội viên?{" "}
+        <button
+          type="button"
+          onClick={onSwitchToRegister}
+          className="font-bold text-[#008b74] hover:underline inline-flex items-center gap-0.5 ml-1"
+        >
+          Đăng ký ngay
+          <ArrowRight className="h-3 w-3" />
+        </button>
+      </div>
+    </form>
+  );
+};
