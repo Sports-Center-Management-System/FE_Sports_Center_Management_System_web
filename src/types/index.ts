@@ -1,1 +1,1 @@
-export * from "@/features/membership-plans/types/plans.types";
+export * from "@/features/member-subscriptions/types/subscriptions.types";

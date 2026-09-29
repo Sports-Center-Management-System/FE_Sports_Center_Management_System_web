@@ -1,13 +1,13 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { MembershipPlansPage } from "@/features/membership-plans";
+import { MemberSubscriptionsPage } from "@/features/member-subscriptions";
 
 export const AppRoutes: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<MembershipPlansPage />} />
-        <Route path="/plans" element={<MembershipPlansPage />} />
+        <Route path="/" element={<MemberSubscriptionsPage />} />
+        <Route path="/subscriptions" element={<MemberSubscriptionsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
