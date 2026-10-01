@@ -13,10 +13,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
 import { CoachPerformanceTable } from "@/features/analytics/components/coach-performance-table";
+import {
+  CoachTimesheetReport,
+  RenewalReport,
+  UnderfilledClassesReport,
+} from "@/features/analytics/components/pending-reports";
 import { ReportFiltersBar } from "@/features/analytics/components/report-filters";
 import { RevenueChart } from "@/features/analytics/components/revenue-chart";
 import { RevenueSummary } from "@/features/analytics/components/revenue-summary";
-import { RoomUtilization } from "@/features/analytics/components/room-utilization";
+import { RoomScheduledHours } from "@/features/analytics/components/room-scheduled-hours";
 import { getKpiReport, getRevenueReport } from "@/features/analytics/services/analytics-api.service";
 import {
   AnalyticsError,
@@ -192,7 +197,7 @@ export const ReportsPage: React.FC = () => {
                     Tổng quan hoạt động trung tâm
                   </h2>
                   <p className="mt-1 max-w-3xl text-sm leading-6 text-[#6a7d78]">
-                    Theo dõi doanh thu, buổi tập PT, đánh giá huấn luyện viên và mức sử dụng phòng.
+                    Theo dõi doanh thu, lịch dạy huấn luyện viên và giờ phòng đã xếp lịch.
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -253,21 +258,23 @@ export const ReportsPage: React.FC = () => {
               </section>
             )}
 
-            {(isLoading || revenue) && <RevenueSummary revenue={revenue} isLoading={isLoading} />}
+            <RevenueSummary revenue={revenue} isLoading={isLoading} />
 
-            {(isLoading || revenue || kpi) && (
-              <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(360px,0.8fr)]">
-                {(isLoading || revenue) && <RevenueChart revenue={revenue} isLoading={isLoading} />}
-                {(isLoading || kpi) && <RoomUtilization rooms={kpi?.roomUtilization ?? {}} isLoading={isLoading} />}
-              </div>
-            )}
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(360px,0.8fr)]">
+              <RevenueChart revenue={revenue} isLoading={isLoading} />
+              <RoomScheduledHours rooms={kpi?.rooms ?? []} isLoading={isLoading} />
+            </div>
 
-            {(isLoading || kpi) && (
-              <CoachPerformanceTable
-                coaches={kpi?.coachesPerformance ?? []}
-                isLoading={isLoading}
-              />
-            )}
+            <div className="grid gap-6 xl:grid-cols-2">
+              <RenewalReport />
+              <UnderfilledClassesReport />
+            </div>
+
+            <CoachPerformanceTable
+              coaches={kpi?.coaches ?? []}
+              isLoading={isLoading}
+            />
+            <CoachTimesheetReport />
           </div>
         </main>
       </div>

@@ -41,8 +41,6 @@ export const RevenueSummary: React.FC<RevenueSummaryProps> = ({ revenue, isLoadi
     <section className="grid gap-4 md:grid-cols-3">
       {cards.map((card) => {
         const Icon = card.icon;
-        const value = revenue?.[card.key] ?? 0;
-
         return (
           <article
             key={card.key}
@@ -54,7 +52,9 @@ export const RevenueSummary: React.FC<RevenueSummaryProps> = ({ revenue, isLoadi
                 {isLoading ? (
                   <div className="mt-3 h-8 w-36 animate-pulse rounded bg-[#e8f3ef]" />
                 ) : (
-                  <p className="mt-2 text-2xl font-bold text-[#10221f]">{formatVnd(value)}</p>
+                  <p className="mt-2 text-2xl font-bold text-[#10221f]">
+                    {revenue ? formatVnd(revenue[card.key]) : "—"}
+                  </p>
                 )}
               </div>
               <div className={`flex h-10 w-10 items-center justify-center rounded-md ${card.tone}`}>
