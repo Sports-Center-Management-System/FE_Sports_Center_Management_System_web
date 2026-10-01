@@ -27,15 +27,17 @@ export const LoginPage: React.FC = () => {
     }
   }, [location.pathname]);
 
-  // If already logged in, redirect to 404
+  const getPostAuthPath = (authUser: AuthUser) =>
+    authUser.role === "CENTER_MANAGER" ? "/portal/manager/reports" : "/404";
+
   useEffect(() => {
     if (!isLoading && isAuthenticated && user) {
-      navigate("/404", { replace: true });
+      navigate(getPostAuthPath(user), { replace: true });
     }
   }, [isAuthenticated, isLoading, user, navigate]);
 
-  const handleAuthSuccess = (_authUser: AuthUser) => {
-    navigate("/404", { replace: true });
+  const handleAuthSuccess = (authUser: AuthUser) => {
+    navigate(getPostAuthPath(authUser), { replace: true });
   };
 
   return (

@@ -19,14 +19,14 @@ export const NotFoundPage: React.FC = () => {
         {/* Brand header */}
         <div className="flex items-center justify-center gap-2.5 mb-2">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#008b74] text-white shadow-md shadow-[#008b74]/30 font-black text-sm tracking-wider">
-            WDP
+            SC
           </div>
           <div className="text-left">
             <h1 className="text-base font-bold leading-tight tracking-tight text-[#008b74]">
-              Dao mẻ WDP
+              Sports Center Management System
             </h1>
             <p className="text-[9px] font-bold tracking-widest text-slate-400 uppercase">
-              SPORTS & WELLNESS CENTER
+              HỆ THỐNG QUẢN LÝ TRUNG TÂM THỂ THAO
             </p>
           </div>
         </div>
@@ -71,6 +71,16 @@ export const NotFoundPage: React.FC = () => {
 
         {/* Action buttons */}
         <div className="space-y-2.5 pt-2">
+          {user?.role === "CENTER_MANAGER" && (
+            <Button
+              type="button"
+              variant="mint"
+              onClick={() => navigate("/portal/manager/reports")}
+              className="w-full rounded-xl py-2.5 text-xs font-bold"
+            >
+              Về trang báo cáo
+            </Button>
+          )}
           {isAuthenticated ? (
             <Button
               type="button"
