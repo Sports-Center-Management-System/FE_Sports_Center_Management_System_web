@@ -27,15 +27,17 @@ export const LoginPage: React.FC = () => {
     }
   }, [location.pathname]);
 
-  // If already logged in, redirect to 404
+  const memberCalendarPath = "/portal/member/bookings";
+
+  // A member resumes directly in the schedule portal after authentication.
   useEffect(() => {
     if (!isLoading && isAuthenticated && user) {
-      navigate("/404", { replace: true });
+      navigate(user.role === "MEMBER" ? memberCalendarPath : "/404", { replace: true });
     }
   }, [isAuthenticated, isLoading, user, navigate]);
 
-  const handleAuthSuccess = (_authUser: AuthUser) => {
-    navigate("/404", { replace: true });
+  const handleAuthSuccess = (authUser: AuthUser) => {
+    navigate(authUser.role === "MEMBER" ? memberCalendarPath : "/404", { replace: true });
   };
 
   return (
