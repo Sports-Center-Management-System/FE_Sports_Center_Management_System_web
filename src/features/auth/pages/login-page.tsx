@@ -27,8 +27,11 @@ export const LoginPage: React.FC = () => {
     }
   }, [location.pathname]);
 
-  const getPostAuthPath = (authUser: AuthUser) =>
-    authUser.role === "CENTER_MANAGER" ? "/portal/manager/reports" : "/404";
+  const getPostAuthPath = (authUser: AuthUser) => {
+    if (authUser.role === "CENTER_MANAGER") return "/portal/manager/reports";
+    if (authUser.role === "RECEPTIONIST") return "/portal/desk";
+    return "/404";
+  };
 
   useEffect(() => {
     if (!isLoading && isAuthenticated && user) {

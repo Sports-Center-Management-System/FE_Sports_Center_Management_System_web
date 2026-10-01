@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
-import { Activity, BellRing, LogOut, RefreshCw, Volume2, VolumeX } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Activity, BellRing, LogOut, RefreshCw, ScanLine, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
 import { CancellationModal } from "../components/cancellation-modal";
@@ -239,7 +240,7 @@ export const FrontDeskPage: React.FC = () => {
           <div className="border-b border-[#e6f2ee] px-5 py-5">
             <div className="flex items-center gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#008b74] text-white"><Activity className="h-5 w-5" /></div><strong className="text-sm leading-tight">Sports Center Management System</strong></div>
           </div>
-          <nav className="flex-1 px-3 py-5 text-sm"><a href="/portal/desk" className="flex items-center gap-3 rounded-md bg-[#e5f7f1] px-3 py-2.5 font-semibold text-[#008b74]"><BellRing className="h-4 w-4" />Bàn lễ tân</a></nav>
+          <nav className="flex-1 space-y-1 px-3 py-5 text-sm"><Link to="/portal/desk" className="flex items-center gap-3 rounded-md bg-[#e5f7f1] px-3 py-2.5 font-semibold text-[#008b74]"><BellRing className="h-4 w-4" />Bàn lễ tân</Link><Link to="/portal/desk/check-in" className="flex items-center gap-3 rounded-md px-3 py-2.5 font-medium text-[#47645c] hover:bg-[#f1faf6]"><ScanLine className="h-4 w-4" />Check-in cổng</Link></nav>
           <div className="border-t border-[#e6f2ee] p-4 text-xs text-[#6a7d78]">{user?.fullName}<br />Lễ tân</div>
         </aside>
 
@@ -248,6 +249,7 @@ export const FrontDeskPage: React.FC = () => {
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div><p className="text-xs font-semibold text-[#008b74]">SPORTS CENTER MANAGEMENT SYSTEM / LỄ TÂN</p><h1 className="mt-1 text-xl font-bold md:text-2xl">Bàn làm việc lễ tân</h1><p className="mt-1 text-xs text-[#6a7d78]">{formatDateTime(now.toISOString())}</p></div>
               <div className="flex flex-wrap items-center gap-2">
+                <Link to="/portal/desk/check-in" className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-[#008b74] px-3 text-sm font-medium text-white hover:bg-[#007461]"><ScanLine className="h-4 w-4" />Check-in cổng</Link>
                 <span className={`rounded-md px-2 py-1 text-xs font-medium ${realtimeStatus === "connected" ? "bg-[#e5f7f1] text-[#008b74]" : "bg-[#fff1e8] text-[#a94f20]"}`}>{realtimeStatus === "connected" ? "Realtime đang hoạt động" : realtimeStatus === "connecting" ? "Đang kết nối..." : "Mất kết nối realtime"}</span>
                 <Button type="button" variant="outline" onClick={() => void toggleSound()} title={soundEnabled ? "Tắt âm báo" : "Bật âm báo"} aria-label={soundEnabled ? "Tắt âm báo" : "Bật âm báo"} className="h-9 w-9 p-0">{soundEnabled ? <Volume2 /> : <VolumeX />}</Button>
                 <Button type="button" variant="outline" onClick={refresh} title="Tải lại dữ liệu" aria-label="Tải lại dữ liệu" className="h-9 w-9 p-0"><RefreshCw /></Button>

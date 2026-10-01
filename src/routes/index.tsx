@@ -2,7 +2,7 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/context/auth-context";
 import { ReportsPage } from "@/features/analytics";
-import { FrontDeskPage } from "@/features/front-desk";
+import { FrontDeskPage, GateCheckinPage } from "@/features/front-desk";
 import { LoginPage, NotFoundPage } from "@/features/auth";
 import { ProtectedRoute } from "@/routes/protected-route";
 import { RoleGuard } from "@/routes/role-guard";
@@ -39,6 +39,17 @@ export const AppRoutes: React.FC = () => {
               <ProtectedRoute>
                 <RoleGuard allowedRoles={["RECEPTIONIST"]}>
                   <FrontDeskPage />
+                </RoleGuard>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/portal/desk/check-in"
+            element={
+              <ProtectedRoute>
+                <RoleGuard allowedRoles={["RECEPTIONIST"]}>
+                  <GateCheckinPage />
                 </RoleGuard>
               </ProtectedRoute>
             }
