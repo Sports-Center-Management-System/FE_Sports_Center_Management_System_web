@@ -1,4 +1,4 @@
-import { Navigate, createBrowserRouter } from 'react-router'
+﻿import { Navigate, createBrowserRouter } from 'react-router'
 import { MemberLayout, PublicLayout } from '../components/Layout'
 import { mondayInVietnam } from '../lib/date'
 import { LoginPage, RegisterPage, PublicPlansPage, MockPaymentPage } from '../pages/PublicPages'
@@ -29,6 +29,10 @@ export const router = createBrowserRouter([
       { path: 'auth/login', element: <LoginPage /> },
       { path: 'auth/register', element: <RegisterPage /> },
       { path: 'mock-payment', element: <MockPaymentPage /> },
+      {
+        path: 'console/*',
+        element: <div className="notice">Console thuộc backlog triển khai.</div>,
+      },
       {
         path: 'forbidden',
         element: (

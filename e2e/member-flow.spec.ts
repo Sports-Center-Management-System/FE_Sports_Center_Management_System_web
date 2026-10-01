@@ -61,3 +61,8 @@ test('member can log in, inspect catalog, VIP quote, subscriptions and weekly ca
   await expect(page).toHaveURL(/\/auth\/login/)
   expect(errors).toEqual([])
 })
+
+test('console zone is identified as backlog', async ({ page }) => {
+  await page.goto('/console')
+  await expect(page.getByText('Console thuộc backlog triển khai.')).toBeVisible()
+})
