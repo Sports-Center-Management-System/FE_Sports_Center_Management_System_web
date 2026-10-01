@@ -19,7 +19,7 @@ export function PublicLayout() {
     <>
       <header className="topbar">
         <NavLink className="brand" to="/plans">
-          ACTIVE<span>HUB</span>
+          3TC<span>Fitness</span>
         </NavLink>
         <nav>
           <NavLink to="/plans">Khám phá gói tập</NavLink>
@@ -40,7 +40,7 @@ export function MemberLayout() {
     <div className="app-shell">
       <aside className="sidebar">
         <NavLink className="brand" to="/portal/member">
-          ACTIVE<span>HUB</span>
+          3TC<span>Fitness</span>
         </NavLink>
         <p className="sidebar-label">MEMBER PORTAL</p>
         <nav>

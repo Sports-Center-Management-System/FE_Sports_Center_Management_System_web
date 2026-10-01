@@ -38,7 +38,7 @@ function AuthPage({ register }: { register: boolean }) {
   }
   return (
     <section className="auth-card">
-      <p className="eyebrow">ACTIVEHUB MEMBER</p>
+      <p className="eyebrow">3TC Fitness MEMBER</p>
       <h1>{register ? 'Tạo tài khoản' : 'Chào mừng trở lại'}</h1>
       <p className="muted">
         {register
