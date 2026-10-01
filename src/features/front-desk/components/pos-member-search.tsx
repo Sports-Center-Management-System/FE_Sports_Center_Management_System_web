@@ -9,9 +9,17 @@ interface Props {
   selected: SearchMember | null;
   onSelect: (member: SearchMember | null) => void;
   disabled: boolean;
+  placeholder?: string;
+  inputMode?: "tel" | "text";
+  minimumLength?: number;
+  resultsClassName?: string;
+  showEmail?: boolean;
 }
 
-export const PosMemberSearch: React.FC<Props> = ({ selected, onSelect, disabled }) => {
+export const PosMemberSearch: React.FC<Props> = ({
+  selected, onSelect, disabled, placeholder = "Số điện thoại hội viên",
+  inputMode = "tel", minimumLength = 4, resultsClassName = "max-h-48", showEmail = false,
+}) => {
   const [query, setQuery] = useState("");
   const [members, setMembers] = useState<SearchMember[]>([]);
   const [loading, setLoading] = useState(false);
@@ -20,6 +28,9 @@ export const PosMemberSearch: React.FC<Props> = ({ selected, onSelect, disabled 
   const sequence = useRef(0);
 
   useEffect(() => () => { sequence.current += 1; }, []);
+  useEffect(() => {
+    if (selected) setMembers((current) => current.map((member) => member.id === selected.id ? selected : member));
+  }, [selected]);
 
   const clear = () => {
     sequence.current += 1;
@@ -34,8 +45,8 @@ export const PosMemberSearch: React.FC<Props> = ({ selected, onSelect, disabled 
   const search = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const q = query.trim();
-    if (q.length < 4) {
-      setError("Nhập ít nhất 4 ký tự để tìm hội viên.");
+    if (q.length < minimumLength) {
+      setError(`Nhập ít nhất ${minimumLength} ký tự để tìm hội viên.`);
       return;
     }
     const current = ++sequence.current;
@@ -73,11 +84,11 @@ export const PosMemberSearch: React.FC<Props> = ({ selected, onSelect, disabled 
       </div>
       <form onSubmit={(event) => void search(event)} className="mt-4 flex flex-col gap-2 sm:flex-row">
         <div className="relative min-w-0 flex-1">
-          <label htmlFor="pos-member-query" className="sr-only">Tìm theo số điện thoại hội viên</label>
+          <label htmlFor="pos-member-query" className="sr-only">{placeholder}</label>
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#789188]" />
-          <input id="pos-member-query" type="tel" inputMode="tel" autoComplete="off" value={query} disabled={disabled}
+          <input id="pos-member-query" type={inputMode === "tel" ? "tel" : "search"} inputMode={inputMode} autoComplete="off" value={query} disabled={disabled}
             onChange={(event) => { sequence.current += 1; setQuery(event.target.value); setMembers([]); setSearched(false); setLoading(false); setError(null); onSelect(null); }}
-            placeholder="Số điện thoại hội viên" className="h-10 w-full rounded-md border border-[#ceded5] bg-white pl-10 pr-9 text-sm outline-none focus:border-[#008b74] focus:ring-2 focus:ring-[#008b74]/15" />
+            placeholder={placeholder} className="h-10 w-full rounded-md border border-[#ceded5] bg-white pl-10 pr-9 text-sm outline-none focus:border-[#008b74] focus:ring-2 focus:ring-[#008b74]/15" />
           {query && <button type="button" onClick={clear} disabled={disabled} title="Xóa tìm kiếm" aria-label="Xóa tìm kiếm" className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[#667b73] hover:bg-[#edf5f0]"><X className="h-4 w-4" /></button>}
         </div>
         <Button type="submit" variant="mint" disabled={disabled || loading} className="h-10 shrink-0">{loading ? "Đang tìm..." : "Tìm hội viên"}</Button>
@@ -85,11 +96,11 @@ export const PosMemberSearch: React.FC<Props> = ({ selected, onSelect, disabled 
       {error && <p role="alert" className="mt-3 text-sm text-[#b53a2c]">{error}</p>}
       {loading && <div className="mt-4 h-16 animate-pulse rounded-md bg-[#edf5f0]" aria-label="Đang tải hội viên" />}
       {searched && !members.length && <p className="mt-4 text-sm text-[#667b73]">Không tìm thấy hội viên phù hợp.</p>}
-      {members.length > 0 && <div className="mt-4 max-h-48 divide-y divide-[#e7efea] overflow-y-auto border-y border-[#dce8e2]">
+      {members.length > 0 && <div className={`mt-4 divide-y divide-[#e7efea] overflow-y-auto border-y border-[#dce8e2] ${resultsClassName}`}>
         {members.map((member) => <button type="button" key={member.id} disabled={!member.isActive || disabled} onClick={() => onSelect(member)}
           className={`flex w-full items-center gap-3 px-2 py-2.5 text-left disabled:opacity-50 ${selected?.id === member.id ? "bg-[#e6f5ed]" : "hover:bg-[#f7faf8]"}`}>
           {member.avatarUrl ? <img src={member.avatarUrl} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" /> : <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e8f1eb] text-[#008b74]"><UserRound className="h-4 w-4" /></span>}
-          <span className="min-w-0 flex-1"><strong className="block truncate text-sm">{member.fullName}</strong><span className="text-xs text-[#667b73]">{member.phone || "Chưa có SĐT"}</span></span>
+          <span className="min-w-0 flex-1"><strong className="block truncate text-sm">{member.fullName}</strong><span className="block text-xs text-[#667b73]">{member.phone || "Chưa có SĐT"}</span>{showEmail && <span className="block truncate text-xs text-[#667b73]">{member.email}</span>}</span>
           {!member.isActive ? <span className="text-xs text-[#b53a2c]">Ngừng hoạt động</span> : selected?.id === member.id ? <Check className="h-4 w-4 text-[#008b74]" /> : null}
         </button>)}
       </div>}

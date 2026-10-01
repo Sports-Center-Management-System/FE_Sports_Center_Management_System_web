@@ -32,6 +32,7 @@ export interface PosSubscription {
   endDate: string;
   assignedCoachId: string | null;
   remainingPtSessions: number | null;
+  remainingGroupSessions: number | null;
   plan: { id: string; name: string };
   assignedCoach: { id: string; fullName: string } | null;
 }

@@ -10,6 +10,7 @@ export interface Attendance {
   checkInTime: string;
   checkinType: string;
   status: string;
+  towelIssued?: boolean | null;
 }
 
 export interface UserSummary {
