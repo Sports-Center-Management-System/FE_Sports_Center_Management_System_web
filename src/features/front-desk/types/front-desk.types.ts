@@ -1,0 +1,75 @@
+export interface GateCheckinEvent {
+  attendanceId: string;
+  memberId: string;
+  lockerNumber?: string | null;
+}
+
+export interface Attendance {
+  id: string;
+  memberId: string;
+  checkInTime: string;
+  checkinType: string;
+  status: string;
+}
+
+export interface UserSummary {
+  id: string;
+  fullName: string;
+  phone?: string | null;
+}
+
+export interface CheckinRow {
+  id: string;
+  memberName: string | null;
+  checkInTime: string | null;
+  lockerNumber: string | null;
+}
+
+export interface Schedule {
+  id: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+  capacity: number;
+  currentEnrolled: number;
+  class: { name: string; discipline?: { name?: string; code: string } };
+  room: { name: string };
+  coach: { fullName: string };
+}
+
+export interface Locker {
+  id: string;
+  zone: string;
+  status: "AVAILABLE" | "OCCUPIED" | "MAINTENANCE";
+  isActive: boolean;
+}
+
+export interface CancellationRequest {
+  id: string;
+  coachId: string;
+  targetType: "PERSONAL_TRAINING" | "GROUP_CLASS";
+  bookingId: string | null;
+  scheduleId: string | null;
+  reasonMessage: string;
+  internalNote: string | null;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  createdAt: string;
+}
+
+export interface Booking {
+  id: string;
+  memberId: string;
+  coachAvailability: { startTime: string } | null;
+}
+
+export interface CancellationDetails {
+  coachName: string | null;
+  memberName: string | null;
+  sessionTime: string | null;
+}
+
+export interface CancellationReviewResponse extends CancellationRequest {
+  requestId: string;
+  reviewedBy: string;
+  refundedCount: number;
+}
