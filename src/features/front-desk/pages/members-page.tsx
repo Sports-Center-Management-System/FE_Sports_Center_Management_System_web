@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  Activity, ArrowLeft, CalendarDays, CreditCard, LogOut, Pencil,
+  Activity, ArrowLeft, CalendarDays, CreditCard, LogOut, Pencil, ScanLine,
   RefreshCw, UserRound, UsersRound, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
 import { EditMemberModal, SubscriptionStatusModal } from "../components/member-modals";
+import { InbodyPanel } from "../components/inbody-panel";
 import { PosMemberSearch } from "../components/pos-member-search";
 import { formatVnd } from "../lib/currency";
 import { formatDateTime } from "../lib/date-time";
@@ -20,7 +21,7 @@ import { SearchMember } from "../types/gate-checkin.types";
 import { MemberDetail, MemberInvoice } from "../types/member-management.types";
 import { PosSubscription } from "../types/pos.types";
 
-type DetailTab = "OVERVIEW" | "ATTENDANCE" | "INVOICES";
+type DetailTab = "OVERVIEW" | "ATTENDANCE" | "INVOICES" | "INBODY";
 
 const dateFormatter = new Intl.DateTimeFormat("vi-VN", {
   timeZone: "UTC", day: "2-digit", month: "2-digit", year: "numeric",
@@ -155,9 +156,10 @@ export const MembersPage: React.FC = () => {
               <div className="flex items-center gap-2"><Button type="button" variant="outline" size="icon" title="Tải lại hồ sơ" aria-label="Tải lại hồ sơ" onClick={refresh}><RefreshCw /></Button><Button type="button" variant="mint" disabled={!profile || profileLoading} onClick={() => setEditing(true)}><Pencil />Cập nhật</Button></div>
             </div>
             <div role="tablist" aria-label="Thông tin hội viên" className="flex overflow-x-auto border-b border-[#dce8e2] px-5 text-sm sm:px-7">
-              {([["OVERVIEW", "Tổng quan", UserRound], ["ATTENDANCE", "Điểm danh", CalendarDays], ["INVOICES", "Hóa đơn", CreditCard]] as const).map(([value, label, Icon]) => <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)} className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 font-medium ${tab === value ? "border-[#008b74] text-[#008b74]" : "border-transparent text-[#61756f] hover:text-[#172b28]"}`}><Icon className="h-4 w-4" />{label}</button>)}
+              {([["OVERVIEW", "Tổng quan", UserRound], ["ATTENDANCE", "Điểm danh", CalendarDays], ["INVOICES", "Hóa đơn", CreditCard], ["INBODY", "InBody", ScanLine]] as const).map(([value, label, Icon]) => <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)} className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 font-medium ${tab === value ? "border-[#008b74] text-[#008b74]" : "border-transparent text-[#61756f] hover:text-[#172b28]"}`}><Icon className="h-4 w-4" />{label}</button>)}
             </div>
             <div className="p-5 sm:p-7">
+              {tab === "INBODY" && <InbodyPanel key={selected.id} memberId={selected.id} memberName={profile?.fullName || selected.fullName} />}
               {tab === "OVERVIEW" && <div className="space-y-7">
                 <section aria-labelledby="member-profile-title"><h3 id="member-profile-title" className="text-sm font-semibold">Thông tin hội viên</h3>
                   {profileLoading ? <div className="mt-4 h-24 animate-pulse rounded-md bg-[#edf5f0]" /> : profileError ? <p role="alert" className="mt-4 text-sm text-[#ae3b2d]">{profileError}</p> : profile ? <dl className="mt-4 grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2">
