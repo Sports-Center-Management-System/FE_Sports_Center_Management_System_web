@@ -54,7 +54,7 @@ const apiError = (error: unknown, fallback: string): string => {
 
 export const GateCheckinPage: React.FC = () => {
   const { user, logout } = useAuth();
-  const [phone, setPhone] = useState("");
+  const [query, setQuery] = useState("");
   const [members, setMembers] = useState<SearchMember[]>([]);
   const [selected, setSelected] = useState<SearchMember | null>(null);
   const [zone, setZone] = useState<LockerZone | "">("");
@@ -67,13 +67,13 @@ export const GateCheckinPage: React.FC = () => {
   const [result, setResult] = useState<GateCheckinResponse | null>(null);
   const searchSequence = useRef(0);
   const submittingRef = useRef(false);
-  const phoneRef = useRef<HTMLInputElement>(null);
+  const queryRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => () => { searchSequence.current += 1; }, []);
 
   const reset = () => {
     searchSequence.current += 1;
-    setPhone("");
+    setQuery("");
     setMembers([]);
     setSelected(null);
     setZone("");
@@ -83,14 +83,14 @@ export const GateCheckinPage: React.FC = () => {
     setSearchError(null);
     setSubmitError(null);
     setResult(null);
-    window.setTimeout(() => phoneRef.current?.focus(), 0);
+    window.setTimeout(() => queryRef.current?.focus(), 0);
   };
 
   const handleSearch = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const query = phone.trim();
-    if (query.length < 4) {
-      setSearchError("Nhập ít nhất 4 ký tự của số điện thoại để tìm hội viên.");
+    const searchTerm = query.trim();
+    if (searchTerm.length < 2) {
+      setSearchError("Nhập ít nhất 2 ký tự để tìm hội viên.");
       return;
     }
     const sequence = ++searchSequence.current;
@@ -101,7 +101,7 @@ export const GateCheckinPage: React.FC = () => {
     setSelected(null);
     setSubmitError(null);
     try {
-      const found = await searchMembers(query);
+      const found = await searchMembers(searchTerm);
       if (sequence !== searchSequence.current) return;
       setMembers(found);
       setSearchDone(true);
@@ -163,14 +163,14 @@ export const GateCheckinPage: React.FC = () => {
             {!result && <section aria-labelledby="member-search-title">
               <div className="flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-md bg-[#e2f5ee] text-sm font-bold text-[#008b74]">01</span><h2 id="member-search-title" className="text-base font-semibold">Tìm và chọn hội viên</h2></div>
               <form onSubmit={(event) => void handleSearch(event)} className="mt-6 flex flex-col gap-2 sm:flex-row">
-                <label htmlFor="member-phone" className="sr-only">Số điện thoại hội viên</label>
+                <label htmlFor="member-phone" className="sr-only">Số điện thoại, họ tên hoặc email hội viên</label>
                 <div className="relative min-w-0 flex-1">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7a9189]" />
-                  <input ref={phoneRef} id="member-phone" type="tel" inputMode="tel" autoComplete="off" value={phone} disabled={submitting}
-                    onChange={(event) => { searchSequence.current += 1; setPhone(event.target.value); setMembers([]); setSelected(null); setSearchDone(false); setSearchLoading(false); setSearchError(null); setSubmitError(null); }}
-                    placeholder="Nhập số điện thoại hội viên"
+                  <input ref={queryRef} id="member-phone" type="search" autoComplete="off" value={query} disabled={submitting}
+                    onChange={(event) => { searchSequence.current += 1; setQuery(event.target.value); setMembers([]); setSelected(null); setSearchDone(false); setSearchLoading(false); setSearchError(null); setSubmitError(null); }}
+                    placeholder="Số điện thoại, họ tên hoặc email"
                     className="h-11 w-full rounded-md border border-[#c9dad2] bg-white pl-10 pr-10 text-sm outline-none focus:border-[#008b74] focus:ring-2 focus:ring-[#008b74]/15" />
-                  {phone && <button type="button" disabled={submitting} onClick={() => { searchSequence.current += 1; setPhone(""); setMembers([]); setSelected(null); setSearchDone(false); setSearchLoading(false); setSearchError(null); phoneRef.current?.focus(); }} title="Xóa số điện thoại" aria-label="Xóa số điện thoại" className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[#61756f] hover:bg-[#edf7f3] disabled:opacity-50"><X className="h-4 w-4" /></button>}
+                  {query && <button type="button" disabled={submitting} onClick={() => { searchSequence.current += 1; setQuery(""); setMembers([]); setSelected(null); setSearchDone(false); setSearchLoading(false); setSearchError(null); queryRef.current?.focus(); }} title="Xóa tìm kiếm" aria-label="Xóa tìm kiếm" className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[#61756f] hover:bg-[#edf7f3] disabled:opacity-50"><X className="h-4 w-4" /></button>}
                 </div>
                 <Button type="submit" variant="mint" disabled={searchLoading || submitting} className="h-11 sm:min-w-36">{searchLoading ? "Đang tìm..." : "Tìm hội viên"}</Button>
               </form>

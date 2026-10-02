@@ -40,3 +40,12 @@ export const purchasePtAddon = async (
     `/billing/subscriptions/${encodeURIComponent(subscriptionId)}/pt-addon`,
     { addonSessions, paymentMethod },
   )).data;
+
+export const renewSubscription = async (
+  subscriptionId: string,
+  paymentMethod: PosPaymentMethod,
+): Promise<PurchaseResponse> =>
+  (await apiClient.post<PurchaseResponse>(
+    `/billing/subscriptions/${encodeURIComponent(subscriptionId)}/renew`,
+    { paymentMethod },
+  )).data;

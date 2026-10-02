@@ -91,6 +91,11 @@ export const NotFoundPage: React.FC = () => {
               Về bàn lễ tân
             </Button>
           )}
+          {user?.role === "COACH" && (
+            <Button type="button" variant="mint" onClick={() => navigate("/portal/desk/inbody")} className="w-full rounded-xl py-2.5 text-xs font-bold">
+              Về trang InBody
+            </Button>
+          )}
           {isAuthenticated ? (
             <Button
               type="button"

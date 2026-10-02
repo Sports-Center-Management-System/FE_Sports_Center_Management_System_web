@@ -30,7 +30,7 @@ export const LoginPage: React.FC = () => {
   const getPostAuthPath = (authUser: AuthUser) => {
     if (authUser.role === "CENTER_MANAGER") return "/portal/manager/reports";
     if (authUser.role === "RECEPTIONIST") return "/portal/desk";
-    if (authUser.role === "COACH") return "/portal/coach/inbody";
+    if (authUser.role === "COACH") return "/portal/desk/inbody";
     return "/404";
   };
 

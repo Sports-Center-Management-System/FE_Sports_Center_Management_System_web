@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   Activity, ArrowLeft, CalendarDays, CreditCard, LogOut, Pencil, ScanLine,
   RefreshCw, UserRound, UsersRound, X,
@@ -41,7 +41,11 @@ const invoiceStatusText: Record<string, string> = {
 
 export const MembersPage: React.FC = () => {
   const { user, logout } = useAuth();
+  const { memberId } = useParams<{ memberId: string }>();
+  const navigate = useNavigate();
   const [selected, setSelected] = useState<SearchMember | null>(null);
+  const [routeLoading, setRouteLoading] = useState(Boolean(memberId));
+  const [routeError, setRouteError] = useState<string | null>(null);
   const [tab, setTab] = useState<DetailTab>("OVERVIEW");
   const [profile, setProfile] = useState<MemberDetail | null>(null);
   const [subscriptions, setSubscriptions] = useState<PosSubscription[]>([]);
@@ -61,6 +65,31 @@ export const MembersPage: React.FC = () => {
   const [notice, setNotice] = useState<string | null>(null);
   const selectedIdRef = useRef<string | null>(null);
   const requestVersionRef = useRef(0);
+
+  useEffect(() => {
+    const id = memberId ?? null;
+    if (selectedIdRef.current === id) return;
+    const version = ++requestVersionRef.current;
+    selectedIdRef.current = id;
+    setSelected(null);
+    setTab("OVERVIEW");
+    setNotice(null);
+    setEditing(false);
+    setStatusTarget(null);
+    setRouteError(null);
+    setRouteLoading(Boolean(id));
+    if (!id) return;
+    getMemberDetail(id).then((member) => {
+      if (requestVersionRef.current === version) {
+        if (member.role === "MEMBER") setSelected(member);
+        else setRouteError("Mã này không thuộc hồ sơ hội viên.");
+      }
+    }).catch((error) => {
+      if (requestVersionRef.current === version) setRouteError(memberError(error, "Không mở được hồ sơ hội viên."));
+    }).finally(() => {
+      if (requestVersionRef.current === version) setRouteLoading(false);
+    });
+  }, [memberId]);
 
   useEffect(() => {
     if (!selected) {
@@ -112,6 +141,9 @@ export const MembersPage: React.FC = () => {
     setNotice(null);
     setEditing(false);
     setStatusTarget(null);
+    setRouteError(null);
+    setRouteLoading(false);
+    navigate(member ? `/portal/desk/members/${encodeURIComponent(member.id)}` : "/portal/desk/members");
   };
   const refresh = () => {
     requestVersionRef.current += 1;
@@ -147,7 +179,7 @@ export const MembersPage: React.FC = () => {
         </aside>
 
         <div className="min-w-0 rounded-md border border-[#d6e6dd] bg-white shadow-sm">
-          {!selected ? <div className="flex min-h-[420px] flex-col items-center justify-center gap-3 px-5 text-center text-sm text-[#71867b]"><UsersRound className="h-8 w-8" /><p>Chưa chọn hội viên.</p></div> : <>
+          {!selected ? <div className="flex min-h-[420px] flex-col items-center justify-center gap-3 px-5 text-center text-sm text-[#71867b]"><UsersRound className="h-8 w-8" /><p role={routeError ? "alert" : "status"}>{routeError ?? (routeLoading ? "Đang mở hồ sơ hội viên..." : "Chưa chọn hội viên.")}</p></div> : <>
             <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#dce8e2] p-5 sm:p-7">
               <div className="flex min-w-0 items-center gap-4">
                 {profile?.avatarUrl || selected.avatarUrl ? <img src={profile?.avatarUrl || selected.avatarUrl || ""} alt="" className="h-14 w-14 shrink-0 rounded-full object-cover" /> : <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#e8f3ed] text-[#008b74]"><UserRound className="h-6 w-6" /></span>}

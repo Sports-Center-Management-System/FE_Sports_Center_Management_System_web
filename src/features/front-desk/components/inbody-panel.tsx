@@ -38,7 +38,7 @@ export const InbodyPanel: React.FC<{ memberId: string; memberName: string }> = (
     setRefreshKey((value) => value + 1);
   };
   const latest = logs[0];
-  const canEdit = (log: InbodyLog) => log.measuredById === user?.id &&
+  const canEdit = (log: InbodyLog) => (log.measuredById === user?.id || user?.role === "CENTER_MANAGER") &&
     Date.now() - new Date(log.measuredAt).getTime() <= 86400000;
 
   return <section aria-labelledby="inbody-title" className="space-y-5">

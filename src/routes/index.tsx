@@ -2,7 +2,7 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/context/auth-context";
 import { ReportsPage } from "@/features/analytics";
-import { CoachInbodyPage, FrontDeskPage, GateCheckinPage, MembersPage, PosPage } from "@/features/front-desk";
+import { FrontDeskPage, GateCheckinPage, InbodyPage, MembersPage, PosPage } from "@/features/front-desk";
 import { LoginPage, NotFoundPage } from "@/features/auth";
 import { ProtectedRoute } from "@/routes/protected-route";
 import { RoleGuard } from "@/routes/role-guard";
@@ -37,7 +37,7 @@ export const AppRoutes: React.FC = () => {
             path="/portal/desk"
             element={
               <ProtectedRoute>
-                <RoleGuard allowedRoles={["RECEPTIONIST"]}>
+                <RoleGuard allowedRoles={["RECEPTIONIST", "CENTER_MANAGER"]}>
                   <FrontDeskPage />
                 </RoleGuard>
               </ProtectedRoute>
@@ -45,10 +45,10 @@ export const AppRoutes: React.FC = () => {
           />
 
           <Route
-            path="/portal/desk/check-in"
+            path="/portal/desk/gate-checkin"
             element={
               <ProtectedRoute>
-                <RoleGuard allowedRoles={["RECEPTIONIST"]}>
+                <RoleGuard allowedRoles={["RECEPTIONIST", "CENTER_MANAGER"]}>
                   <GateCheckinPage />
                 </RoleGuard>
               </ProtectedRoute>
@@ -59,8 +59,19 @@ export const AppRoutes: React.FC = () => {
             path="/portal/desk/pos"
             element={
               <ProtectedRoute>
-                <RoleGuard allowedRoles={["RECEPTIONIST"]}>
-                  <PosPage />
+                <RoleGuard allowedRoles={["RECEPTIONIST", "CENTER_MANAGER"]}>
+                  <PosPage key="sale" />
+                </RoleGuard>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/portal/desk/subscriptions"
+            element={
+              <ProtectedRoute>
+                <RoleGuard allowedRoles={["RECEPTIONIST", "CENTER_MANAGER"]}>
+                  <PosPage key="subscriptions" initialMode="RENEW" />
                 </RoleGuard>
               </ProtectedRoute>
             }
@@ -70,7 +81,7 @@ export const AppRoutes: React.FC = () => {
             path="/portal/desk/members"
             element={
               <ProtectedRoute>
-                <RoleGuard allowedRoles={["RECEPTIONIST"]}>
+                <RoleGuard allowedRoles={["RECEPTIONIST", "CENTER_MANAGER"]}>
                   <MembersPage />
                 </RoleGuard>
               </ProtectedRoute>
@@ -78,11 +89,22 @@ export const AppRoutes: React.FC = () => {
           />
 
           <Route
-            path="/portal/coach/inbody"
+            path="/portal/desk/members/:memberId"
             element={
               <ProtectedRoute>
-                <RoleGuard allowedRoles={["COACH"]}>
-                  <CoachInbodyPage />
+                <RoleGuard allowedRoles={["RECEPTIONIST", "CENTER_MANAGER"]}>
+                  <MembersPage />
+                </RoleGuard>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/portal/desk/inbody"
+            element={
+              <ProtectedRoute>
+                <RoleGuard allowedRoles={["RECEPTIONIST", "COACH"]}>
+                  <InbodyPage />
                 </RoleGuard>
               </ProtectedRoute>
             }

@@ -240,8 +240,15 @@ export const FrontDeskPage: React.FC = () => {
           <div className="border-b border-[#e6f2ee] px-5 py-5">
             <div className="flex items-center gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#008b74] text-white"><Activity className="h-5 w-5" /></div><strong className="text-sm leading-tight">Sports Center Management System</strong></div>
           </div>
-          <nav className="flex-1 space-y-1 px-3 py-5 text-sm"><Link to="/portal/desk" className="flex items-center gap-3 rounded-md bg-[#e5f7f1] px-3 py-2.5 font-semibold text-[#008b74]"><BellRing className="h-4 w-4" />Bàn lễ tân</Link><Link to="/portal/desk/check-in" className="flex items-center gap-3 rounded-md px-3 py-2.5 font-medium text-[#47645c] hover:bg-[#f1faf6]"><ScanLine className="h-4 w-4" />Check-in cổng</Link><Link to="/portal/desk/pos" className="flex items-center gap-3 rounded-md px-3 py-2.5 font-medium text-[#47645c] hover:bg-[#f1faf6]"><ReceiptText className="h-4 w-4" />Bán vé & PT</Link><Link to="/portal/desk/members" className="flex items-center gap-3 rounded-md px-3 py-2.5 font-medium text-[#47645c] hover:bg-[#f1faf6]"><UsersRound className="h-4 w-4" />Hội viên</Link></nav>
-          <div className="border-t border-[#e6f2ee] p-4 text-xs text-[#6a7d78]">{user?.fullName}<br />Lễ tân</div>
+          <nav className="flex-1 space-y-1 px-3 py-5 text-sm">
+            <Link to="/portal/desk" className="flex items-center gap-3 rounded-md bg-[#e5f7f1] px-3 py-2.5 font-semibold text-[#008b74]"><BellRing className="h-4 w-4" />Bàn lễ tân</Link>
+            <Link to="/portal/desk/gate-checkin" className="flex items-center gap-3 rounded-md px-3 py-2.5 font-medium text-[#47645c] hover:bg-[#f1faf6]"><ScanLine className="h-4 w-4" />Check-in cổng</Link>
+            <Link to="/portal/desk/pos" className="flex items-center gap-3 rounded-md px-3 py-2.5 font-medium text-[#47645c] hover:bg-[#f1faf6]"><ReceiptText className="h-4 w-4" />Bán vé & PT</Link>
+            <Link to="/portal/desk/subscriptions" className="flex items-center gap-3 rounded-md px-3 py-2.5 font-medium text-[#47645c] hover:bg-[#f1faf6]"><ReceiptText className="h-4 w-4" />Gia hạn & PT</Link>
+            <Link to="/portal/desk/members" className="flex items-center gap-3 rounded-md px-3 py-2.5 font-medium text-[#47645c] hover:bg-[#f1faf6]"><UsersRound className="h-4 w-4" />Hội viên</Link>
+            {user?.role === "RECEPTIONIST" && <Link to="/portal/desk/inbody" className="flex items-center gap-3 rounded-md px-3 py-2.5 font-medium text-[#47645c] hover:bg-[#f1faf6]"><Activity className="h-4 w-4" />InBody</Link>}
+          </nav>
+          <div className="border-t border-[#e6f2ee] p-4 text-xs text-[#6a7d78]">{user?.fullName}<br />{user?.role === "CENTER_MANAGER" ? "Quản lý trung tâm" : "Lễ tân"}</div>
         </aside>
 
         <main className="min-w-0 flex-1">
@@ -251,7 +258,7 @@ export const FrontDeskPage: React.FC = () => {
               <div className="flex flex-wrap items-center gap-2">
                 <Link to="/portal/desk/members" className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-[#cde6db] bg-white px-3 text-sm font-medium text-[#008b74] hover:bg-[#f1faf6]"><UsersRound className="h-4 w-4" />Hội viên</Link>
                 <Link to="/portal/desk/pos" className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-[#cde6db] bg-white px-3 text-sm font-medium text-[#008b74] hover:bg-[#f1faf6]"><ReceiptText className="h-4 w-4" />Bán vé & PT</Link>
-                <Link to="/portal/desk/check-in" className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-[#008b74] px-3 text-sm font-medium text-white hover:bg-[#007461]"><ScanLine className="h-4 w-4" />Check-in cổng</Link>
+                <Link to="/portal/desk/gate-checkin" className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-[#008b74] px-3 text-sm font-medium text-white hover:bg-[#007461]"><ScanLine className="h-4 w-4" />Check-in cổng</Link>
                 <span className={`rounded-md px-2 py-1 text-xs font-medium ${realtimeStatus === "connected" ? "bg-[#e5f7f1] text-[#008b74]" : "bg-[#fff1e8] text-[#a94f20]"}`}>{realtimeStatus === "connected" ? "Realtime đang hoạt động" : realtimeStatus === "connecting" ? "Đang kết nối..." : "Mất kết nối realtime"}</span>
                 <Button type="button" variant="outline" onClick={() => void toggleSound()} title={soundEnabled ? "Tắt âm báo" : "Bật âm báo"} aria-label={soundEnabled ? "Tắt âm báo" : "Bật âm báo"} className="h-9 w-9 p-0">{soundEnabled ? <Volume2 /> : <VolumeX />}</Button>
                 <Button type="button" variant="outline" onClick={refresh} title="Tải lại dữ liệu" aria-label="Tải lại dữ liệu" className="h-9 w-9 p-0"><RefreshCw /></Button>

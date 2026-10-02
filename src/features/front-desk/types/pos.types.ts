@@ -27,13 +27,14 @@ export interface PosCoach {
 export interface PosSubscription {
   id: string;
   userId: string;
+  packageTier: PackageTier;
   status: string;
   startDate: string;
   endDate: string;
   assignedCoachId: string | null;
   remainingPtSessions: number | null;
   remainingGroupSessions: number | null;
-  plan: { id: string; name: string };
+  plan: { id: string; name: string; price: Money };
   assignedCoach: { id: string; fullName: string } | null;
 }
 
