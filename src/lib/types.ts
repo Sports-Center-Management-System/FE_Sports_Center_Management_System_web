@@ -1,4 +1,7 @@
-﻿export type Role = 'MEMBER' | 'ADMIN' | 'CENTER_MANAGER' | 'RECEPTIONIST' | 'COACH'
+import type { AuthUser, UserRole } from '@/types/auth.types'
+
+export type Role = UserRole
+export type User = AuthUser
 export type Tier = 'TRIAL' | 'DROP_IN' | 'PLUS' | 'VIP'
 export type CheckoutStatus =
   | 'PENDING_PAYMENT'
@@ -14,19 +17,6 @@ export interface Discipline {
   id: string
   code: string
   name: string
-}
-export interface User {
-  id: string
-  email: string
-  fullName: string
-  phone?: string
-  role: Role
-  avatarUrl?: string | null
-  memberProfile?: {
-    fitnessGoals?: string | null
-    medicalHistory?: string | null
-    heightCm?: number | null
-  }
 }
 export interface Tokens {
   accessToken: string

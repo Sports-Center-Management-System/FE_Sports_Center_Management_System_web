@@ -1,41 +1,148 @@
-﻿# Web Portal · MEMBER
+﻿# Sports Center Management System - Web Portal
 
-Frontend React 19, TypeScript, Vite 8 cho luồng MEMBER. Các màn hình bám theo `markdown/user_flow.md` và `erd/active/screen lists/MEMBER_SCREEN_LIST.md`. Vùng `/console` và các role khác còn trong backlog.
+> Cổng thông tin và bảng điều khiển quản trị web dành cho Quản lý Trung tâm (Center Manager) và Nhân viên Lễ tân (Receptionist), cung cấp giao diện trực quan cho quản lý lớp học, phân quyền, thanh toán và check-in thời gian thực.
 
-## Chạy cục bộ
+[![React](https://img.shields.io/badge/React-v18.x-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-v5.x-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-v5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v3.x-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![shadcn/ui](https://img.shields.io/badge/shadcn%2Fui-latest-000000?logo=shadcnui&logoColor=white)](https://ui.shadcn.com/)
+[![TanStack Query](https://img.shields.io/badge/TanStack_Query-v5.x-FF4154?logo=reactquery&logoColor=white)](https://tanstack.com/query)
+[![TanStack Table](https://img.shields.io/badge/TanStack_Table-v8.x-FF4154)](https://tanstack.com/table)
+[![Zustand](https://img.shields.io/badge/Zustand-v4.x-443E38)](https://zustand-demo.pmnd.rs/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Yêu cầu Node.js 22+ và backend đang chạy ở `http://localhost:3000`.
+---
 
-```powershell
-npm ci
-Copy-Item .env.example .env.local
-npm run dev
+## 1. Quick Start
+
+### Yêu cầu tiên quyết
+* **Node.js**: `v20.x LTS` hoặc mới hơn
+* **Package Manager**: `npm` hoặc `pnpm`
+* **Backend API**: Đang hoạt động cục bộ hoặc có URL endpoint staging sẵn sàng
+
+### Các bước cài đặt
+
+1. **Clone repository:**
+   ```bash
+   git clone https://github.com/your-org/sports-center-web.git
+   cd sports-center-web
+   ```
+
+2. **Cài đặt dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Cấu hình biến môi trường:**
+   Tạo file `.env.local` từ `.env.example`:
+   ```bash
+   cp .env.example .env.local
+   ```
+   Cập nhật các giá trị cấu hình kết nối:
+   ```env
+   VITE_API_BASE_URL="http://localhost:3000/api/v1"
+   VITE_SOCKET_SERVER_URL="http://localhost:3000"
+   VITE_APP_TITLE="Sports Center Portal"
+   ```
+
+4. **Khởi chạy môi trường phát triển (Dev Server):**
+   ```bash
+   npm run dev
+   ```
+   * Ứng dụng sẽ khả dụng tại: `http://localhost:5173`
+
+5. **Build kiểm tra mã nguồn cho Production:**
+   ```bash
+   npm run build
+   npm run preview
+   ```
+
+---
+
+## 2. Structure Tree & Architecture
+
+Dự án áp dụng kết hợp **Atomic Design (cho tầng Base UI)** và **Feature-Sliced Design (cho tầng Logic Nghiệp vụ)** nhằm đảm bảo khả năng tái sử dụng thành phần giao diện nhưng vẫn cô lập logic của từng màn hình quản trị.
+
+```text
+frontend-web/
+├── public/                            # Tài nguyên tĩnh, favicon, logos
+├── src/
+│   ├── assets/                        # Ảnh tĩnh, icon nội bộ, vector graphics
+│   ├── components/                    # [ATOMIC DESIGN] Các thành phần UI dùng chung
+│   │   ├── common/                    # [Organisms] Bảng biểu, cards dữ liệu tái sử dụng
+│   │   │   ├── confirm-dialog.tsx
+│   │   │   ├── data-table/            # Data table bọc TanStack Table (sort, filter, page)
+│   │   │   ├── search-input.tsx
+│   │   │   └── stat-card.tsx          # Card hiển thị chỉ số doanh thu / học viên
+│   │   ├── feedback/                  # Component trạng thái (Skeleton, EmptyState, ErrorBoundary)
+│   │   └── ui/                        # [Atoms / Molecules] Thư viện shadcn/ui nguyên bản
+│   │       ├── button.tsx
+│   │       ├── dialog.tsx
+│   │       ├── dropdown-menu.tsx
+│   │       ├── input.tsx
+│   │       ├── select.tsx
+│   │       └── table.tsx
+│   ├── features/                      # [FEATURE-SLICED] Nghiệp vụ chia theo domain
+│   │   ├── analytics/                 # Thống kê, biểu đồ Recharts doanh thu/tỷ lệ lấp đầy
+│   │   ├── auth/                      # Form đăng nhập, xử lý refresh session
+│   │   ├── billing/                   # Quản lý hóa đơn, in phiếu thu tiền mặt/chuyển khoản
+│   │   ├── classes-schedule/          # Bảng lịch tuần, quản lý phòng tập, điều phối HLV
+│   │   ├── members/                   # Danh sách hội viên, modal hồ sơ, gia hạn gói
+│   │   └── reception-checkin/         # Màn hình điểm danh nhanh tại quầy lễ tân
+│   ├── layouts/                       # Khung màn hình theo vai trò (Templates)
+│   │   ├── auth-layout.tsx            # Layout trang đăng nhập
+│   │   ├── dashboard-layout.tsx       # Sidebar, Header điều hướng cho Manager
+│   │   └── reception-layout.tsx       # Layout tối ưu màn hình cảm ứng / thao tác nhanh cho Lễ tân
+│   ├── routes/                        # Cấu hình React Router v6
+│   │   ├── index.tsx                  # Khai báo tuyến đường
+│   │   ├── protected-route.tsx        # Bọc kiểm tra đăng nhập
+│   │   └── role-guard.tsx             # Chặn truy cập trái quyền theo vai trò (RBAC)
+│   ├── services/                      # Cấu hình Axios Client, Interceptors, Socket Client
+│   ├── stores/                        # Zustand Store (authStore, uiStore, sidebarStore)
+│   ├── types/                         # TypeScript definitions & API response models
+│   ├── App.tsx
+│   └── main.tsx                       # React root entry, TanStack Query Client Provider
+├── index.html
+├── tailwind.config.js                 # Cấu hình màu sắc, layout, plugin Tailwind
+├── tsconfig.json
+└── vite.config.ts                     # Cấu hình alias (@/), proxy dev server
 ```
 
-Vite proxy `/api` và `/socket.io` tới backend. Nếu web và API ở hai origin khác nhau, đặt `VITE_API_BASE_URL` bằng **origin** của backend, ví dụ `https://api.example.com`, không kèm `/api/v1`. Backend phải cho phép origin của web trong CORS. Tất cả request đi qua `/api/v1`.
+---
 
-`VITE_PUBLIC_WEB_URL` là URL public của web khi dùng VS Code Port Forwarding để quét QR từ điện thoại. QR chỉ trỏ tới `/mock-payment`, không chứa payment ID. Chỉ bật `VITE_ENABLE_MOCK_PAYMENT=true` trong bản build demo; backend cũng phải bật `MOCK_PAYMENT_ENABLED=true` và cấu hình `MOCK_WEBHOOK_SECRET`. Môi trường dev Vite luôn hiện trang demo, nhưng backend vẫn quyết định API mock có hoạt động hay không.
+## 3. Coding Conventions
 
-## Kiểm tra
+### 3.1. Git Branching & Quy trình đóng góp
+* `main`: Nhánh production.
+* `dev`: Nhánh staging tích hợp trước khi release.
+* `feature/web-<tên-tính-năng>`: Phát triển UI/tính năng mới (vd: `feature/web-attendance-table`, `feature/web-class-scheduler`).
+* `fix/web-<vấn-đề>`: Khắc phục lỗi giao diện/luồng dữ liệu (vd: `fix/web-token-refresh-loop`).
 
-```powershell
-npm run lint
-npm test
-npm run build
-```
+### 3.2. Commit Guidelines (Conventional Commits)
+* `feat(scope)`: Thêm màn hình hoặc component mới (vd: `feat(schedule): add drag-and-drop class assignment grid`)
+* `fix(scope)`: Sửa lỗi hiển thị hoặc xử lý state (vd: `fix(members): correct table pagination offset calculation`)
+* `style(scope)`: Tinh chỉnh Tailwind CSS, responsive spacing không ảnh hưởng logic
+* `refactor(scope)`: Gom nhóm hoặc tái cấu trúc custom hook (vd: `refactor(auth): simplify role check hook`)
 
-E2E dùng Edge/Playwright và backend có tài khoản MEMBER seed. Tài khoản chỉ cần quyền đọc; bài test không tạo checkout hoặc booking.
+### 3.3. React & TypeScript Standards
+* **Component Architecture**: Sử dụng Functional Components hoàn toàn kèm typed props interface rõ ràng:
+  ```tsx
+  interface MemberTableProps {
+    data: MemberItem[];
+    isLoading: boolean;
+    onRowClick: (id: string) => void;
+  }
+  export const MemberTable: React.FC<MemberTableProps> = ({ ... }) => { ... };
+  ```
+* **State Management**:
+  * Dữ liệu từ Server (Server State): Bắt buộc quản lý qua **TanStack Query** (`useQuery`, `useMutation`). Tuyệt đối không dùng `useEffect` + `useState` để fetch và lưu trữ dữ liệu API thủ công.
+  * Trạng thái giao diện cục bộ (UI State): Dùng `useState` hoặc **Zustand** cho trạng thái toàn cục nhẹ (Sidebar collapsed, Active modal).
+* **Styling**: Sử dụng các tiện ích utility-first của TailwindCSS; gom class có điều kiện bằng hàm tiện ích `cn()` (`clsx` + `tailwind-merge`).
 
-```powershell
-$env:E2E_MEMBER_EMAIL = 'member@example.test'
-$env:E2E_MEMBER_PASSWORD = '...'
-npm run test:e2e
-```
+---
 
-`E2E_BROWSER_CHANNEL` có thể dùng để chọn Chrome/Chromium nếu môi trường không có Edge. Playwright chạy trên web tại `http://127.0.0.1:5173`; hãy khởi động Vite trước.
+## 4. License
 
-## Cấu trúc và quy ước
-
-`src/routes` quản lý ba vùng URL `/`, `/portal/member`, `/console` (backlog). `src/auth` xác minh phiên và role từ backend; `src/lib` chứa API client, kiểu dữ liệu, date-only theo giờ Việt Nam và query key; `src/pages` chứa các màn hình; `src/components` chứa layout và trạng thái chung. Dữ liệu server dùng TanStack Query; mỗi cache key riêng tư gắn user ID, calendar gắn tuần và bộ lọc. Logout xóa cache. Quota và trạng thái thanh toán được đọc lại từ API, không tự tính ở frontend.
-
-Nhánh phát triển dùng `feature/web-<tên>` từ `dev` khi có `dev`, commit theo Conventional Commits. TypeScript có type rõ cho API và component; tên component PascalCase, hàm camelCase. CSS hiện dùng `src/index.css`, không có Tailwind/shadcn trong dependency hiện tại.
+Dự án được phân phối dưới giấy phép mã nguồn mở [MIT License](LICENSE).  
+Bản quyền thuộc về © 2026 Sports Center Management System Team.

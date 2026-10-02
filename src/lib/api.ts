@@ -1,4 +1,4 @@
-import type { Tokens } from './types'
+import type { Tokens, User } from './types'
 const key = 'sportscenter.member.tokens'
 const base = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
 export class ApiError extends Error {
@@ -13,17 +13,34 @@ export class ApiError extends Error {
 export function readTokens(): Tokens | null {
   try {
     const value = localStorage.getItem(key)
-    return value ? (JSON.parse(value) as Tokens) : null
+    if (value) {
+      const parsed = JSON.parse(value) as Tokens
+      if (parsed && parsed.accessToken) return parsed
+    }
+    const accessToken = localStorage.getItem('access_token')
+    const refreshToken = localStorage.getItem('refresh_token')
+    if (accessToken && refreshToken) {
+      return { accessToken, refreshToken }
+    }
+    return null
   } catch {
     return null
   }
 }
-export function saveTokens(tokens: Tokens) {
+export function saveTokens(tokens: Tokens, user?: User | null) {
   localStorage.setItem(key, JSON.stringify(tokens))
+  localStorage.setItem('access_token', tokens.accessToken)
+  localStorage.setItem('refresh_token', tokens.refreshToken)
+  if (user) {
+    localStorage.setItem('auth_user', JSON.stringify(user))
+  }
   window.dispatchEvent(new Event('session-changed'))
 }
 export function clearTokens() {
   localStorage.removeItem(key)
+  localStorage.removeItem('access_token')
+  localStorage.removeItem('refresh_token')
+  localStorage.removeItem('auth_user')
   window.dispatchEvent(new Event('session-changed'))
 }
 export function apiOrigin() {
