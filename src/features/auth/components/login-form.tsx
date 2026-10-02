@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router";
 import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,7 +79,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
       {/* Email Input */}
       <div>
-        <label className="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1.5">
+        <label className="block text-xs font-semibold text-slate-700 tracking-normal mb-1.5">
           Địa chỉ Email
         </label>
         <div className="relative">
@@ -90,7 +91,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="member@example.com"
-            className="pl-10"
+            className="pl-10 h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-[#008b74] focus:ring-4 focus:ring-[#008b74]/10 transition-all text-sm"
           />
         </div>
       </div>
@@ -98,7 +99,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       {/* Password Input */}
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <label className="block text-xs font-bold text-slate-700 uppercase tracking-tight">
+          <label className="block text-xs font-semibold text-slate-700 tracking-normal">
             Mật khẩu
           </label>
         </div>
@@ -111,12 +112,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Tối thiểu 6 ký tự"
-            className="pl-10 pr-10"
+            className="pl-10 pr-10 h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-[#008b74] focus:ring-4 focus:ring-[#008b74]/10 transition-all text-sm"
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1 cursor-pointer"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
             title={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
           >
             {showPassword ? (
@@ -133,7 +134,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         type="submit"
         variant="mint"
         disabled={isSubmitting}
-        className="w-full rounded-xl py-3 text-xs font-bold shadow-md shadow-emerald-700/10 flex items-center justify-center gap-2 mt-2"
+        className="w-full h-11 rounded-xl text-xs font-bold shadow-md shadow-emerald-700/10 flex items-center justify-center gap-2 mt-2 cursor-pointer active:scale-[0.99] transition-all"
       >
         {isSubmitting ? (
           <span>Đang xác thực...</span>
@@ -146,31 +147,34 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       </Button>
 
       {/* Quick Demo Credentials Panel */}
-      <div className="pt-2 border-t border-slate-100">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-          Tài khoản kiểm thử nhanh (Demo):
-        </p>
-        <div className="flex flex-wrap gap-1.5">
+      <div className="pt-3 border-t border-slate-100">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+            ⚡ Đăng nhập nhanh (Demo)
+          </span>
+          <span className="text-[10px] text-slate-400">1-click test</span>
+        </div>
+        <div className="grid grid-cols-3 gap-1.5">
           <button
             type="button"
             onClick={() => handleQuickFill("member.john@example.com")}
-            className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-emerald-50 text-[#008b74] border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer"
+            className="py-1.5 px-2 rounded-lg text-[11px] font-semibold bg-emerald-50/80 text-[#008b74] border border-emerald-200/80 hover:bg-emerald-100/80 transition-all text-center truncate cursor-pointer"
           >
-            Hội viên (Member)
+            Hội viên
           </button>
           <button
             type="button"
             onClick={() => handleQuickFill("manager@sportscenter.com")}
-            className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 transition-colors cursor-pointer"
+            className="py-1.5 px-2 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 transition-all text-center truncate cursor-pointer"
           >
-            Giám Đốc (Manager)
+            Giám Đốc
           </button>
           <button
             type="button"
             onClick={() => handleQuickFill("receptionist@sportscenter.com")}
-            className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200 hover:bg-sky-100 transition-colors cursor-pointer"
+            className="py-1.5 px-2 rounded-lg text-[11px] font-semibold bg-sky-50/80 text-sky-700 border border-sky-200/80 hover:bg-sky-100/80 transition-all text-center truncate cursor-pointer"
           >
-            Lễ Tân (Desk)
+            Lễ Tân
           </button>
         </div>
       </div>
@@ -178,14 +182,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       {/* Switch to Register link */}
       <div className="pt-2 text-center text-xs text-slate-500">
         Chưa có tài khoản hội viên?{" "}
-        <button
-          type="button"
+        <Link
+          to="/auth/register"
           onClick={onSwitchToRegister}
-          className="font-bold text-white hover:underline inline-flex items-center gap-0.5 ml-1 cursor-pointer"
+          className="font-bold text-[#008b74] hover:text-[#007461] hover:underline inline-flex items-center gap-0.5 ml-1 cursor-pointer"
         >
           Đăng ký ngay
           <ArrowRight className="h-3 w-3" />
-        </button>
+        </Link>
       </div>
     </form>
   );

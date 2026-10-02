@@ -1,6 +1,8 @@
 import type { Tokens, User } from './types'
 const key = 'sportscenter.member.tokens'
-const base = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
+const rawBase = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
+export const apiPrefix = rawBase.endsWith('/api/v1') ? rawBase : `${rawBase}/api/v1`
+
 export class ApiError extends Error {
   status: number
   code: string
@@ -44,7 +46,7 @@ export function clearTokens() {
   window.dispatchEvent(new Event('session-changed'))
 }
 export function apiOrigin() {
-  return base || window.location.origin
+  return rawBase.replace(/\/api\/v1$/, '') || window.location.origin
 }
 let refreshFlight: Promise<Tokens> | null = null
 async function refreshTokens(): Promise<Tokens> {
@@ -55,7 +57,7 @@ async function refreshTokens(): Promise<Tokens> {
         throw new ApiError(401, 'SESSION_MISSING', 'Phiên đăng nhập đã hết hạn')
       let response: Response
       try {
-        response = await fetch(`${base}/api/v1/auth/refresh`, {
+        response = await fetch(`${apiPrefix}/auth/refresh`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ refreshToken: current.refreshToken }),
@@ -91,7 +93,7 @@ export async function request<T>(
   const call = async (token?: string) => {
     let response: Response
     try {
-      response = await fetch(`${base}/api/v1${path}`, {
+      response = await fetch(`${apiPrefix}${path}`, {
         ...init,
         headers: {
           ...(init.body ? { 'Content-Type': 'application/json' } : {}),

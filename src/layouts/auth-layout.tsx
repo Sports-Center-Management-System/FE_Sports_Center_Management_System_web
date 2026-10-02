@@ -32,14 +32,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#008b74] text-white shadow-lg shadow-black/30 font-black text-sm tracking-wider">
               3TC
             </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-white leading-none drop-shadow-sm">
-                3TC Fitness
-              </h1>
-              <p className="text-[10px] font-bold tracking-widest text-emerald-300 mt-1 uppercase drop-shadow-sm">
-                SPORTS & WELLNESS CENTER
-              </p>
-            </div>
+          
           </div>
         </div>
 
@@ -83,23 +76,29 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
 
       {/* Right Column: Interactive Content Form Container */}
       <div className="flex-1 flex flex-col justify-center items-center p-6 sm:p-10 lg:p-14 overflow-y-auto">
-        <div className="w-full max-w-md space-y-6">
-          {/* Mobile Brand Logo */}
-          <div className="lg:hidden flex items-center gap-2.5 mb-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#008b74] text-white shadow-md shadow-[#008b74]/20 font-black text-xs tracking-wider">
-              3TC
+        <div className="w-full max-w-md space-y-5">
+          {/* Brand Header & Greeting */}
+          <div className="flex flex-col items-center text-center">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#008b74] text-white shadow-md shadow-[#008b74]/25 font-black text-sm tracking-wider">
+                3TC
+              </div>
+              <div className="text-left">
+                <span className="text-base font-extrabold tracking-tight text-slate-900 block leading-tight">3TC Fitness</span>
+                <span className="text-[10px] font-bold tracking-widest text-[#008b74] uppercase block">Sports & Wellness</span>
+              </div>
             </div>
-            <span className="text-base font-bold text-[#008b74]">3TC Fitness</span>
-          </div>
 
-          {/* Form Header */}
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-              {title}
-            </h2>
-            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-              {subtitle}
-            </p>
+            {title && (
+              <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
+                {title}
+              </h1>
+            )}
+            {subtitle && (
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed max-w-xs">
+                {subtitle}
+              </p>
+            )}
           </div>
 
           {/* Child Form Card */}
