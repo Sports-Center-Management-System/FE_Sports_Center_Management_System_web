@@ -6,7 +6,7 @@ export const PublicLayout: React.FC = () => {
   const { isAuthenticated, user} = useAuth();
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f8fafc] text-slate-800">
+    <div className="h-screen w-full overflow-hidden flex flex-col bg-[#f8fafc] text-slate-800">
       {isAuthenticated && user ? (
         <>
 
@@ -50,7 +50,7 @@ export const PublicLayout: React.FC = () => {
         </>
       )}
 
-      <main className="flex-1 w-full mx-auto p-4 sm:p-8">
+      <main className="flex-1 w-full ">
         <Outlet />
       </main>
     </div>
