@@ -55,6 +55,7 @@ export interface Coach {
     id?: string;
     specialties?: string | null;
     bio?: string | null;
+    certificateUrls?: string[];
     yearsExperience?: number;
     coachSpecialties?: {
       id?: string;
@@ -63,6 +64,7 @@ export interface Coach {
     }[];
   } | null;
   coachRates?: CoachRateItem[];
+  coachAvailabilities?: CoachAvailabilitySlot[];
   availabilitySlots?: CoachAvailabilitySlot[];
 }
 

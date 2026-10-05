@@ -108,6 +108,84 @@ export const coachApiService = {
   },
 
   /**
+   * GET /api/v1/coaches/:id
+   * Fetches full detail of a coach from Backend API.
+   */
+  async getCoachDetail(coachId: string): Promise<Coach> {
+    const item = await get<any>(`/coaches/${coachId}`);
+    if (!item) {
+      throw new Error("COACH_NOT_FOUND");
+    }
+
+    const disciplineIdsSet = new Set<string>();
+    const disciplineCodesSet = new Set<string>();
+
+    if (Array.isArray(item.coachRates)) {
+      item.coachRates.forEach((r: any) => {
+        if (r.disciplineId) disciplineIdsSet.add(r.disciplineId);
+        if (r.discipline?.code) disciplineCodesSet.add(r.discipline.code.toUpperCase());
+      });
+    }
+
+    const specialties = item.coachProfile?.coachSpecialties || [];
+    specialties.forEach((cs: any) => {
+      if (cs.specialty?.disciplineId) {
+        disciplineIdsSet.add(cs.specialty.disciplineId);
+      }
+      if (cs.specialty?.discipline?.code) {
+        disciplineCodesSet.add(cs.specialty.discipline.code.toUpperCase());
+      }
+      if (cs.specialty?.code) {
+        const code = cs.specialty.code.toUpperCase();
+        if (code.includes("GYM")) disciplineCodesSet.add("GYM");
+        if (code.includes("BOX")) disciplineCodesSet.add("BOXING");
+        if (code.includes("YOG")) disciplineCodesSet.add("YOGA");
+      }
+    });
+
+    const specString = (item.coachProfile?.specialties || "").toUpperCase();
+    if (specString.includes("GYM")) disciplineCodesSet.add("GYM");
+    if (specString.includes("BOX")) disciplineCodesSet.add("BOXING");
+    if (specString.includes("YOG")) disciplineCodesSet.add("YOGA");
+
+    const disciplineCodes = Array.from(disciplineCodesSet);
+    const disciplineIds = Array.from(disciplineIdsSet);
+    const primaryDiscipline = disciplineCodes[0] || "GYM";
+
+    const rates: CoachRateItem[] = Array.isArray(item.coachRates)
+      ? item.coachRates.map((r: any) => ({
+          id: r.id,
+          coachId: r.coachId,
+          disciplineId: r.disciplineId,
+          ratePerSession: Number(r.ratePerSession) || 500000,
+          effectiveFrom: r.effectiveFrom || "2026-01-01T00:00:00.000Z",
+          effectiveTo: r.effectiveTo || null,
+          rateRange: r.rateRange,
+          discipline: r.discipline,
+        }))
+      : [];
+
+    return {
+      id: item.id,
+      fullName: item.fullName || "Huấn Luyện Viên",
+      avatarUrl: item.avatarUrl ? item.avatarUrl.trim() : null,
+      phone: item.phone || null,
+      email: item.email || null,
+      disciplineIds,
+      disciplineCodes,
+      primaryDiscipline,
+      experienceYears: item.coachProfile?.yearsExperience || 5,
+      rating: 4.9,
+      reviewCount: 125,
+      title: `HLV Chuyên Sâu ${disciplineCodes.join(" & ") || "Thể Hình"}`,
+      bio: item.coachProfile?.bio || null,
+      coachProfile: item.coachProfile,
+      coachRates: rates,
+      coachAvailabilities: item.coachAvailabilities || [],
+    };
+  },
+
+  /**
    * GET /api/v1/coaches/availability?coachId=...
    */
   async getAvailability(coachId?: string): Promise<CoachAvailabilitySlot[]> {

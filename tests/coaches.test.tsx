@@ -110,11 +110,14 @@ describe("Coaches Feature (/api/v1/coaches)", () => {
     vi.restoreAllMocks();
     vi.spyOn(coachApiService, "getDisciplines").mockResolvedValue(mockDisciplines);
     vi.spyOn(coachApiService, "getCoaches").mockResolvedValue(mockCoaches);
+    vi.spyOn(coachApiService, "getCoachDetail").mockImplementation(async (id) => {
+      const found = mockCoaches.find((c) => c.id === id);
+      return found || mockCoaches[0];
+    });
     vi.spyOn(coachApiService, "getAvailability").mockResolvedValue([
       {
         id: "slot-1",
         coachId: "coach-1",
-        dayOfWeek: 1,
         startTime: "09:00",
         endTime: "10:00",
         isBooked: false,

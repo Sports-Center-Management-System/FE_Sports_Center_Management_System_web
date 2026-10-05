@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   X,
   Star,
@@ -16,6 +17,7 @@ import {
   ChevronRight,
   User,
   Check,
+  FileText,
 } from "lucide-react";
 import { money } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -42,20 +44,42 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
   const [slots, setSlots] = useState<CoachAvailabilitySlot[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
 
-  // Fetch real availability slots when coach opens
+  // 1. Fetch full coach detail from GET /api/v1/coaches/:id
+  const coachDetailQuery = useQuery({
+    queryKey: ["coach-detail", coach?.id],
+    queryFn: () => (coach?.id ? coachApiService.getCoachDetail(coach.id) : Promise.reject()),
+    enabled: Boolean(isOpen && coach?.id),
+    staleTime: 30000,
+  });
+
+  const activeCoach = coachDetailQuery.data || coach;
+
+  // 2. Fetch real availability slots when modal opens
   useEffect(() => {
     setSelectedSlotId(null);
     setBookSuccess(false);
 
     if (coach?.id) {
+      if (
+        Array.isArray(activeCoach?.coachAvailabilities) &&
+        activeCoach.coachAvailabilities.length > 0
+      ) {
+        setSlots(activeCoach.coachAvailabilities);
+      }
+
       setIsLoadingSlots(true);
       coachApiService
         .getAvailability(coach.id)
         .then((data) => {
           if (Array.isArray(data) && data.length > 0) {
             setSlots(data);
+          } else if (
+            Array.isArray(activeCoach?.coachAvailabilities) &&
+            activeCoach.coachAvailabilities.length > 0
+          ) {
+            setSlots(activeCoach.coachAvailabilities);
           } else {
-            // Default active slots for booking demo if coach hasn't added slots yet
+            // Default active demo slots if coach has not scheduled slots yet
             setSlots([
               {
                 id: `slot-${coach.id}-1`,
@@ -86,7 +110,7 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
         })
         .finally(() => setIsLoadingSlots(false));
     }
-  }, [coach]);
+  }, [coach?.id, activeCoach?.coachAvailabilities]);
 
   // Handle ESC key
   useEffect(() => {
@@ -105,36 +129,35 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen || !coach) return null;
+  if (!isOpen || !activeCoach) return null;
 
-  const targetCode = coach.primaryDiscipline || "GYM";
+  const targetCode = activeCoach.primaryDiscipline || "GYM";
   const DiscIcon = getDisciplineIcon(targetCode);
   const discColor = getDisciplineColor(targetCode);
 
   const activeRate =
-    coach.coachRates && coach.coachRates.length > 0
-      ? coach.coachRates[0]
+    activeCoach.coachRates && activeCoach.coachRates.length > 0
+      ? activeCoach.coachRates[0]
       : {
           id: "default-rate",
-          coachId: coach.id,
+          coachId: activeCoach.id,
           ratePerSession: 500000,
           effectiveFrom: "2026-01-01",
           rateRange: "[2026-01-01,)",
         };
 
-  const specialties =
-    coach.coachProfile?.coachSpecialties || [];
-
-  const hasAvatar = Boolean(coach.avatarUrl && coach.avatarUrl.trim());
+  const specialties = activeCoach.coachProfile?.coachSpecialties || [];
+  const hasAvatar = Boolean(activeCoach.avatarUrl && activeCoach.avatarUrl.trim());
+  const bio = activeCoach.bio || activeCoach.coachProfile?.bio;
 
   const handleConfirmBooking = () => {
     const chosenSlot = slots.find((s) => s.id === selectedSlotId);
     if (onSelectSlot && chosenSlot) {
-      onSelectSlot(coach, chosenSlot);
+      onSelectSlot(activeCoach, chosenSlot);
     } else {
       setBookSuccess(true);
       setTimeout(() => {
-        navigate(`/portal/member/bookings?coachId=${coach.id}`);
+        navigate(`/portal/member/bookings?coachId=${activeCoach.id}`);
         onClose();
       }, 1000);
     }
@@ -161,14 +184,14 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
           <div className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden">
             {hasAvatar ? (
               <img
-                src={coach.avatarUrl!}
-                alt={coach.fullName}
+                src={activeCoach.avatarUrl!}
+                alt={activeCoach.fullName}
                 className="w-full h-full object-cover object-top opacity-60 filter contrast-105"
               />
             ) : (
               <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-center p-6 select-none">
                 <div className="w-28 h-28 rounded-full bg-slate-800/80 border-2 border-emerald-500/40 flex items-center justify-center text-emerald-400 font-black text-4xl shadow-2xl mb-3">
-                  {getInitials(coach.fullName)}
+                  {getInitials(activeCoach.fullName)}
                 </div>
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
                   Chưa có ảnh đại diện
@@ -184,31 +207,31 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
             <div className="flex items-center gap-2">
               <span
                 className={cn(
-                  "inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold uppercase backdrop-blur-md border",
+                  "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase backdrop-blur-md border",
                   discColor
                 )}
               >
-                <DiscIcon className="w-3.5 h-3.5" />
+                <DiscIcon className="w-4 h-4" />
                 <span>{targetCode}</span>
               </span>
 
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-white/10 text-white backdrop-blur-md border border-white/20">
-                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                <span>{coach.rating.toFixed(1)} / 5.0</span>
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 backdrop-blur-md">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>HLV Đạt Chuẩn</span>
               </span>
             </div>
 
             <div className="pt-2">
               <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                {coach.fullName}
+                {activeCoach.fullName}
               </h2>
               <p className="text-xs font-semibold text-emerald-400 mt-1">
-                {coach.title}
+                {activeCoach.title}
               </p>
             </div>
           </div>
 
-          {/* Bottom stats box */}
+          {/* Bottom stats & contact box */}
           <div className="relative z-10 pt-8 space-y-4">
             <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-slate-900/80 backdrop-blur-md border border-white/10 text-center">
               <div>
@@ -216,7 +239,7 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
                   Kinh nghiệm
                 </span>
                 <span className="text-base font-extrabold text-white">
-                  {coach.experienceYears}+ Năm
+                  {activeCoach.experienceYears}+ Năm
                 </span>
               </div>
               <div className="border-x border-white/10">
@@ -224,7 +247,7 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
                   Đánh giá
                 </span>
                 <span className="text-base font-extrabold text-amber-400">
-                  {coach.rating.toFixed(1)} ★
+                  {activeCoach.rating.toFixed(1)} ★
                 </span>
               </div>
               <div>
@@ -232,30 +255,30 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
                   Học viên
                 </span>
                 <span className="text-base font-extrabold text-emerald-400">
-                  {coach.reviewCount}+
+                  {activeCoach.reviewCount}+
                 </span>
               </div>
             </div>
 
-            {/* Contact chips */}
+            {/* Contact chips from real BE user table */}
             <div className="flex flex-wrap gap-2 text-[11px] text-slate-400">
-              {coach.email && (
-                <span className="inline-flex items-center gap-1">
+              {activeCoach.email && (
+                <span className="inline-flex items-center gap-1 bg-slate-900/60 px-2.5 py-1 rounded-lg border border-white/10">
                   <Mail className="w-3 h-3 text-slate-400" />
-                  <span>{coach.email}</span>
+                  <span>{activeCoach.email}</span>
                 </span>
               )}
-              {coach.phone && (
-                <span className="inline-flex items-center gap-1">
+              {activeCoach.phone && (
+                <span className="inline-flex items-center gap-1 bg-slate-900/60 px-2.5 py-1 rounded-lg border border-white/10">
                   <Phone className="w-3 h-3 text-slate-400" />
-                  <span>{coach.phone}</span>
+                  <span>{activeCoach.phone}</span>
                 </span>
               )}
             </div>
           </div>
         </div>
 
-        {/* RIGHT COLUMN: PRICING RATE, SPECIALTIES, AVAILABILITY SLOTS & ACTIONS */}
+        {/* RIGHT COLUMN: PRICING RATE, SPECIALTIES, BIO, AVAILABILITY SLOTS & ACTIONS */}
         <div className="lg:w-7/12 p-6 sm:p-8 flex flex-col justify-between space-y-6 bg-slate-50/50">
           <div className="space-y-6">
             {/* 1. PRICING RATE BOX (Coach Pricing Rate API) */}
@@ -288,6 +311,17 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
                 </p>
               </div>
             </div>
+
+            {/* Bio info if available */}
+            {bio && (
+              <div className="p-4 rounded-xl bg-white border border-slate-200/80 space-y-1.5">
+                <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Giới thiệu bản thân</span>
+                </h4>
+                <p className="text-xs text-slate-600 leading-relaxed">{bio}</p>
+              </div>
+            )}
 
             {/* 2. TECHNICAL SPECIALTY MAPPING (Coach Specialty Mapping API) */}
             <div className="space-y-2.5">
