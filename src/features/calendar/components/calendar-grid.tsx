@@ -3,7 +3,6 @@ import type {
   CalendarSchedule,
   CalendarPtSlot,
   CalendarBooking,
-  CalendarViewMode,
 } from '../types/calendar.types'
 import {
   getWeekDays,
@@ -25,12 +24,20 @@ export type CalendarEventItem =
 
 const ACTIVE_BOOKING_STATUSES = new Set(['CONFIRMED', 'PENDING'])
 
+const disciplineEventClass = (code?: string, name?: string) => {
+  const value = `${code ?? ''} ${name ?? ''}`.toLowerCase()
+  if (value.includes('gym') || value.includes('fitness')) return 'bg-orange-50 border-orange-300 text-orange-950 hover:bg-orange-100 hover:border-orange-400'
+  if (value.includes('box') || value.includes('combat')) return 'bg-rose-50 border-rose-300 text-rose-950 hover:bg-rose-100 hover:border-rose-400'
+  if (value.includes('yoga')) return 'bg-violet-50 border-violet-300 text-violet-950 hover:bg-violet-100 hover:border-violet-400'
+  if (value.includes('dance') || value.includes('zumba')) return 'bg-amber-50 border-amber-300 text-amber-950 hover:bg-amber-100 hover:border-amber-400'
+  return 'bg-cyan-50 border-cyan-300 text-cyan-950 hover:bg-cyan-100 hover:border-cyan-400'
+}
+
 interface CalendarGridProps {
   currentWeek: string // YYYY-MM-DD (Monday)
   schedules: CalendarSchedule[]
   ptSlots: CalendarPtSlot[]
   bookings: CalendarBooking[]
-  viewMode: CalendarViewMode
   onSelectEvent: (event: CalendarEventItem) => void
 }
 
@@ -39,27 +46,25 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
   schedules,
   ptSlots,
   bookings,
-  viewMode,
   onSelectEvent,
 }) => {
   const weekDays = getWeekDays(currentWeek)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
-  // Auto-scroll to 07:00 on initial mount
+  // The calendar begins at 05:00 so a 05:45 session is never hidden above the viewport.
   useEffect(() => {
     if (scrollContainerRef.current) {
-      const scrollPosition = (7 - CALENDAR_START_HOUR) * HOUR_HEIGHT_PX
-      scrollContainerRef.current.scrollTop = scrollPosition
+      scrollContainerRef.current.scrollTop = 0
     }
   }, [currentWeek])
 
   // Hours array from CALENDAR_START_HOUR to CALENDAR_END_HOUR
   const hours = Array.from(
-    { length: CALENDAR_END_HOUR - CALENDAR_START_HOUR + 1 },
+    { length: CALENDAR_END_HOUR - CALENDAR_START_HOUR },
     (_, i) => CALENDAR_START_HOUR + i,
   )
 
-  const totalGridHeight = (CALENDAR_END_HOUR - CALENDAR_START_HOUR + 1) * HOUR_HEIGHT_PX
+  const totalGridHeight = (CALENDAR_END_HOUR - CALENDAR_START_HOUR) * HOUR_HEIGHT_PX
   const currentTimeTop = getCurrentTimeTop()
 
   // Helper to check if a booking matches a schedule
@@ -86,9 +91,8 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
       return bDate === dateString && ACTIVE_BOOKING_STATUSES.has(b.status)
     })
 
-    // 1. Group classes (schedules)
-    if (viewMode === 'all' || viewMode === 'group') {
-      schedules
+    // 1. Every discipline view includes group classes.
+    schedules
         .filter((s) => formatDateToYMD(new Date(s.startAt)) === dateString)
         .forEach((schedule) => {
           const { top, height } = calculateEventPosition(schedule.startAt, schedule.endAt)
@@ -110,7 +114,10 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                   ? 'bg-emerald-500/15 border-emerald-500 text-emerald-950 ring-1 ring-emerald-500/30 hover:bg-emerald-500/25'
                   : isFull
                     ? 'bg-slate-100 border-slate-300 text-slate-500 opacity-75 hover:bg-slate-200'
-                    : 'bg-sky-50 border-sky-300 text-sky-950 hover:bg-sky-100/90 hover:border-sky-400 hover:shadow-xs',
+                    : `${disciplineEventClass(
+                        schedule.discipline?.code,
+                        schedule.discipline?.name || schedule.class?.name,
+                      )} hover:shadow-xs`,
               )}
             >
               <div className="flex items-start justify-between gap-1 mb-1">
@@ -156,11 +163,9 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
             </div>,
           )
         })
-    }
 
-    // 2. Personal Training slots (PT)
-    if (viewMode === 'all' || viewMode === 'pt') {
-      ptSlots
+    // 2. It also includes available PT slots.
+    ptSlots
         .filter((pt) => formatDateToYMD(new Date(pt.startAt)) === dateString)
         .forEach((ptSlot) => {
           const { top, height } = calculateEventPosition(ptSlot.startAt, ptSlot.endAt)
@@ -215,11 +220,15 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
             </div>,
           )
         })
-    }
 
-    // 3. Standalone confirmed bookings if in "mine" view mode
-    if (viewMode === 'mine') {
-      dayBookings.forEach((b) => {
+    // 3. Keep the member's booking visible even if the matching source slot is absent.
+    dayBookings
+      .filter(
+        (booking) =>
+          !schedules.some((schedule) => schedule.id === booking.scheduleId) &&
+          !ptSlots.some((slot) => slot.id === booking.coachAvailabilityId),
+      )
+      .forEach((b) => {
         const { top, height } = calculateEventPosition(b.startAt, b.endAt)
         events.push(
           <div
@@ -256,7 +265,6 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
           </div>,
         )
       })
-    }
 
     return events
   }
@@ -316,7 +324,12 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                 style={{ height: `${HOUR_HEIGHT_PX}px` }}
                 className="relative border-b border-slate-200/60 text-right pr-2 sm:pr-3"
               >
-                <span className="text-[11px] font-medium text-slate-400 -translate-y-2 block">
+                <span
+                  className={cn(
+                    'text-[11px] font-medium text-slate-400 block',
+                    hour === CALENDAR_START_HOUR ? 'translate-y-1' : '-translate-y-2',
+                  )}
+                >
                   {String(hour).padStart(2, '0')}:00
                 </span>
               </div>

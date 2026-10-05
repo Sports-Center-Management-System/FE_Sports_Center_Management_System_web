@@ -83,8 +83,8 @@ export const formatRangeLabel = (mondayYMD: string): string => {
   return `${start.dayNumber}/${start.monthNumber} - ${end.dayNumber}/${end.monthNumber}/${end.date.getFullYear()}`
 }
 
-export const CALENDAR_START_HOUR = 6 // 06:00
-export const CALENDAR_END_HOUR = 22 // 22:00
+export const CALENDAR_START_HOUR = 5 // 05:00, allowing 05:45 sessions to be visible
+export const CALENDAR_END_HOUR = 21 // The final visible boundary is 21:00
 export const HOUR_HEIGHT_PX = 68 // Height in px for 1 hour row
 
 /**
@@ -102,7 +102,7 @@ export const calculateEventPosition = (
 
   // Clamp within calendar boundaries
   const clampedStart = Math.max(startHour, CALENDAR_START_HOUR)
-  const clampedEnd = Math.min(Math.max(endHour, clampedStart + 0.5), CALENDAR_END_HOUR + 1)
+  const clampedEnd = Math.min(Math.max(endHour, clampedStart + 0.5), CALENDAR_END_HOUR)
 
   const top = (clampedStart - CALENDAR_START_HOUR) * HOUR_HEIGHT_PX
   const height = Math.max((clampedEnd - clampedStart) * HOUR_HEIGHT_PX, 32)
@@ -116,7 +116,7 @@ export const calculateEventPosition = (
 export const getCurrentTimeTop = (): number | null => {
   const now = new Date()
   const currentHour = now.getHours() + now.getMinutes() / 60
-  if (currentHour < CALENDAR_START_HOUR || currentHour > CALENDAR_END_HOUR + 1) {
+  if (currentHour < CALENDAR_START_HOUR || currentHour > CALENDAR_END_HOUR) {
     return null
   }
   return (currentHour - CALENDAR_START_HOUR) * HOUR_HEIGHT_PX

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router'
-import type { CalendarResponseData, CalendarViewMode, Discipline } from '../types/calendar.types'
+import type { CalendarResponseData, Discipline } from '../types/calendar.types'
 import {
   getCalendarApi,
   bookGroupClassApi,
@@ -34,14 +34,12 @@ export const CalendarPage: React.FC = () => {
 
   // URL Query Parameters
   const weekParam = searchParams.get('week')
-  const viewParam = (searchParams.get('view') as CalendarViewMode) || 'all'
   const disciplineParam = searchParams.get('disciplineId') || 'all'
 
   // State
   const [currentWeek, setCurrentWeek] = useState<string>(() => {
     return weekParam ? getMondayOfWeek(weekParam) : getMondayOfWeek()
   })
-  const [viewMode, setViewMode] = useState<CalendarViewMode>(viewParam)
   const [selectedDisciplineId, setSelectedDisciplineId] = useState<string>(disciplineParam)
 
   const [calendarData, setCalendarData] = useState<CalendarResponseData | null>(null)
@@ -67,12 +65,9 @@ export const CalendarPage: React.FC = () => {
 
   // Sync state with URL params
   const updateUrlParams = useCallback(
-    (week: string, view: CalendarViewMode, disciplineId: string) => {
+    (week: string, disciplineId: string) => {
       const params = new URLSearchParams()
       params.set('week', week)
-      if (view !== 'all') {
-        params.set('view', view)
-      }
       if (disciplineId !== 'all') {
         params.set('disciplineId', disciplineId)
       }
@@ -103,7 +98,7 @@ export const CalendarPage: React.FC = () => {
     try {
       const data = await getCalendarApi({
         week: currentWeek,
-        view: viewMode,
+        view: 'all',
         disciplineId: selectedDisciplineId,
       })
       setCalendarData(data)
@@ -113,7 +108,7 @@ export const CalendarPage: React.FC = () => {
     } finally {
       setIsLoading(false)
     }
-  }, [currentWeek, viewMode, selectedDisciplineId])
+  }, [currentWeek, selectedDisciplineId])
 
   useEffect(() => {
     const requestId = window.setTimeout(() => {
@@ -127,23 +122,18 @@ export const CalendarPage: React.FC = () => {
     const offset = direction === 'next' ? 1 : -1
     const newWeek = shiftWeek(currentWeek, offset)
     setCurrentWeek(newWeek)
-    updateUrlParams(newWeek, viewMode, selectedDisciplineId)
+    updateUrlParams(newWeek, selectedDisciplineId)
   }
 
   const handleGoToCurrentWeek = () => {
     const thisMonday = getMondayOfWeek()
     setCurrentWeek(thisMonday)
-    updateUrlParams(thisMonday, viewMode, selectedDisciplineId)
-  }
-
-  const handleViewModeChange = (mode: CalendarViewMode) => {
-    setViewMode(mode)
-    updateUrlParams(currentWeek, mode, selectedDisciplineId)
+    updateUrlParams(thisMonday, selectedDisciplineId)
   }
 
   const handleDisciplineChange = (discId: string) => {
     setSelectedDisciplineId(discId)
-    updateUrlParams(currentWeek, viewMode, discId)
+    updateUrlParams(currentWeek, discId)
   }
 
   // Booking actions
@@ -204,8 +194,6 @@ export const CalendarPage: React.FC = () => {
         currentWeek={currentWeek}
         onWeekChange={handleWeekChange}
         onGoToCurrentWeek={handleGoToCurrentWeek}
-        viewMode={viewMode}
-        onViewModeChange={handleViewModeChange}
         selectedDisciplineId={selectedDisciplineId}
         onDisciplineChange={handleDisciplineChange}
         disciplines={disciplines}
@@ -238,7 +226,6 @@ export const CalendarPage: React.FC = () => {
               schedules={calendarData?.schedules || []}
               ptSlots={calendarData?.ptSlots || []}
               bookings={calendarData?.bookings || []}
-              viewMode={viewMode}
               onSelectEvent={(event) => setSelectedEvent(event)}
             />
           </div>
