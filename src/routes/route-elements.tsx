@@ -31,7 +31,7 @@ export function CalendarRoute() {
     next.set('week', mondayInVietnam())
     return <Navigate to={`/portal/member/bookings?${next}`} replace />
   }
-  return <CalendarPage week={week} />
+  return <CalendarPage />
 }
 export function CalendarAlias({ view }: { view: 'group' | 'pt' }) {
   const [params] = useSearchParams()
