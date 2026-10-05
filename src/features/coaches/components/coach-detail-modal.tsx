@@ -79,33 +79,7 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
           ) {
             setSlots(activeCoach.coachAvailabilities);
           } else {
-            // Default active demo slots if coach has not scheduled slots yet
-            setSlots([
-              {
-                id: `slot-${coach.id}-1`,
-                coachId: coach.id,
-                startTime: "2026-10-06T09:00:00Z",
-                endTime: "2026-10-06T10:00:00Z",
-                isBooked: false,
-                timeRange: "09:00 - 10:00",
-              },
-              {
-                id: `slot-${coach.id}-2`,
-                coachId: coach.id,
-                startTime: "2026-10-06T14:30:00Z",
-                endTime: "2026-10-06T15:30:00Z",
-                isBooked: false,
-                timeRange: "14:30 - 15:30",
-              },
-              {
-                id: `slot-${coach.id}-3`,
-                coachId: coach.id,
-                startTime: "2026-10-06T18:00:00Z",
-                endTime: "2026-10-06T19:00:00Z",
-                isBooked: false,
-                timeRange: "18:00 - 19:00",
-              },
-            ]);
+            setSlots([]);
           }
         })
         .finally(() => setIsLoadingSlots(false));
@@ -373,56 +347,62 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {slots.map((slot) => {
-                  const isSelected = selectedSlotId === slot.id;
-                  const formatSlotTime = (t: string) => {
-                    if (!t) return "";
-                    if (t.includes("T")) {
-                      const d = new Date(t);
-                      if (!isNaN(d.getTime())) {
-                        return d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+                {slots.length > 0 ? (
+                  slots.map((slot) => {
+                    const isSelected = selectedSlotId === slot.id;
+                    const formatSlotTime = (t: string) => {
+                      if (!t) return "";
+                      if (t.includes("T")) {
+                        const d = new Date(t);
+                        if (!isNaN(d.getTime())) {
+                          return d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+                        }
                       }
-                    }
-                    return t.slice(0, 5);
-                  };
-                  const displayTime =
-                    slot.timeRange ||
-                    `${formatSlotTime(slot.startTime)} - ${formatSlotTime(slot.endTime)}`;
+                      return t.slice(0, 5);
+                    };
+                    const displayTime =
+                      slot.timeRange ||
+                      `${formatSlotTime(slot.startTime)} - ${formatSlotTime(slot.endTime)}`;
 
-                  return (
-                    <button
-                      key={slot.id}
-                      type="button"
-                      disabled={slot.isBooked}
-                      onClick={() => setSelectedSlotId(slot.id)}
-                      className={cn(
-                        "p-2.5 rounded-xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[58px]",
-                        slot.isBooked
-                          ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-60"
-                          : isSelected
-                            ? "!bg-emerald-600 !border-emerald-600 !text-white shadow-md scale-[1.02]"
-                            : "bg-white border-slate-200 text-slate-800 hover:border-emerald-400 hover:bg-emerald-50/30"
-                      )}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-extrabold">{displayTime}</span>
-                        {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
-                      </div>
-                      <span
+                    return (
+                      <button
+                        key={slot.id}
+                        type="button"
+                        disabled={slot.isBooked}
+                        onClick={() => setSelectedSlotId(slot.id)}
                         className={cn(
-                          "text-[10px] font-semibold",
+                          "p-2.5 rounded-xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[58px]",
                           slot.isBooked
-                            ? "text-slate-400"
+                            ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-60"
                             : isSelected
-                              ? "text-emerald-100"
-                              : "text-emerald-600"
+                              ? "!bg-emerald-600 !border-emerald-600 !text-white shadow-md scale-[1.02]"
+                              : "bg-white border-slate-200 text-slate-800 hover:border-emerald-400 hover:bg-emerald-50/30"
                         )}
                       >
-                        {slot.isBooked ? "Đã được đặt" : "Trống (Có thể đặt)"}
-                      </span>
-                    </button>
-                  );
-                })}
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-extrabold">{displayTime}</span>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
+                        </div>
+                        <span
+                          className={cn(
+                            "text-[10px] font-semibold",
+                            slot.isBooked
+                              ? "text-slate-400"
+                              : isSelected
+                                ? "text-emerald-100"
+                                : "text-emerald-600"
+                          )}
+                        >
+                          {slot.isBooked ? "Đã được đặt" : "Trống (Có thể đặt)"}
+                        </span>
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="col-span-full p-4 rounded-xl bg-white border border-slate-200 text-slate-500 text-xs font-medium text-center">
+                    Hiện chưa có khung giờ rảnh nào mở trong hệ thống cho HLV này.
+                  </div>
+                )}
               </div>
             </div>
           </div>
