@@ -1,1 +1,1 @@
-export { CalendarPage, CalendarPage as default, ClassCard, SlotCard } from "@/features/calendar";
+export { CalendarPage, CalendarPage as default } from "@/features/calendar";
