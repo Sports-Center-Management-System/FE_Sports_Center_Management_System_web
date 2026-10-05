@@ -153,9 +153,9 @@ describe("Coaches Feature (/api/v1/coaches)", () => {
     expect(screen.getByText("NH")).toBeDefined();
     expect(screen.getByText("TL")).toBeDefined();
 
-    // Verify Navigation Arrows for Gym section
-    expect(screen.getByLabelText("Xem HLV Gym & Fitness trước")).toBeDefined();
-    expect(screen.getByLabelText("Xem HLV Gym & Fitness tiếp theo")).toBeDefined();
+    // Verify Horizontal Navigation Arrows for Gym section
+    expect(screen.getByLabelText("Cuộn trái danh sách HLV Gym & Fitness")).toBeDefined();
+    expect(screen.getByLabelText("Cuộn phải danh sách HLV Gym & Fitness")).toBeDefined();
   });
 
   it("filters coaches by discipline tab", async () => {

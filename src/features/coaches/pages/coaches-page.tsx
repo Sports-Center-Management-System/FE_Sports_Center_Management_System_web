@@ -104,72 +104,41 @@ const DisciplineCoachSection: React.FC<DisciplineCoachSectionProps> = ({
   return (
     <section className="space-y-4 pt-4">
       {/* Section Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 pb-3 border-b border-slate-200/80">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-[#008b74] flex items-center justify-center shrink-0 shadow-xs">
-            <DiscIcon className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
-                {discipline.name}
-              </h2>
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-slate-100 text-slate-700 border border-slate-200/80">
-                {coaches.length} HLV
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{tagline}</p>
-          </div>
+      <div className="flex items-center gap-3 pb-3 border-b border-slate-200/80">
+        <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-[#008b74] flex items-center justify-center shrink-0 shadow-xs">
+          <DiscIcon className="w-5 h-5" />
         </div>
-
-        {/* Top Header Navigation Arrows */}
-        <div className="flex items-center gap-2 self-end sm:self-auto">
-          <button
-            type="button"
-            onClick={() => handleScroll("left")}
-            disabled={!canScroll}
-            aria-label={`Xem HLV ${discipline.name} trước`}
-            title="Xem HLV trước"
-            className={cn(
-              "w-9 h-9 sm:w-10 sm:h-10 rounded-full border flex items-center justify-center transition-all duration-200 shadow-xs",
-              canScroll
-                ? "bg-white border-slate-200 text-slate-700 hover:bg-slate-900 hover:text-white hover:border-slate-900 cursor-pointer active:scale-95"
-                : "bg-slate-50 border-slate-200/60 text-slate-300 cursor-not-allowed"
-            )}
-          >
-            <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => handleScroll("right")}
-            disabled={!canScroll}
-            aria-label={`Xem HLV ${discipline.name} tiếp theo`}
-            title="Xem HLV tiếp theo"
-            className={cn(
-              "w-9 h-9 sm:w-10 sm:h-10 rounded-full border flex items-center justify-center transition-all duration-200 shadow-xs",
-              canScroll
-                ? "bg-white border-slate-200 text-slate-700 hover:bg-slate-900 hover:text-white hover:border-slate-900 cursor-pointer active:scale-95"
-                : "bg-slate-50 border-slate-200/60 text-slate-300 cursor-not-allowed"
-            )}
-          >
-            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
+        <div>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+              {discipline.name}
+            </h2>
+            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-slate-100 text-slate-700 border border-slate-200/80">
+              {coaches.length} HLV
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{tagline}</p>
         </div>
       </div>
 
-      {/* Row with Coach Cards and Floating Arrows */}
+      {/* Row with Coach Cards and Horizontal Navigation Arrows */}
       <div className="relative group/row">
-        {/* Floating Left Arrow */}
-        {canScroll && (
-          <button
-            type="button"
-            onClick={() => handleScroll("left")}
-            aria-label={`Cuộn trái ${discipline.name}`}
-            className="hidden md:flex absolute -left-4 top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full bg-white/95 backdrop-blur-md shadow-xl border border-slate-200/90 text-slate-800 hover:bg-slate-900 hover:text-white items-center justify-center transition-all duration-200 cursor-pointer active:scale-90"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-        )}
+        {/* Horizontal Navigation Left Arrow */}
+        <button
+          type="button"
+          onClick={() => handleScroll("left")}
+          disabled={!canScroll}
+          aria-label={`Cuộn trái danh sách HLV ${discipline.name}`}
+          title="Cuộn sang trái"
+          className={cn(
+            "flex absolute -left-3 sm:-left-5 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/95 backdrop-blur-md shadow-xl border border-slate-200/90 text-slate-800 transition-all duration-200 items-center justify-center",
+            canScroll
+              ? "hover:bg-slate-900 hover:text-white cursor-pointer active:scale-90 opacity-100"
+              : "opacity-0 sm:opacity-40 cursor-not-allowed pointer-events-none"
+          )}
+        >
+          <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+        </button>
 
         {/* Horizontally Scrollable Coach Cards Track */}
         <div
@@ -192,17 +161,22 @@ const DisciplineCoachSection: React.FC<DisciplineCoachSectionProps> = ({
           ))}
         </div>
 
-        {/* Floating Right Arrow */}
-        {canScroll && (
-          <button
-            type="button"
-            onClick={() => handleScroll("right")}
-            aria-label={`Cuộn phải ${discipline.name}`}
-            className="hidden md:flex absolute -right-4 top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full bg-white/95 backdrop-blur-md shadow-xl border border-slate-200/90 text-slate-800 hover:bg-slate-900 hover:text-white items-center justify-center transition-all duration-200 cursor-pointer active:scale-90"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
-        )}
+        {/* Horizontal Navigation Right Arrow */}
+        <button
+          type="button"
+          onClick={() => handleScroll("right")}
+          disabled={!canScroll}
+          aria-label={`Cuộn phải danh sách HLV ${discipline.name}`}
+          title="Cuộn sang phải"
+          className={cn(
+            "flex absolute -right-3 sm:-right-5 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/95 backdrop-blur-md shadow-xl border border-slate-200/90 text-slate-800 transition-all duration-200 items-center justify-center",
+            canScroll
+              ? "hover:bg-slate-900 hover:text-white cursor-pointer active:scale-90 opacity-100"
+              : "opacity-0 sm:opacity-40 cursor-not-allowed pointer-events-none"
+          )}
+        >
+          <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+        </button>
       </div>
     </section>
   );
