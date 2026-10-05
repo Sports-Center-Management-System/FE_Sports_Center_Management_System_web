@@ -16,75 +16,30 @@ import {
   Lock,
   Camera,
   X,
-  Check,
   Link as LinkIcon,
   Trash2,
+  CreditCard,
+  Activity,
+  Award,
 } from "lucide-react";
 import { useSession } from "@/auth/session-context";
 import { PageTitle } from "@/components/common/page-title";
 import { StateMessage } from "@/components/feedback/state-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { get, put, errorText } from "@/lib/api";
+import { errorText } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import type {
+  UserProfile,
+  UpdateProfileDto,
+  GenderType,
+} from "../types/profile.types";
+import { getGenderLabel, getInitials } from "../utils/profile.utils";
+import { profileApiService } from "../services/profile-api.service";
 
 // ==========================================
-// 1. TYPES & INTERFACES
+// 1. CONSTANTS & SUGGESTIONS
 // ==========================================
-export type GenderType = "MALE" | "FEMALE" | "OTHER";
-
-export interface UserProfile {
-  id: string;
-  email: string;
-  fullName: string;
-  phone?: string;
-  role: string;
-  avatarUrl?: string;
-  gender?: GenderType;
-  fitnessGoals?: string;
-  medicalHistory?: string;
-  heightCm?: number;
-  isActive?: boolean;
-  memberProfile?: {
-    fitnessGoals?: string;
-    medicalHistory?: string;
-    heightCm?: number;
-    gender?: GenderType;
-  };
-}
-
-export interface UpdateProfileDto {
-  fullName: string;
-  phone?: string;
-  avatarUrl?: string;
-  gender?: GenderType;
-  heightCm?: number;
-  fitnessGoals?: string;
-  medicalHistory?: string;
-}
-
-// ==========================================
-// 2. CONSTANTS & PRESETS
-// ==========================================
-const PRESET_AVATARS = [
-  {
-    name: "Nam Thể Thao",
-    url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
-  },
-  {
-    name: "Nữ Fitness",
-    url: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80",
-  },
-  {
-    name: "Nam PT Gym",
-    url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80",
-  },
-  {
-    name: "Nữ Yoga",
-    url: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80",
-  },
-];
-
 const FITNESS_GOAL_SUGGESTIONS = [
   "Tăng 2kg cơ bắp",
   "Giảm 3kg mỡ thừa",
@@ -98,158 +53,11 @@ const MEDICAL_SUGGESTIONS = [
   "Không có bệnh lý nền, sức khỏe tốt",
   "Đau mỏi vai gáy do ngồi văn phòng",
   "Khớp gối cần tránh bài tập quá nặng",
-  "Cần khởi động kỹ khớp cổ chân",
+  "Huyết áp ổn định, tập cardio nhẹ",
 ];
 
-export function getGenderLabel(gender?: GenderType): {
-  label: string;
-  icon: string;
-  className: string;
-} {
-  if (gender === "FEMALE") {
-    return {
-      label: "Nữ",
-      icon: "♀",
-      className: "bg-rose-500/10 text-rose-300 border-rose-500/20",
-    };
-  }
-  if (gender === "OTHER") {
-    return {
-      label: "Khác",
-      icon: "⚧",
-      className: "bg-purple-500/10 text-purple-300 border-purple-500/20",
-    };
-  }
-  return {
-    label: "Nam",
-    icon: "♂",
-    className: "bg-sky-500/10 text-sky-300 border-sky-500/20",
-  };
-}
-
 // ==========================================
-// 3. STORAGE & API SERVICE
-// ==========================================
-const MOCK_PROFILE_STORAGE_KEY = "sportscenter.mock_profile";
-
-function getStoredMockProfile(): UserProfile | null {
-  try {
-    const raw = localStorage.getItem(MOCK_PROFILE_STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as UserProfile;
-  } catch {
-    // Ignore parse error
-  }
-  return null;
-}
-
-function saveStoredMockProfile(profile: UserProfile): void {
-  try {
-    localStorage.setItem(MOCK_PROFILE_STORAGE_KEY, JSON.stringify(profile));
-    const rawAuth = localStorage.getItem("auth_user");
-    if (rawAuth) {
-      const auth = JSON.parse(rawAuth);
-      auth.fullName = profile.fullName;
-      auth.avatarUrl = profile.avatarUrl;
-      localStorage.setItem("auth_user", JSON.stringify(auth));
-      window.dispatchEvent(new Event("session-changed"));
-    }
-  } catch {
-    // Ignore write error
-  }
-}
-
-export const profileApiService = {
-  async getProfile(): Promise<UserProfile> {
-    const stored = getStoredMockProfile();
-    try {
-      const beData = await get<UserProfile>("/users/profile/me");
-      if (beData) {
-        const merged: UserProfile = {
-          id: beData.id,
-          email: beData.email,
-          fullName: beData.fullName,
-          phone: beData.phone || stored?.phone || "",
-          role: beData.role,
-          avatarUrl: beData.avatarUrl !== undefined ? beData.avatarUrl : stored?.avatarUrl ?? "",
-          gender: beData.gender || stored?.gender || beData.memberProfile?.gender || "MALE",
-          fitnessGoals:
-            beData.fitnessGoals ?? beData.memberProfile?.fitnessGoals ?? stored?.fitnessGoals ?? "Tăng 2kg cơ, cải thiện sức bền",
-          medicalHistory:
-            beData.medicalHistory ?? beData.memberProfile?.medicalHistory ?? stored?.medicalHistory ?? "Không có bệnh lý nền",
-          heightCm: beData.heightCm ?? beData.memberProfile?.heightCm ?? stored?.heightCm ?? 175,
-          isActive: beData.isActive ?? true,
-          memberProfile: beData.memberProfile,
-        };
-        saveStoredMockProfile(merged);
-        return merged;
-      }
-    } catch {
-      // Backend request failed or BE not available yet -> fall back to mock
-    }
-
-    if (stored) return stored;
-
-    const defaultProfile: UserProfile = {
-      id: "usr-mock-001",
-      email: "member@sportscenter.vn",
-      fullName: "Nguyễn Văn A",
-      phone: "0901234567",
-      role: "MEMBER",
-      avatarUrl: "",
-      gender: "MALE",
-      fitnessGoals: "Tăng 2kg cơ, cải thiện vóc dáng",
-      medicalHistory: "Không có bệnh lý nền, sức khỏe tốt",
-      heightCm: 175,
-      isActive: true,
-    };
-    saveStoredMockProfile(defaultProfile);
-    return defaultProfile;
-  },
-
-  async updateProfile(dto: UpdateProfileDto): Promise<UserProfile> {
-    const stored = getStoredMockProfile();
-    let updatedBeData: UserProfile | null = null;
-
-    try {
-      updatedBeData = await put<UserProfile>("/users/profile/me", {
-        fullName: dto.fullName,
-        phone: dto.phone,
-        avatarUrl: dto.avatarUrl,
-        fitnessGoals: dto.fitnessGoals,
-        medicalHistory: dto.medicalHistory,
-        ...(dto.heightCm ? { heightCm: dto.heightCm } : {}),
-      });
-    } catch {
-      // Backend failed or endpoint not implemented -> use mock update
-    }
-
-    const updatedProfile: UserProfile = {
-      id: updatedBeData?.id || stored?.id || "usr-current",
-      email: updatedBeData?.email || stored?.email || "member@sportscenter.vn",
-      fullName: dto.fullName,
-      phone: dto.phone || "",
-      role: updatedBeData?.role || stored?.role || "MEMBER",
-      avatarUrl: dto.avatarUrl || "",
-      gender: dto.gender || stored?.gender || "MALE",
-      fitnessGoals: dto.fitnessGoals || "",
-      medicalHistory: dto.medicalHistory || "",
-      heightCm: dto.heightCm,
-      isActive: true,
-      memberProfile: {
-        fitnessGoals: dto.fitnessGoals,
-        medicalHistory: dto.medicalHistory,
-        heightCm: dto.heightCm,
-        gender: dto.gender,
-      },
-    };
-
-    saveStoredMockProfile(updatedProfile);
-    return updatedProfile;
-  },
-};
-
-// ==========================================
-// 4. SUBCOMPONENT: PROFILE HEADER (HERO & AVATAR)
+// 2. SUBCOMPONENT: PROFILE HEADER (HERO & AVATAR)
 // ==========================================
 interface ProfileHeaderProps {
   profile: UserProfile;
@@ -279,7 +87,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   const displayAvatar = avatarUrl !== undefined ? avatarUrl : profile.avatarUrl;
   const displayName = liveFullName || profile.fullName || "Hội viên Sports Center";
   const displayPhone = livePhone !== undefined ? livePhone : profile.phone;
-  const displayGender = liveGender || profile.gender || profile.memberProfile?.gender || "MALE";
+  const displayGender = liveGender || profile.gender || "MALE";
   const displayHeight = liveHeightCm !== undefined ? liveHeightCm : profile.heightCm;
   const displayGoals = liveFitnessGoals !== undefined ? liveFitnessGoals : profile.fitnessGoals;
 
@@ -305,7 +113,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       <div className="absolute -bottom-10 left-1/4 w-72 h-72 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6">
-        {/* Avatar Trigger with camera */}
+        {/* Avatar Trigger with camera & Initials fallback */}
         <div className="relative shrink-0 group">
           <div
             className={cn(
@@ -323,8 +131,10 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
             ) : (
-              <div className="flex flex-col items-center justify-center text-center p-2">
-                <User className="w-10 h-10 text-slate-500 mb-1" />
+              <div className="flex flex-col items-center justify-center text-center p-2 select-none">
+                <span className="text-2xl font-black text-emerald-400 mb-1">
+                  {getInitials(displayName)}
+                </span>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                   Chưa có ảnh
                 </span>
@@ -350,7 +160,13 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Hội viên chính thức</span>
+              <span>
+                {profile.role === "COACH"
+                  ? "Huấn luyện viên chính thức"
+                  : profile.role === "ADMIN" || profile.role === "CENTER_MANAGER"
+                  ? "Quản trị viên hệ thống"
+                  : "Hội viên chính thức"}
+              </span>
             </span>
             <span
               className={cn(
@@ -399,7 +215,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         </div>
       </div>
 
-      {/* Modal Change Avatar */}
+      {/* Modal Change Avatar URL */}
       {showAvatarModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="w-full max-w-md bg-slate-900 border border-slate-700/80 rounded-3xl p-6 text-white shadow-2xl space-y-4">
@@ -423,36 +239,11 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 <span>Nhập URL ảnh đại diện</span>
               </div>
               <Input
-                placeholder="https://images.unsplash.com/..."
+                placeholder="https://example.com/avatar.jpg"
                 value={tempUrl}
                 onChange={(e) => setTempUrl(e.target.value)}
                 className="h-10 bg-slate-950 border-slate-700 text-xs text-white rounded-xl focus:border-emerald-500"
               />
-            </div>
-
-            {/* Presets */}
-            <div className="space-y-2 pt-1">
-              <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-amber-400" /> Ảnh mẫu gợi ý:
-              </span>
-              <div className="grid grid-cols-2 gap-2">
-                {PRESET_AVATARS.map((preset) => (
-                  <button
-                    key={preset.name}
-                    type="button"
-                    onClick={() => setTempUrl(preset.url)}
-                    className={cn(
-                      "px-3 py-2 rounded-xl text-xs font-bold border transition-all text-left flex items-center justify-between cursor-pointer",
-                      tempUrl === preset.url
-                        ? "!bg-emerald-500/20 !border-emerald-500 !text-emerald-300"
-                        : "!bg-slate-800/80 !border-slate-700 !text-slate-300 hover:!bg-slate-800 hover:!border-slate-600"
-                    )}
-                  >
-                    <span>{preset.name}</span>
-                    {tempUrl === preset.url && <Check className="w-3.5 h-3.5 text-emerald-400" />}
-                  </button>
-                ))}
-              </div>
             </div>
 
             {/* Actions */}
@@ -499,7 +290,149 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 };
 
 // ==========================================
-// 5. SUBCOMPONENT: PROFILE FORM (BENTO GRID)
+// 3. SUBCOMPONENT: ACTIVE SUBSCRIPTION & PHYSICAL STATS
+// ==========================================
+interface MemberStatusOverviewProps {
+  profile: UserProfile;
+}
+
+const MemberStatusOverview: React.FC<MemberStatusOverviewProps> = ({ profile }) => {
+  const activeSub = profile.subscriptions && profile.subscriptions.length > 0
+    ? profile.subscriptions[0]
+    : null;
+
+  const hasBodyStats =
+    profile.heightCm || profile.weightKg || profile.bmi || profile.bodyFatPct;
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      {/* 1. THẺ HỘI VIÊN & GÓI TẬP HIỆN HÀNH */}
+      <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm space-y-4 flex flex-col justify-between">
+        <div>
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <span className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-800">
+              <CreditCard className="w-4 h-4 text-[#008b74]" />
+              <span>Gói tập & Thẻ hội viên</span>
+            </span>
+            {activeSub ? (
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/70">
+                {activeSub.packageTier || "ACTIVE"}
+              </span>
+            ) : (
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-500">
+                Chưa có gói tập
+              </span>
+            )}
+          </div>
+
+          <div className="pt-3">
+            {activeSub ? (
+              <div className="space-y-3">
+                <div>
+                  <h4 className="text-lg font-black text-slate-900">
+                    {activeSub.plan?.name || "Gói tập hội viên"}
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {activeSub.plan?.description || "Quyền lợi tập luyện tại trung tâm"}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 space-y-1">
+                    <span className="text-[10px] font-bold text-slate-400 block uppercase">
+                      Buổi PT 1:1 còn lại
+                    </span>
+                    <span className="text-base font-extrabold text-[#008b74]">
+                      {activeSub.remainingPtSessions ?? activeSub.remainingSessions ?? 0} buổi
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 space-y-1">
+                    <span className="text-[10px] font-bold text-slate-400 block uppercase">
+                      Hạn gói tập
+                    </span>
+                    <span className="text-xs font-bold text-slate-700">
+                      {activeSub.endDate ? new Date(activeSub.endDate).toLocaleDateString("vi-VN") : "Đang duy trì"}
+                    </span>
+                  </div>
+                </div>
+
+                {activeSub.assignedCoach && (
+                  <div className="flex items-center gap-2 p-2 rounded-xl bg-emerald-50/60 border border-emerald-200/60 text-xs">
+                    <Award className="w-3.5 h-3.5 text-[#008b74] shrink-0" />
+                    <span className="text-slate-600">HLV cá nhân:</span>
+                    <span className="font-extrabold text-[#008b74]">
+                      {activeSub.assignedCoach.fullName}
+                    </span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="p-4 rounded-2xl bg-slate-50 text-slate-500 text-xs text-center border border-slate-200/80">
+                Bạn chưa đăng ký gói tập nào đang hoạt động.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 2. CHỈ SỐ THỂ CHẤT & INBODY */}
+      <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm space-y-4 flex flex-col justify-between">
+        <div>
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <span className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-800">
+              <Activity className="w-4 h-4 text-emerald-600" />
+              <span>Chỉ số thể chất & InBody</span>
+            </span>
+            <span className="text-[11px] text-slate-400 font-medium">Từ hồ sơ hệ thống</span>
+          </div>
+
+          <div className="pt-3">
+            {hasBodyStats ? (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Chiều cao</span>
+                  <span className="text-sm font-black text-slate-900">
+                    {profile.heightCm ? `${profile.heightCm} cm` : "--"}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Cân nặng</span>
+                  <span className="text-sm font-black text-slate-900">
+                    {profile.weightKg ? `${profile.weightKg} kg` : "--"}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Chỉ số BMI</span>
+                  <span className="text-sm font-black text-emerald-700">
+                    {profile.bmi ? `${profile.bmi}` : "--"}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Tỷ lệ mỡ</span>
+                  <span className="text-sm font-black text-amber-600">
+                    {profile.bodyFatPct ? `${profile.bodyFatPct}%` : "--"}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 rounded-2xl bg-slate-50 text-slate-500 text-xs text-center border border-slate-200/80">
+                Chưa có dữ liệu đo thể chất InBody được ghi nhận.
+              </div>
+            )}
+          </div>
+        </div>
+
+        <p className="text-[11px] text-slate-400 pt-1">
+          Các chỉ số InBody được cập nhật khi hội viên thực hiện đo kiểm thể chất định kỳ tại trung tâm.
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// ==========================================
+// 4. SUBCOMPONENT: PROFILE FORM (BENTO GRID)
 // ==========================================
 interface ProfileFormProps {
   initialData: UserProfile;
@@ -530,19 +463,12 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
 }) => {
   const [fullName, setFullName] = useState(initialData.fullName || "");
   const [phone, setPhone] = useState(initialData.phone || "");
-  const [gender, setGender] = useState<GenderType>(
-    initialData.gender || initialData.memberProfile?.gender || "MALE"
-  );
+  const [gender, setGender] = useState<GenderType>(initialData.gender || "MALE");
   const [heightCm, setHeightCm] = useState<string>(
     initialData.heightCm ? String(initialData.heightCm) : ""
   );
-  const [fitnessGoals, setFitnessGoals] = useState(
-    initialData.fitnessGoals || initialData.memberProfile?.fitnessGoals || ""
-  );
-  const [medicalHistory, setMedicalHistory] = useState(
-    initialData.medicalHistory || initialData.memberProfile?.medicalHistory || ""
-  );
-
+  const [fitnessGoals, setFitnessGoals] = useState(initialData.fitnessGoals || "");
+  const [medicalHistory, setMedicalHistory] = useState(initialData.medicalHistory || "");
   const [validationError, setValidationError] = useState("");
 
   useEffect(() => {
@@ -561,10 +487,10 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
     setFullName(initialData.fullName || "");
     setPhone(initialData.phone || "");
     onAvatarChange(initialData.avatarUrl || "");
-    setGender(initialData.gender || initialData.memberProfile?.gender || "MALE");
+    setGender(initialData.gender || "MALE");
     setHeightCm(initialData.heightCm ? String(initialData.heightCm) : "");
-    setFitnessGoals(initialData.fitnessGoals || initialData.memberProfile?.fitnessGoals || "");
-    setMedicalHistory(initialData.medicalHistory || initialData.memberProfile?.medicalHistory || "");
+    setFitnessGoals(initialData.fitnessGoals || "");
+    setMedicalHistory(initialData.medicalHistory || "");
     setValidationError("");
   };
 
@@ -837,7 +763,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
       {/* BOTTOM ACTION BAR */}
       <div className="flex items-center justify-between pt-2">
         <p className="text-xs text-slate-400 font-medium hidden sm:block">
-          Các thay đổi sẽ được đồng bộ ngay lập tức vào thẻ hội viên của bạn.
+          Các thay đổi sẽ được đồng bộ ngay lập tức vào hồ sơ hội viên của bạn.
         </p>
 
         <div className="flex items-center gap-3 ml-auto">
@@ -868,7 +794,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
 };
 
 // ==========================================
-// 6. MAIN PROFILE PAGE
+// 5. MAIN PROFILE PAGE
 // ==========================================
 export const ProfilePage: React.FC = () => {
   const { user, verify } = useSession();
@@ -881,7 +807,10 @@ export const ProfilePage: React.FC = () => {
     queryFn: () => profileApiService.getProfile(),
   });
 
-  const [avatarUrl, setAvatarUrl] = useState("");
+  const [customAvatarUrl, setCustomAvatarUrl] = useState<string | null>(null);
+  const activeAvatarUrl =
+    customAvatarUrl !== null ? customAvatarUrl : profileQuery.data?.avatarUrl || "";
+
   const [liveForm, setLiveForm] = useState<{
     fullName: string;
     phone: string;
@@ -890,17 +819,12 @@ export const ProfilePage: React.FC = () => {
     fitnessGoals: string;
   } | null>(null);
 
-  useEffect(() => {
-    if (profileQuery.data) {
-      setAvatarUrl(profileQuery.data.avatarUrl || "");
-    }
-  }, [profileQuery.data]);
-
   const saveMutation = useMutation({
     mutationFn: (dto: UpdateProfileDto) => profileApiService.updateProfile(dto),
     onSuccess: async () => {
       setSaveSuccess(true);
       setSaveError("");
+      setCustomAvatarUrl(null);
       await cache.invalidateQueries({
         queryKey: ["member", user?.id || "current", "profile"],
       });
@@ -941,8 +865,8 @@ export const ProfilePage: React.FC = () => {
           {/* Visual Hero Card with Avatar & Live Status */}
           <ProfileHeader
             profile={profileQuery.data}
-            avatarUrl={avatarUrl}
-            onAvatarChange={setAvatarUrl}
+            avatarUrl={activeAvatarUrl}
+            onAvatarChange={(url) => setCustomAvatarUrl(url)}
             liveFullName={liveForm?.fullName}
             livePhone={liveForm?.phone}
             liveGender={liveForm?.gender}
@@ -950,11 +874,14 @@ export const ProfilePage: React.FC = () => {
             liveFitnessGoals={liveForm?.fitnessGoals}
           />
 
+          {/* Connected Subscriptions & Physical InBody Stats Overview */}
+          <MemberStatusOverview profile={profileQuery.data} />
+
           {/* Clean 2-Column Bento Form */}
           <ProfileForm
             initialData={profileQuery.data}
-            avatarUrl={avatarUrl}
-            onAvatarChange={setAvatarUrl}
+            avatarUrl={activeAvatarUrl}
+            onAvatarChange={(url) => setCustomAvatarUrl(url)}
             onLiveChange={setLiveForm}
             onSubmit={handleSubmit}
             isSaving={saveMutation.isPending}
