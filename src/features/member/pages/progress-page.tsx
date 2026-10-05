@@ -1,53 +1,118 @@
-import React from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useSession } from "@/auth/session-context";
-import { PageTitle } from "@/components/common/page-title";
-import { StateMessage } from "@/components/feedback/state-message";
-import { get } from "@/lib/api";
-import { vietnamTime } from "@/lib/date";
-import type { InbodyLog } from "@/lib/types";
+import { lazy, Suspense } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { CalendarDays } from 'lucide-react'
+import { useSession } from '@/auth/session-context'
+import { PageTitle } from '@/components/common/page-title'
+import { StateMessage } from '@/components/feedback/state-message'
+import { Card } from '@/components/ui/card'
+import { get } from '@/lib/api'
+import type { InbodyLog } from '@/lib/types'
+import { InbodyBodyViewer } from '../components/inbody/inbody-body-viewer'
+import { InbodyMetricCard } from '../components/inbody/inbody-metric-card'
+import { InbodyComparison } from '../components/inbody/inbody-comparison'
+import { InbodyHistory } from '../components/inbody/inbody-history'
+import { InbodyVisualBoundary } from '../components/inbody/inbody-visual-boundary'
+import {
+  formatMeasurementDate,
+  inbodyMetrics,
+  prepareMeasurements,
+} from '../components/inbody/inbody-data'
+import '../components/inbody/inbody.css'
 
-export const ProgressPage: React.FC = () => {
-  const { user } = useSession();
+const InbodyProgressChart = lazy(() => import('../components/inbody/inbody-progress-chart'))
+
+export const ProgressPage = () => {
+  const { user } = useSession()
   const progress = useQuery({
-    queryKey: ["member", user!.id, "progress"],
-    queryFn: () => get<{ logs: InbodyLog[] }>("/inbody/my-progress"),
-  });
+    queryKey: ['member', user?.id, 'progress'],
+    queryFn: () => get<{ logs: InbodyLog[] }>('/inbody/my-progress'),
+    enabled: !!user,
+  })
+  const { history, chronological, undatedCount } = prepareMeasurements(progress.data?.logs)
+  const latest = chronological.at(-1)
+  const previous = chronological.at(-2)
+  const first = chronological[0]
 
   return (
-    <>
+    <div className="inbody-dashboard mx-auto max-w-6xl pb-6">
       <PageTitle eyebrow="MEM-11 · INBODY" title="Chỉ số cơ thể" />
-      <StateMessage
-        loading={progress.isPending}
-        error={progress.error}
-        empty={progress.data?.logs.length === 0}
-      />
-      <div className="card table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Ngày đo</th>
-              <th>Cân nặng</th>
-              <th>Mỡ cơ thể</th>
-              <th>Cơ</th>
-              <th>BMI</th>
-            </tr>
-          </thead>
-          <tbody>
-            {progress.data?.logs.map((item) => (
-              <tr key={item.id}>
-                <td>{vietnamTime(item.measuredAt)}</td>
-                <td>{item.weightKg ?? "—"} kg</td>
-                <td>{item.bodyFatPct ?? "—"}%</td>
-                <td>{item.muscleMassKg ?? "—"} kg</td>
-                <td>{item.bmi ?? "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <p className="-mt-3 mb-7 text-sm text-slate-500">
+        Theo dõi sự thay đổi cơ thể của bạn theo thời gian.
+      </p>
+      <div aria-live="polite" aria-busy={progress.isPending}>
+        <StateMessage
+          loading={progress.isPending}
+          error={progress.error}
+          empty={progress.isSuccess && history.length === 0}
+          emptyText="Bạn chưa có lần đo InBody nào. Các chỉ số sẽ xuất hiện sau lần đo đầu tiên."
+          onRetry={() => void progress.refetch()}
+        />
       </div>
-    </>
-  );
-};
+      {progress.isSuccess && (
+        <div className="space-y-6">
+          {undatedCount > 0 && (
+            <p className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
+              {undatedCount} bản ghi chưa có ngày đo hợp lệ, vẫn được giữ trong lịch sử. Tổng quan
+              và xu hướng chỉ sử dụng các lần đo có ngày hợp lệ.
+            </p>
+          )}
+          <section aria-label="Tổng quan cơ thể" className="grid min-w-0 grid-cols-2 gap-6">
+            <InbodyBodyViewer />
+            <Card className="min-w-0 p-6">
+              <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-bold text-slate-900">Lần đo mới nhất</h2>
+                  <p className="mt-2 text-xs text-slate-500">Các chỉ số được ghi nhận từ InBody.</p>
+                </div>
+                {latest && (
+                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-2 text-xs text-slate-600">
+                    <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
+                    {formatMeasurementDate(latest.timestamp)}
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {inbodyMetrics.map((metric) => (
+                  <InbodyMetricCard
+                    key={metric.key}
+                    metric={metric}
+                    current={latest?.[metric.key] ?? null}
+                    previous={previous?.[metric.key] ?? null}
+                  />
+                ))}
+              </div>
+              <p className="mt-5 text-xs leading-relaxed text-slate-500">
+                {latest
+                  ? 'Thay đổi được so với lần đo liền trước. Dấu — biểu thị chỉ số chưa được cung cấp.'
+                  : 'Chưa có lần đo hợp lệ để hiển thị chỉ số mới nhất.'}
+              </p>
+            </Card>
+          </section>
+          <InbodyVisualBoundary
+            fallback={
+              <Card role="status" className="text-sm text-slate-500">
+                Không thể hiển thị biểu đồ. Xem các chỉ số trong bảng lịch sử bên dưới.
+              </Card>
+            }
+          >
+            <Suspense
+              fallback={
+                <Card role="status" className="h-80 animate-pulse text-sm text-slate-500">
+                  Đang tải biểu đồ...
+                </Card>
+              }
+            >
+              <InbodyProgressChart measurements={chronological} />
+            </Suspense>
+          </InbodyVisualBoundary>
+          {first && latest && chronological.length >= 2 && (
+            <InbodyComparison first={first} current={latest} />
+          )}
+          <InbodyHistory measurements={history} latestKey={latest?.key} />
+        </div>
+      )}
+    </div>
+  )
+}
 
-export default ProgressPage;
+export default ProgressPage
