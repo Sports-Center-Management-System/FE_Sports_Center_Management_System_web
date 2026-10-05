@@ -30,6 +30,14 @@ export const PublicLayout: React.FC = () => {
               >
                 Khám phá gói tập
               </NavLink>
+              <NavLink
+                to="/coaches"
+                className={({ isActive }) =>
+                  isActive ? "text-[#008b74]" : "text-slate-600 hover:text-slate-900"
+                }
+              >
+                Huấn luyện viên
+              </NavLink>
 
               <div className="flex items-center gap-2">
                 <NavLink

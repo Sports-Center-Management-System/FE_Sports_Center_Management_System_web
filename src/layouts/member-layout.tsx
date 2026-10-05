@@ -10,6 +10,7 @@ import {
   BookOpen,
   CheckCircle2,
   Package,
+  Dumbbell,
   KeyRound,
   FileText,
   LogOut,
@@ -18,6 +19,7 @@ import { cn } from "@/lib/utils";
 
 const memberNavLinks = [
   { label: "Gói tập", path: "/portal/member/plans", icon: Package },
+  { label: "Huấn luyện viên", path: "/portal/member/coaches", icon: Dumbbell },
   { label: "Lịch tuần", path: "/portal/member/bookings", icon: Calendar },
   { label: "Gói của tôi", path: "/portal/member/subscriptions", icon: CreditCard },
   { label: "Giao dịch", path: "/portal/member/transactions", icon: History },

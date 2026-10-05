@@ -5,3 +5,4 @@ export * from "./checkout";
 export * from "./subscriptions";
 export * from "./calendar";
 export * from "./member";
+export * from "./coaches";
