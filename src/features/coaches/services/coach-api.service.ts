@@ -178,19 +178,11 @@ export const coachApiService = {
   },
 
   /**
-   * GET /api/v1/coaches/:id
-   * Compatible with original BE: tries :id first, or falls back to /coaches + /rates + /availability.
+   * Loads a single coach detail by fetching the full /coaches list and filtering.
+   * The BE does not expose GET /coaches/:id, so we use the list endpoint.
+   * Then enriches with /rates and /availability if those endpoints exist.
    */
   async getCoachDetail(coachId: string): Promise<Coach> {
-    try {
-      const item = await get<RawCoachResponse>(`/coaches/${coachId}`);
-      if (item && item.id) {
-        return mapRawCoach(item);
-      }
-    } catch {
-      // Fallback to load from /coaches list
-    }
-
     const allCoaches = await this.getCoaches();
     const found = allCoaches.find((c) => c.id === coachId);
     if (!found) {
