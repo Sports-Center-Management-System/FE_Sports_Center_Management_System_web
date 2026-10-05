@@ -597,7 +597,6 @@ export const PlanCatalog: React.FC<PlanCatalogProps> = () => {
 
           {tabDisciplines.map((item) => {
             const isActive = disciplineId === item.id;
-            const Icon = getDisciplineIcon(item.name || item.code || item.id);
             return (
               <button
                 key={item.id}
@@ -610,7 +609,8 @@ export const PlanCatalog: React.FC<PlanCatalogProps> = () => {
                     : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-900"
                 )}
               >
-                <Icon
+                <DisciplineIconComponent
+                  nameOrCode={item.name || item.code || item.id}
                   className={cn("w-3.5 h-3.5", isActive ? "text-emerald-400" : "text-slate-400")}
                 />
                 <span>{item.name}</span>
