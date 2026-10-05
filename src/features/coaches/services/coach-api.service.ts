@@ -40,19 +40,19 @@ function mapRawCoach(item: any, idx = 0): Coach {
 
   const disciplineCodes = Array.from(disciplineCodesSet);
   const disciplineIds = Array.from(disciplineIdsSet);
-  const primaryDiscipline = disciplineCodes[0] || "GYM";
+  const primaryDiscipline = disciplineCodes[0] || "";
 
   const rates: CoachRateItem[] = Array.isArray(item.coachRates)
     ? item.coachRates.map((r: any) => ({
-        id: r.id,
-        coachId: r.coachId,
-        disciplineId: r.disciplineId,
-        ratePerSession: Number(r.ratePerSession) || 500000,
-        effectiveFrom: r.effectiveFrom || "2026-01-01T00:00:00.000Z",
-        effectiveTo: r.effectiveTo || null,
-        rateRange: r.rateRange,
-        discipline: r.discipline,
-      }))
+      id: r.id,
+      coachId: r.coachId,
+      disciplineId: r.disciplineId,
+      ratePerSession: Number(r.ratePerSession) || 0,
+      effectiveFrom: r.effectiveFrom || "",
+      effectiveTo: r.effectiveTo || null,
+      rateRange: r.rateRange,
+      discipline: r.discipline,
+    }))
     : [];
 
   return {
@@ -64,10 +64,8 @@ function mapRawCoach(item: any, idx = 0): Coach {
     disciplineIds,
     disciplineCodes,
     primaryDiscipline,
-    experienceYears: item.coachProfile?.yearsExperience || 5,
-    rating: 4.9,
-    reviewCount: 120 + idx * 15,
-    title: `HLV Chuyên Sâu ${disciplineCodes.join(" & ") || "Thể Hình"}`,
+    experienceYears: item.coachProfile?.yearsExperience ?? 0,
+    title: disciplineCodes.length > 0 ? `HLV Chuyên Sâu ${disciplineCodes.join(" & ")}` : "Huấn luyện viên",
     bio: item.coachProfile?.bio || null,
     coachProfile: item.coachProfile,
     coachRates: rates,
@@ -132,14 +130,14 @@ export const coachApiService = {
       if (rates && rates.length > 0) {
         found.coachRates = rates;
       }
-    } catch {}
+    } catch { }
 
     try {
       const slots = await this.getAvailability(coachId);
       if (slots && slots.length > 0) {
         found.coachAvailabilities = slots;
       }
-    } catch {}
+    } catch { }
 
     return found;
   },
@@ -168,7 +166,7 @@ export const coachApiService = {
       if (Array.isArray(data)) {
         return data.map((r) => ({
           ...r,
-          ratePerSession: Number(r.ratePerSession) || 500000,
+          ratePerSession: Number(r.ratePerSession) || 0,
         }));
       }
     } catch {

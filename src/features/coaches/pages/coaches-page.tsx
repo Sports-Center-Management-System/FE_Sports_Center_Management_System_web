@@ -18,7 +18,7 @@ import { StateMessage } from "@/components/feedback/state-message";
 import { coachApiService } from "../services/coach-api.service";
 import { CoachCard, getDisciplineIcon } from "../components/coach-card";
 import { CoachDetailModal } from "../components/coach-detail-modal";
-import type { Coach, Discipline, DisciplineCode } from "../types/coach.types";
+import type { Coach, Discipline } from "../types/coach.types";
 import { cn } from "@/lib/utils";
 
 interface CoachesPageProps {
@@ -31,14 +31,6 @@ const DISCIPLINE_TAGLINES: Record<string, string> = {
   YOGA: "Cân bằng thân - tâm - trí, cải thiện độ dẻo dai, thư giãn hơi thở và phục hồi xương khớp tự nhiên.",
   PILATES: "Định hình vóc dáng, siết cơ lõi chuyên sâu, tăng độ linh hoạt và cải thiện tư thế chuẩn xác.",
 };
-
-const DISCIPLINE_TABS: { id: DisciplineCode; label: string; icon: any }[] = [
-  { id: "ALL", label: "Tất cả bộ môn", icon: Layers },
-  { id: "GYM", label: "Gym & Thể hình", icon: Dumbbell },
-  { id: "BOXING", label: "Boxing & Võ thuật", icon: Flame },
-  { id: "YOGA", label: "Yoga & Trị liệu", icon: Sparkles },
-  { id: "PILATES", label: "Pilates & Core", icon: Activity },
-];
 
 /**
  * Single Discipline Section with Horizontal Scroll Carousel & Navigation Arrows
@@ -183,9 +175,9 @@ const DisciplineCoachSection: React.FC<DisciplineCoachSectionProps> = ({
 };
 
 export const CoachesPage: React.FC<CoachesPageProps> = ({ isMemberView = false }) => {
-  const [selectedDiscipline, setSelectedDiscipline] = useState<DisciplineCode>("ALL");
+  const [selectedDiscipline, setSelectedDiscipline] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"default" | "price-asc" | "price-desc" | "rating">("default");
+  const [sortBy, setSortBy] = useState<"default" | "price-asc" | "price-desc" | "experience">("default");
   const [activeCoachDetail, setActiveCoachDetail] = useState<Coach | null>(null);
 
   // 1. Fetch disciplines
@@ -199,6 +191,23 @@ export const CoachesPage: React.FC<CoachesPageProps> = ({ isMemberView = false }
     queryKey: ["coaches"],
     queryFn: () => coachApiService.getCoaches(),
   });
+
+  // Dynamic discipline tabs from real Backend API
+  const disciplineTabs = useMemo(() => {
+    const list = [
+      { id: "ALL", label: "Tất cả bộ môn", icon: Layers },
+    ];
+    if (Array.isArray(disciplinesQuery.data)) {
+      disciplinesQuery.data.forEach((d) => {
+        list.push({
+          id: d.code.toUpperCase(),
+          label: d.name,
+          icon: getDisciplineIcon(d.code),
+        });
+      });
+    }
+    return list;
+  }, [disciplinesQuery.data]);
 
   // Filtered & grouped coaches by discipline
   const disciplineSections = useMemo(() => {
@@ -223,11 +232,11 @@ export const CoachesPage: React.FC<CoachesPageProps> = ({ isMemberView = false }
     // Sort function
     const sortList = (list: Coach[]) => {
       return [...list].sort((a, b) => {
-        const rateA = a.coachRates?.[0]?.ratePerSession ?? 500000;
-        const rateB = b.coachRates?.[0]?.ratePerSession ?? 500000;
+        const rateA = a.coachRates?.[0]?.ratePerSession ?? 0;
+        const rateB = b.coachRates?.[0]?.ratePerSession ?? 0;
         if (sortBy === "price-asc") return rateA - rateB;
         if (sortBy === "price-desc") return rateB - rateA;
-        if (sortBy === "rating") return b.rating - a.rating;
+        if (sortBy === "experience") return (b.experienceYears || 0) - (a.experienceYears || 0);
         return 0;
       });
     };
@@ -305,7 +314,7 @@ export const CoachesPage: React.FC<CoachesPageProps> = ({ isMemberView = false }
       <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-xs space-y-4">
         {/* Discipline Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {DISCIPLINE_TABS.map((tab) => {
+          {disciplineTabs.map((tab) => {
             const Icon = tab.icon;
             const active = selectedDiscipline === tab.id;
             return (
@@ -360,7 +369,7 @@ export const CoachesPage: React.FC<CoachesPageProps> = ({ isMemberView = false }
               className="h-11 px-3.5 rounded-xl text-xs font-bold bg-slate-50 border border-slate-200 text-slate-700 cursor-pointer focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#008b74]/20"
             >
               <option value="default">Mặc định (Nổi bật)</option>
-              <option value="rating">Đánh giá cao nhất (★)</option>
+              <option value="experience">Kinh nghiệm nhiều nhất (Năm)</option>
               <option value="price-asc">Biểu phí: Thấp đến cao</option>
               <option value="price-desc">Biểu phí: Cao đến thấp</option>
             </select>

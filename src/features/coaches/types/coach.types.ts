@@ -47,8 +47,6 @@ export interface Coach {
   disciplineCodes: string[];
   primaryDiscipline: string;
   experienceYears: number;
-  rating: number;
-  reviewCount: number;
   title: string;
   bio?: string | null;
   coachProfile?: {

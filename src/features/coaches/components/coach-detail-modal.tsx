@@ -112,13 +112,7 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
   const activeRate =
     activeCoach.coachRates && activeCoach.coachRates.length > 0
       ? activeCoach.coachRates[0]
-      : {
-          id: "default-rate",
-          coachId: activeCoach.id,
-          ratePerSession: 500000,
-          effectiveFrom: "2026-01-01",
-          rateRange: "[2026-01-01,)",
-        };
+      : null;
 
   const specialties = activeCoach.coachProfile?.coachSpecialties || [];
   const hasAvatar = Boolean(activeCoach.avatarUrl && activeCoach.avatarUrl.trim());
@@ -218,18 +212,18 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
               </div>
               <div className="border-x border-white/10">
                 <span className="text-[10px] font-bold text-slate-400 block uppercase">
-                  Đánh giá
+                  Chuyên môn
                 </span>
                 <span className="text-base font-extrabold text-amber-400">
-                  {activeCoach.rating.toFixed(1)} ★
+                  {specialties.length} Kỹ thuật
                 </span>
               </div>
               <div>
                 <span className="text-[10px] font-bold text-slate-400 block uppercase">
-                  Học viên
+                  Biểu phí
                 </span>
                 <span className="text-base font-extrabold text-emerald-400">
-                  {activeCoach.reviewCount}+
+                  {activeCoach.coachRates?.length || 0} Gói
                 </span>
               </div>
             </div>
@@ -256,35 +250,41 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
         <div className="lg:w-7/12 p-6 sm:p-8 flex flex-col justify-between space-y-6 bg-slate-50/50">
           <div className="space-y-6">
             {/* 1. PRICING RATE BOX (Coach Pricing Rate API) */}
-            <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50/80 border border-emerald-200/80 space-y-3 shadow-xs">
-              <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-emerald-800">
-                  <DollarSign className="w-4 h-4 text-emerald-600" />
-                  <span>Biểu phí dạy kèm 1:1 (Coach Rate)</span>
-                </span>
-                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md border border-emerald-300/60">
-                  Hiệu lực: {new Date(activeRate.effectiveFrom).toLocaleDateString("vi-VN")}
-                </span>
-              </div>
+            {activeRate ? (
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50/80 border border-emerald-200/80 space-y-3 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-emerald-800">
+                    <DollarSign className="w-4 h-4 text-emerald-600" />
+                    <span>Biểu phí dạy kèm 1:1 (Coach Rate)</span>
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md border border-emerald-300/60">
+                    Hiệu lực: {new Date(activeRate.effectiveFrom).toLocaleDateString("vi-VN")}
+                  </span>
+                </div>
 
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-black text-[#008b74]">
-                  {money(activeRate.ratePerSession)}
-                </span>
-                <span className="text-sm font-bold text-slate-600">/ buổi dạy kèm (60 phút)</span>
-              </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-[#008b74]">
+                    {money(activeRate.ratePerSession)}
+                  </span>
+                  <span className="text-sm font-bold text-slate-600">/ buổi dạy kèm (60 phút)</span>
+                </div>
 
-              <div className="text-xs text-slate-600 space-y-1 pt-1 border-t border-emerald-200/50">
-                <p className="flex items-center gap-1.5 font-medium">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>Kèm 1:1 theo giáo án cá nhân hóa, đo chỉ số InBody & theo dõi tiến độ</span>
-                </p>
-                <p className="flex items-center gap-1.5 font-medium">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>Chống trùng lấn lịch dạy bằng hệ thống Lock thông minh</span>
-                </p>
+                <div className="text-xs text-slate-600 space-y-1 pt-1 border-t border-emerald-200/50">
+                  <p className="flex items-center gap-1.5 font-medium">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>Kèm 1:1 theo giáo án cá nhân hóa, đo chỉ số InBody & theo dõi tiến độ</span>
+                  </p>
+                  <p className="flex items-center gap-1.5 font-medium">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>Chống trùng lấn lịch dạy bằng hệ thống Lock thông minh</span>
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="p-4 rounded-2xl bg-slate-100 border border-slate-200 text-slate-500 text-xs font-medium text-center">
+                Huấn luyện viên chưa có biểu phí thiết lập trong hệ thống.
+              </div>
+            )}
 
             {/* Bio info if available */}
             {bio && (

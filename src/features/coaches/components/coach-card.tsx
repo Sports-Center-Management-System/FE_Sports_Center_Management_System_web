@@ -58,16 +58,16 @@ export const CoachCard: React.FC<CoachCardProps> = ({
   const DiscIcon = getDisciplineIcon(targetCode);
   const discColor = getDisciplineColor(targetCode);
 
-  // Active rate for this coach
+  // Active rate for this coach from DB
   const rateItem = coach.coachRates && coach.coachRates.length > 0
     ? coach.coachRates[0]
     : null;
-  const rateAmount = rateItem ? rateItem.ratePerSession : 500000;
+  const rateAmount = rateItem ? rateItem.ratePerSession : null;
 
   // Specialties
   const specialties =
     coach.coachProfile?.coachSpecialties?.map((s) => s.specialty.name) ||
-    (coach.coachProfile?.specialties ? [coach.coachProfile.specialties] : ["Huấn luyện viên 1:1"]);
+    (coach.coachProfile?.specialties ? [coach.coachProfile.specialties] : ["Huấn luyện viên"]);
 
   const hasAvatar = Boolean(coach.avatarUrl && coach.avatarUrl.trim());
 
@@ -117,9 +117,8 @@ export const CoachCard: React.FC<CoachCardProps> = ({
           </span>
 
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-black/60 text-white backdrop-blur-md border border-white/20">
-            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-            <span>{coach.rating.toFixed(1)}</span>
-            <span className="text-slate-400 font-normal">({coach.reviewCount})</span>
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span>HLV Đạt Chuẩn</span>
           </span>
         </div>
 
@@ -132,11 +131,13 @@ export const CoachCard: React.FC<CoachCardProps> = ({
         </div>
 
         {/* Experience Pill on Bottom Left */}
-        <div className="absolute bottom-3 left-3 flex items-center gap-1.5 text-xs text-white/90">
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-600/80 backdrop-blur-md text-[10px] font-black uppercase tracking-wider">
-            <Award className="w-3 h-3" /> {coach.experienceYears}+ Năm KN
-          </span>
-        </div>
+        {coach.experienceYears > 0 && (
+          <div className="absolute bottom-3 left-3 flex items-center gap-1.5 text-xs text-white/90">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-600/80 backdrop-blur-md text-[10px] font-black uppercase tracking-wider">
+              <Award className="w-3 h-3" /> {coach.experienceYears}+ Năm KN
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Card Body */}
@@ -180,10 +181,18 @@ export const CoachCard: React.FC<CoachCardProps> = ({
                 Biểu phí dạy kèm 1:1
               </span>
               <div className="flex items-baseline gap-1 mt-0.5">
-                <span className="text-lg font-extrabold text-[#008b74]">
-                  {money(rateAmount)}
-                </span>
-                <span className="text-xs text-slate-500 font-semibold">/ buổi</span>
+                {rateAmount !== null ? (
+                  <>
+                    <span className="text-lg font-extrabold text-[#008b74]">
+                      {money(rateAmount)}
+                    </span>
+                    <span className="text-xs text-slate-500 font-semibold">/ buổi</span>
+                  </>
+                ) : (
+                  <span className="text-xs font-semibold text-slate-400">
+                    Chưa thiết lập biểu phí
+                  </span>
+                )}
               </div>
             </div>
 

@@ -23,8 +23,6 @@ const mockCoaches: Coach[] = [
     disciplineCodes: ["GYM"],
     primaryDiscipline: "GYM",
     experienceYears: 7,
-    rating: 4.9,
-    reviewCount: 140,
     title: "HLV Chuyên Sâu GYM",
     bio: "Chuyên gia huấn luyện thể hình và tăng cơ giảm mỡ chuẩn NASM.",
     coachProfile: {
@@ -68,8 +66,6 @@ const mockCoaches: Coach[] = [
     disciplineCodes: ["YOGA"],
     primaryDiscipline: "YOGA",
     experienceYears: 6,
-    rating: 5.0,
-    reviewCount: 180,
     title: "HLV Chuyên Sâu YOGA",
     bio: "Master Yoga Alliance 500h chuyên sâu Yoga phục hồi trị liệu cột sống.",
     coachProfile: {
@@ -142,11 +138,11 @@ describe("Coaches Feature (/api/v1/coaches)", () => {
     // Verify Page Title
     expect(screen.getByText("Đội ngũ Huấn luyện viên chuyên biệt")).toBeDefined();
 
-    // Verify Discipline tabs
+    // Verify Discipline tabs (loaded dynamically from disciplines API)
     expect(screen.getByText("Tất cả bộ môn")).toBeDefined();
-    expect(screen.getByText("Gym & Thể hình")).toBeDefined();
-    expect(screen.getByText("Boxing & Võ thuật")).toBeDefined();
-    expect(screen.getByText("Yoga & Trị liệu")).toBeDefined();
+    expect(await screen.findAllByText("Gym & Fitness")).toBeDefined();
+    expect(screen.getAllByText("Boxing & Kickboxing")).toBeDefined();
+    expect(screen.getAllByText("Yoga & Meditation")).toBeDefined();
 
     // Verify Coaches rendered under their respective sections
     expect(await screen.findByText("Nguyễn Văn Hùng")).toBeDefined();
@@ -168,7 +164,7 @@ describe("Coaches Feature (/api/v1/coaches)", () => {
     expect(await screen.findByText("Nguyễn Văn Hùng")).toBeDefined();
 
     // Click on Yoga tab
-    const yogaTab = screen.getAllByText("Yoga & Trị liệu")[0];
+    const yogaTab = (await screen.findAllByText("Yoga & Meditation"))[0];
     fireEvent.click(yogaTab);
 
     // Verify Yoga section is shown and Gym section is hidden
