@@ -7,11 +7,14 @@ import type {
 } from "../types/coach.types";
 
 interface RawCoachSpecialty {
+  id?: string;
+  specialtyId?: string;
   specialty?: {
     id?: string;
     code?: string;
     name?: string;
     disciplineId?: string;
+    description?: string | null;
     discipline?: {
       code?: string;
       name?: string;
@@ -101,6 +104,27 @@ function mapRawCoach(item: RawCoachResponse): Coach {
     }))
     : [];
 
+  const mappedProfile = item.coachProfile
+    ? {
+      id: item.coachProfile.id,
+      specialties: item.coachProfile.specialties,
+      bio: item.coachProfile.bio,
+      certificateUrls: item.coachProfile.certificateUrls,
+      yearsExperience: item.coachProfile.yearsExperience,
+      coachSpecialties: (item.coachProfile.coachSpecialties || []).map((cs) => ({
+        id: cs.id,
+        specialtyId: cs.specialtyId || cs.specialty?.id,
+        specialty: {
+          id: cs.specialty?.id || "",
+          name: cs.specialty?.name || "",
+          code: cs.specialty?.code,
+          disciplineId: cs.specialty?.disciplineId,
+          description: cs.specialty?.description || null,
+        },
+      })),
+    }
+    : null;
+
   return {
     id: item.id,
     fullName: item.fullName || "Huấn Luyện Viên",
@@ -113,7 +137,7 @@ function mapRawCoach(item: RawCoachResponse): Coach {
     experienceYears: item.coachProfile?.yearsExperience ?? 0,
     title: disciplineCodes.length > 0 ? `HLV Chuyên Sâu ${disciplineCodes.join(" & ")}` : "Huấn luyện viên",
     bio: item.coachProfile?.bio || null,
-    coachProfile: item.coachProfile,
+    coachProfile: mappedProfile,
     coachRates: rates,
     coachAvailabilities: item.coachAvailabilities || [],
   };
@@ -217,6 +241,7 @@ export const coachApiService = {
         return data.map((r) => ({
           ...r,
           ratePerSession: Number(r.ratePerSession) || 0,
+          effectiveFrom: r.effectiveFrom || "",
         }));
       }
     } catch {
