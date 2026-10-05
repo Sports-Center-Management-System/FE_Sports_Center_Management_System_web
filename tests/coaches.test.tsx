@@ -190,6 +190,6 @@ describe("Coaches Feature (/api/v1/coaches)", () => {
 
     // Verify availability slots
     expect(screen.getByText("Khung giờ dạy kèm mở rảnh (Availability Slots)")).toBeDefined();
-    expect(screen.getByText("09:00 - 10:00")).toBeDefined();
+    expect(await screen.findByText("09:00 - 10:00")).toBeDefined();
   });
 });

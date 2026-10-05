@@ -5,10 +5,6 @@ import {
   Search,
   ArrowUpDown,
   RotateCcw,
-  Sparkles,
-  Flame,
-  Dumbbell,
-  Activity,
   Layers,
   ChevronLeft,
   ChevronRight,
@@ -16,8 +12,9 @@ import {
 import { PageTitle } from "@/components/common/page-title";
 import { StateMessage } from "@/components/feedback/state-message";
 import { coachApiService } from "../services/coach-api.service";
-import { CoachCard, getDisciplineIcon } from "../components/coach-card";
+import { CoachCard } from "../components/coach-card";
 import { CoachDetailModal } from "../components/coach-detail-modal";
+import { DisciplineIcon } from "../components/discipline-icon";
 import type { Coach, Discipline } from "../types/coach.types";
 import { cn } from "@/lib/utils";
 
@@ -91,14 +88,12 @@ const DisciplineCoachSection: React.FC<DisciplineCoachSectionProps> = ({
     }
   };
 
-  const DiscIcon = getDisciplineIcon(discipline.code);
-
   return (
     <section className="space-y-4 pt-4">
       {/* Section Header */}
       <div className="flex items-center gap-3 pb-3 border-b border-slate-200/80">
         <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-[#008b74] flex items-center justify-center shrink-0 shadow-xs">
-          <DiscIcon className="w-5 h-5" />
+          <DisciplineIcon code={discipline.code} className="w-5 h-5" />
         </div>
         <div>
           <div className="flex items-center gap-2.5 flex-wrap">
@@ -174,7 +169,7 @@ const DisciplineCoachSection: React.FC<DisciplineCoachSectionProps> = ({
   );
 };
 
-export const CoachesPage: React.FC<CoachesPageProps> = ({ isMemberView = false }) => {
+export const CoachesPage: React.FC<CoachesPageProps> = () => {
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"default" | "price-asc" | "price-desc" | "experience">("default");
@@ -195,14 +190,14 @@ export const CoachesPage: React.FC<CoachesPageProps> = ({ isMemberView = false }
   // Dynamic discipline tabs from real Backend API
   const disciplineTabs = useMemo(() => {
     const list = [
-      { id: "ALL", label: "Tất cả bộ môn", icon: Layers },
+      { id: "ALL", label: "Tất cả bộ môn", code: "ALL" },
     ];
     if (Array.isArray(disciplinesQuery.data)) {
       disciplinesQuery.data.forEach((d) => {
         list.push({
           id: d.code.toUpperCase(),
           label: d.name,
-          icon: getDisciplineIcon(d.code),
+          code: d.code,
         });
       });
     }
@@ -289,10 +284,6 @@ export const CoachesPage: React.FC<CoachesPageProps> = ({ isMemberView = false }
     return sections;
   }, [disciplinesQuery.data, coachesQuery.data, searchQuery, sortBy, selectedDiscipline]);
 
-  const totalMatchingCoaches = useMemo(() => {
-    return disciplineSections.reduce((acc, sec) => acc + sec.coaches.length, 0);
-  }, [disciplineSections]);
-
   const isLoading = disciplinesQuery.isPending || coachesQuery.isPending;
   const error = disciplinesQuery.error || coachesQuery.error;
 
@@ -315,7 +306,6 @@ export const CoachesPage: React.FC<CoachesPageProps> = ({ isMemberView = false }
         {/* Discipline Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
           {disciplineTabs.map((tab) => {
-            const Icon = tab.icon;
             const active = selectedDiscipline === tab.id;
             return (
               <button
@@ -329,7 +319,14 @@ export const CoachesPage: React.FC<CoachesPageProps> = ({ isMemberView = false }
                     : "!bg-slate-100/90 !text-slate-600 !border-slate-200/80 hover:!bg-slate-200/70 hover:!text-slate-900"
                 )}
               >
-                <Icon className={cn("w-3.5 h-3.5", active ? "text-white" : "text-slate-500")} />
+                {tab.code === "ALL" ? (
+                  <Layers className={cn("w-3.5 h-3.5", active ? "text-white" : "text-slate-500")} />
+                ) : (
+                  <DisciplineIcon
+                    code={tab.code}
+                    className={cn("w-3.5 h-3.5", active ? "text-white" : "text-slate-500")}
+                  />
+                )}
                 <span>{tab.label}</span>
               </button>
             );
@@ -365,7 +362,9 @@ export const CoachesPage: React.FC<CoachesPageProps> = ({ isMemberView = false }
             </span>
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
+              onChange={(e) =>
+                setSortBy(e.target.value as "default" | "price-asc" | "price-desc" | "experience")
+              }
               className="h-11 px-3.5 rounded-xl text-xs font-bold bg-slate-50 border border-slate-200 text-slate-700 cursor-pointer focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#008b74]/20"
             >
               <option value="default">Mặc định (Nổi bật)</option>

@@ -1,20 +1,16 @@
 import React from "react";
 import {
-  Dumbbell,
-  Flame,
-  Sparkles,
-  Activity,
   Maximize2,
   Calendar,
   Award,
   ChevronRight,
   ShieldCheck,
-  Star,
-  User,
 } from "lucide-react";
 import { money } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { Coach } from "../types/coach.types";
+import { DisciplineIcon } from "./discipline-icon";
+import { getDisciplineColor, getInitials } from "../utils/coach.utils";
 
 interface CoachCardProps {
   coach: Coach;
@@ -22,29 +18,6 @@ interface CoachCardProps {
   className?: string;
   onOpenDetail: (coach: Coach) => void;
   onBookSession?: (coach: Coach, e?: React.MouseEvent) => void;
-}
-
-export function getDisciplineIcon(code?: string) {
-  const c = (code || "").toUpperCase();
-  if (c.includes("BOX")) return Flame;
-  if (c.includes("YOG")) return Sparkles;
-  if (c.includes("PIL")) return Activity;
-  return Dumbbell;
-}
-
-export function getDisciplineColor(code?: string) {
-  const c = (code || "").toUpperCase();
-  if (c.includes("BOX")) return "text-amber-400 bg-amber-500/20 border-amber-500/30";
-  if (c.includes("YOG")) return "text-teal-300 bg-teal-500/20 border-teal-500/30";
-  if (c.includes("PIL")) return "text-purple-300 bg-purple-500/20 border-purple-500/30";
-  return "text-emerald-400 bg-emerald-500/20 border-emerald-500/30";
-}
-
-export function getInitials(fullName: string) {
-  if (!fullName) return "HLV";
-  const parts = fullName.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 export const CoachCard: React.FC<CoachCardProps> = ({
@@ -55,14 +28,13 @@ export const CoachCard: React.FC<CoachCardProps> = ({
   onBookSession,
 }) => {
   const targetCode = disciplineCode || coach.primaryDiscipline || "GYM";
-  const DiscIcon = getDisciplineIcon(targetCode);
   const discColor = getDisciplineColor(targetCode);
 
   // Active rate for this coach from DB
   const rateItem = coach.coachRates && coach.coachRates.length > 0
     ? coach.coachRates[0]
     : null;
-  const rateAmount = rateItem ? rateItem.ratePerSession : null;
+  const rateAmount = rateItem && rateItem.ratePerSession > 0 ? rateItem.ratePerSession : null;
 
   // Specialties
   const specialties =
@@ -112,7 +84,7 @@ export const CoachCard: React.FC<CoachCardProps> = ({
               discColor
             )}
           >
-            <DiscIcon className="w-3.5 h-3.5" />
+            <DisciplineIcon code={targetCode} className="w-3.5 h-3.5" />
             <span>{targetCode}</span>
           </span>
 

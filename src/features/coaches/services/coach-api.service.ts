@@ -6,19 +6,65 @@ import type {
   Discipline,
 } from "../types/coach.types";
 
-function mapRawCoach(item: any, idx = 0): Coach {
+interface RawCoachSpecialty {
+  specialty?: {
+    id?: string;
+    code?: string;
+    name?: string;
+    disciplineId?: string;
+    discipline?: {
+      code?: string;
+      name?: string;
+    };
+  };
+}
+
+interface RawCoachRate {
+  id: string;
+  coachId: string;
+  disciplineId?: string;
+  ratePerSession?: number | string;
+  effectiveFrom?: string;
+  effectiveTo?: string | null;
+  rateRange?: string;
+  discipline?: {
+    id: string;
+    name: string;
+    code?: string;
+  };
+}
+
+interface RawCoachResponse {
+  id: string;
+  fullName?: string;
+  avatarUrl?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  coachProfile?: {
+    id?: string;
+    specialties?: string | null;
+    bio?: string | null;
+    certificateUrls?: string[];
+    yearsExperience?: number;
+    coachSpecialties?: RawCoachSpecialty[];
+  };
+  coachRates?: RawCoachRate[];
+  coachAvailabilities?: CoachAvailabilitySlot[];
+}
+
+function mapRawCoach(item: RawCoachResponse): Coach {
   const disciplineIdsSet = new Set<string>();
   const disciplineCodesSet = new Set<string>();
 
   if (Array.isArray(item.coachRates)) {
-    item.coachRates.forEach((r: any) => {
+    item.coachRates.forEach((r) => {
       if (r.disciplineId) disciplineIdsSet.add(r.disciplineId);
       if (r.discipline?.code) disciplineCodesSet.add(r.discipline.code.toUpperCase());
     });
   }
 
   const specialties = item.coachProfile?.coachSpecialties || [];
-  specialties.forEach((cs: any) => {
+  specialties.forEach((cs) => {
     if (cs.specialty?.disciplineId) {
       disciplineIdsSet.add(cs.specialty.disciplineId);
     }
@@ -43,7 +89,7 @@ function mapRawCoach(item: any, idx = 0): Coach {
   const primaryDiscipline = disciplineCodes[0] || "";
 
   const rates: CoachRateItem[] = Array.isArray(item.coachRates)
-    ? item.coachRates.map((r: any) => ({
+    ? item.coachRates.map((r) => ({
       id: r.id,
       coachId: r.coachId,
       disciplineId: r.disciplineId,
@@ -84,7 +130,7 @@ export const coachApiService = {
         return res;
       }
     } catch {
-      // return empty on error
+      return [];
     }
     return [];
   },
@@ -95,12 +141,12 @@ export const coachApiService = {
    */
   async getCoaches(): Promise<Coach[]> {
     try {
-      const rawCoaches = await get<any[]>("/coaches");
+      const rawCoaches = await get<RawCoachResponse[]>("/coaches");
       if (Array.isArray(rawCoaches)) {
-        return rawCoaches.map((item, idx) => mapRawCoach(item, idx));
+        return rawCoaches.map((item) => mapRawCoach(item));
       }
     } catch {
-      // If unauthenticated or network error, return empty array
+      return [];
     }
     return [];
   },
@@ -111,12 +157,12 @@ export const coachApiService = {
    */
   async getCoachDetail(coachId: string): Promise<Coach> {
     try {
-      const item = await get<any>(`/coaches/${coachId}`);
+      const item = await get<RawCoachResponse>(`/coaches/${coachId}`);
       if (item && item.id) {
         return mapRawCoach(item);
       }
     } catch {
-      // Original BE doesn't have /coaches/:id, so load from /coaches
+      // Fallback to load from /coaches list
     }
 
     const allCoaches = await this.getCoaches();
@@ -130,14 +176,18 @@ export const coachApiService = {
       if (rates && rates.length > 0) {
         found.coachRates = rates;
       }
-    } catch { }
+    } catch {
+      // Silent catch
+    }
 
     try {
       const slots = await this.getAvailability(coachId);
       if (slots && slots.length > 0) {
         found.coachAvailabilities = slots;
       }
-    } catch { }
+    } catch {
+      // Silent catch
+    }
 
     return found;
   },
@@ -152,7 +202,7 @@ export const coachApiService = {
       );
       if (Array.isArray(data)) return data;
     } catch {
-      // fallback
+      return [];
     }
     return [];
   },
@@ -162,7 +212,7 @@ export const coachApiService = {
    */
   async getRates(coachId: string): Promise<CoachRateItem[]> {
     try {
-      const data = await get<any[]>(`/coaches/${coachId}/rates`);
+      const data = await get<RawCoachRate[]>(`/coaches/${coachId}/rates`);
       if (Array.isArray(data)) {
         return data.map((r) => ({
           ...r,
@@ -170,7 +220,7 @@ export const coachApiService = {
         }));
       }
     } catch {
-      // fallback
+      return [];
     }
     return [];
   },

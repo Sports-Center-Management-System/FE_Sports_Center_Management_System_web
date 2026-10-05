@@ -4,9 +4,6 @@ import { useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
   X,
-  Star,
-  Award,
-  Calendar,
   Clock,
   ShieldCheck,
   CheckCircle2,
@@ -15,15 +12,16 @@ import {
   Tag,
   DollarSign,
   ChevronRight,
-  User,
   Check,
   FileText,
+  Calendar,
 } from "lucide-react";
 import { money } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { Coach, CoachAvailabilitySlot } from "../types/coach.types";
 import { coachApiService } from "../services/coach-api.service";
-import { getDisciplineColor, getDisciplineIcon, getInitials } from "./coach-card";
+import { DisciplineIcon } from "./discipline-icon";
+import { getDisciplineColor, getInitials } from "../utils/coach.utils";
 
 export interface CoachDetailModalProps {
   coach: Coach | null;
@@ -41,10 +39,8 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
   const navigate = useNavigate();
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [bookSuccess, setBookSuccess] = useState(false);
-  const [slots, setSlots] = useState<CoachAvailabilitySlot[]>([]);
-  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
 
-  // 1. Fetch full coach detail from GET /api/v1/coaches/:id
+  // 1. Fetch full coach detail
   const coachDetailQuery = useQuery({
     queryKey: ["coach-detail", coach?.id],
     queryFn: () => (coach?.id ? coachApiService.getCoachDetail(coach.id) : Promise.reject()),
@@ -54,37 +50,17 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
 
   const activeCoach = coachDetailQuery.data || coach;
 
-  // 2. Fetch real availability slots when modal opens
-  useEffect(() => {
-    setSelectedSlotId(null);
-    setBookSuccess(false);
+  // 2. Fetch real availability slots from API
+  const availabilityQuery = useQuery({
+    queryKey: ["coach-availability", coach?.id],
+    queryFn: () => (coach?.id ? coachApiService.getAvailability(coach.id) : Promise.resolve([])),
+    enabled: Boolean(isOpen && coach?.id),
+  });
 
-    if (coach?.id) {
-      if (
-        Array.isArray(activeCoach?.coachAvailabilities) &&
-        activeCoach.coachAvailabilities.length > 0
-      ) {
-        setSlots(activeCoach.coachAvailabilities);
-      }
-
-      setIsLoadingSlots(true);
-      coachApiService
-        .getAvailability(coach.id)
-        .then((data) => {
-          if (Array.isArray(data) && data.length > 0) {
-            setSlots(data);
-          } else if (
-            Array.isArray(activeCoach?.coachAvailabilities) &&
-            activeCoach.coachAvailabilities.length > 0
-          ) {
-            setSlots(activeCoach.coachAvailabilities);
-          } else {
-            setSlots([]);
-          }
-        })
-        .finally(() => setIsLoadingSlots(false));
-    }
-  }, [coach?.id, activeCoach?.coachAvailabilities]);
+  const slots =
+    availabilityQuery.data && availabilityQuery.data.length > 0
+      ? availabilityQuery.data
+      : activeCoach?.coachAvailabilities || [];
 
   // Handle ESC key
   useEffect(() => {
@@ -106,7 +82,6 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
   if (!isOpen || !activeCoach) return null;
 
   const targetCode = activeCoach.primaryDiscipline || "GYM";
-  const DiscIcon = getDisciplineIcon(targetCode);
   const discColor = getDisciplineColor(targetCode);
 
   const activeRate =
@@ -179,7 +154,7 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
                   discColor
                 )}
               >
-                <DiscIcon className="w-4 h-4" />
+                <DisciplineIcon code={targetCode} className="w-4 h-4" />
                 <span>{targetCode}</span>
               </span>
 
@@ -249,7 +224,7 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
         {/* RIGHT COLUMN: PRICING RATE, SPECIALTIES, BIO, AVAILABILITY SLOTS & ACTIONS */}
         <div className="lg:w-7/12 p-6 sm:p-8 flex flex-col justify-between space-y-6 bg-slate-50/50">
           <div className="space-y-6">
-            {/* 1. PRICING RATE BOX (Coach Pricing Rate API) */}
+            {/* 1. PRICING RATE BOX */}
             {activeRate ? (
               <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50/80 border border-emerald-200/80 space-y-3 shadow-xs">
                 <div className="flex items-center justify-between">
@@ -258,7 +233,7 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
                     <span>Biểu phí dạy kèm 1:1 (Coach Rate)</span>
                   </span>
                   <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md border border-emerald-300/60">
-                    Hiệu lực: {new Date(activeRate.effectiveFrom).toLocaleDateString("vi-VN")}
+                    Hiệu lực: {activeRate.effectiveFrom ? new Date(activeRate.effectiveFrom).toLocaleDateString("vi-VN") : "Hiện hành"}
                   </span>
                 </div>
 
@@ -297,7 +272,7 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
               </div>
             )}
 
-            {/* 2. TECHNICAL SPECIALTY MAPPING (Coach Specialty Mapping API) */}
+            {/* 2. TECHNICAL SPECIALTY MAPPING */}
             <div className="space-y-2.5">
               <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                 <Tag className="w-3.5 h-3.5 text-slate-400" />
@@ -334,7 +309,7 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
               </div>
             </div>
 
-            {/* 3. AVAILABILITY SLOTS (Coach Availability Slot API) */}
+            {/* 3. AVAILABILITY SLOTS */}
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
@@ -342,7 +317,7 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
                   <span>Khung giờ dạy kèm mở rảnh (Availability Slots)</span>
                 </h4>
                 <span className="text-[11px] text-slate-400 font-medium">
-                  {isLoadingSlots ? "Đang tải khung giờ..." : "Chọn 1 khung giờ để đăng ký"}
+                  {availabilityQuery.isPending ? "Đang tải khung giờ..." : "Chọn 1 khung giờ để đăng ký"}
                 </span>
               </div>
 
