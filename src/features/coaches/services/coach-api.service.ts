@@ -9,6 +9,7 @@ import type {
 interface RawCoachSpecialty {
   id?: string;
   specialtyId?: string;
+  coachProfileId?: string;
   specialty?: {
     id?: string;
     code?: string;
@@ -114,6 +115,7 @@ function mapRawCoach(item: RawCoachResponse): Coach {
       coachSpecialties: (item.coachProfile.coachSpecialties || []).map((cs) => ({
         id: cs.id,
         specialtyId: cs.specialtyId || cs.specialty?.id,
+        coachProfileId: cs.coachProfileId,
         specialty: {
           id: cs.specialty?.id || "",
           name: cs.specialty?.name || "",

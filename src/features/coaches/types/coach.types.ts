@@ -58,6 +58,7 @@ export interface Coach {
     coachSpecialties?: {
       id?: string;
       specialtyId?: string;
+      coachProfileId?: string;
       specialty: CoachSpecialtyItem;
     }[];
   } | null;
