@@ -1,0 +1,21 @@
+/* Scoped overrides for legacy global button rules; other pages stay unchanged. */
+.inbody-dashboard button {
+  min-height: 36px;
+  padding: 0.5rem 0.75rem;
+}
+.inbody-dashboard button[data-variant='outline'] {
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+}
+.inbody-dashboard button[data-variant='outline']:hover {
+  background: #f1f5f9;
+}
+.inbody-dashboard button[aria-pressed='true'] {
+  border-color: #008b74;
+  background: #ecfdf5;
+  color: #007461;
+}
+.inbody-dashboard select {
+  font-weight: 500;
+}

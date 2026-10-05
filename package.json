@@ -13,6 +13,8 @@
     "format:check": "prettier --check src tests e2e playwright.config.ts vitest.config.ts vite.config.ts"
   },
   "dependencies": {
+    "@react-three/drei": "^10.7.9",
+    "@react-three/fiber": "^9.8.1",
     "@tanstack/react-query": "^5.104.0",
     "axios": "^1.20.0",
     "class-variance-authority": "^0.7.1",
@@ -22,8 +24,10 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router": "^8.4.0",
+    "recharts": "^3.10.1",
     "socket.io-client": "^4.8.4",
-    "tailwind-merge": "^3.7.0"
+    "tailwind-merge": "^3.7.0",
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
