@@ -1,8 +1,7 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { readTokens, saveTokens, clearTokens } from "@/lib/api";
 
-const rawBase = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
-const BASE_URL = rawBase.endsWith('/api/v1') ? rawBase : (rawBase ? `${rawBase}/api/v1` : '/api/v1');
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api/v1";
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,

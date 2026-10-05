@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { Link } from "react-router";
 import { Mail, Lock, Eye, EyeOff, User, Phone, UserPlus, AlertCircle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,7 +101,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
 
       {/* Full Name */}
       <div>
-        <label className="block text-xs font-semibold text-slate-700 tracking-normal mb-1.5">
+        <label className="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1">
           Họ và tên
         </label>
         <div className="relative">
@@ -114,14 +113,14 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             placeholder="Nguyễn Văn A"
-            className="pl-10 h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-[#008b74] focus:ring-4 focus:ring-[#008b74]/10 transition-all text-sm"
+            className="pl-10"
           />
         </div>
       </div>
 
       {/* Phone Number */}
       <div>
-        <label className="block text-xs font-semibold text-slate-700 tracking-normal mb-1.5">
+        <label className="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1">
           Số điện thoại
         </label>
         <div className="relative">
@@ -133,14 +132,14 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="0912345678"
-            className="pl-10 h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-[#008b74] focus:ring-4 focus:ring-[#008b74]/10 transition-all text-sm"
+            className="pl-10"
           />
         </div>
       </div>
 
       {/* Email */}
       <div>
-        <label className="block text-xs font-semibold text-slate-700 tracking-normal mb-1.5">
+        <label className="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1">
           Địa chỉ Email
         </label>
         <div className="relative">
@@ -152,7 +151,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="hoivien@example.com"
-            className="pl-10 h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-[#008b74] focus:ring-4 focus:ring-[#008b74]/10 transition-all text-sm"
+            className="pl-10"
           />
         </div>
       </div>
@@ -161,7 +160,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {/* Password */}
         <div>
-          <label className="block text-xs font-semibold text-slate-700 tracking-normal mb-1.5">
+          <label className="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1">
             Mật khẩu
           </label>
           <div className="relative">
@@ -173,12 +172,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Tối thiểu 6 ký tự"
-              className="pl-10 pr-9 h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-[#008b74] focus:ring-4 focus:ring-[#008b74]/10 transition-all text-sm"
+              className="pl-10 pr-9"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1 cursor-pointer"
               title={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
             >
               {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -188,7 +187,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
 
         {/* Confirm Password */}
         <div>
-          <label className="block text-xs font-semibold text-slate-700 tracking-normal mb-1.5">
+          <label className="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1">
             Xác nhận mật khẩu
           </label>
           <div className="relative">
@@ -200,7 +199,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Nhập lại mật khẩu"
-              className="pl-10 pr-4 h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-[#008b74] focus:ring-4 focus:ring-[#008b74]/10 transition-all text-sm"
+              className="pl-10 pr-4"
             />
           </div>
         </div>
@@ -211,7 +210,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         type="submit"
         variant="mint"
         disabled={isSubmitting}
-        className="w-full h-11 rounded-xl text-xs font-bold shadow-md shadow-emerald-700/10 flex items-center justify-center gap-2 mt-2 cursor-pointer active:scale-[0.99] transition-all"
+        className="w-full rounded-xl py-3 text-xs font-bold shadow-md shadow-emerald-700/10 flex items-center justify-center gap-2 mt-2"
       >
         {isSubmitting ? (
           <span>Đang tạo tài khoản...</span>
@@ -226,14 +225,14 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
       {/* Switch to Login link */}
       <div className="pt-2 text-center text-xs text-slate-500">
         Đã có tài khoản?{" "}
-        <Link
-          to="/auth/login"
+        <button
+          type="button"
           onClick={onSwitchToLogin}
-          className="font-bold text-[#008b74] hover:text-[#007461] hover:underline inline-flex items-center gap-1 ml-1 cursor-pointer"
+          className="font-bold text-white hover:underline inline-flex items-center gap-1 ml-1 cursor-pointer"
         >
           <ArrowLeft className="h-3 w-3" />
           Đăng nhập ngay
-        </Link>
+        </button>
       </div>
     </form>
   );
