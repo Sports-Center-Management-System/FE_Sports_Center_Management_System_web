@@ -3,6 +3,7 @@ import { PublicLayout, MemberLayout } from "@/layouts";
 import { LoginPage, NotFoundPage } from "@/features/auth";
 import { PublicPlansPage, MockPaymentPage } from "@/features/public";
 import { PlansPage, QuotePage } from "@/features/plans";
+import { CoachesPage } from "@/features/coaches";
 import { CheckoutPage, TransactionsPage } from "@/features/checkout";
 import { SubscriptionsPage, InvoicesPage } from "@/features/subscriptions";
 import {
@@ -23,6 +24,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/plans" replace /> },
       { path: "plans", element: <PublicPlansPage /> },
+      { path: "coaches", element: <CoachesPage /> },
       { path: "login", element: <LoginPage /> },
       { path: "register", element: <LoginPage /> },
       { path: "auth/login", element: <LoginPage /> },
@@ -59,6 +61,7 @@ export const router = createBrowserRouter([
             element: <Navigate to={`/portal/member/bookings?week=${mondayInVietnam()}`} replace />,
           },
           { path: "plans", element: <PlansPage /> },
+          { path: "coaches", element: <CoachesPage isMemberView /> },
           { path: "quotations", element: <QuotePage /> },
           { path: "checkouts/:checkoutId", element: <CheckoutPage /> },
           { path: "transactions", element: <TransactionsPage /> },

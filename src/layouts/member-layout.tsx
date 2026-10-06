@@ -10,6 +10,7 @@ import {
   BookOpen,
   CheckCircle2,
   Package,
+  Dumbbell,
   KeyRound,
   FileText,
   LogOut,
@@ -18,18 +19,19 @@ import {
 import { cn } from '@/lib/utils'
 
 const memberNavLinks = [
-  { label: 'Gói tập', path: '/portal/member/plans', icon: Package },
-  { label: 'Lịch tuần', path: '/portal/member/bookings', icon: Calendar },
-  { label: 'Gói của tôi', path: '/portal/member/subscriptions', icon: CreditCard },
-  { label: 'Giao dịch', path: '/portal/member/transactions', icon: History },
-  { label: 'Hóa đơn', path: '/portal/member/invoices', icon: FileText },
-  { label: 'Lịch sử', path: '/portal/member/history', icon: CheckCircle2 },
-  { label: 'Hồ sơ', path: '/portal/member/profile', icon: User },
-  { label: 'InBody', path: '/portal/member/progress', icon: Activity },
-  { label: 'Giáo án', path: '/portal/member/workout-plans', icon: BookOpen },
-  { label: 'Điểm danh', path: '/portal/member/attendances', icon: CheckCircle2 },
-  { label: 'Tủ đồ', path: '/portal/member/lockers', icon: KeyRound },
-]
+  { label: "Gói tập", path: "/portal/member/plans", icon: Package },
+  { label: "Huấn luyện viên", path: "/portal/member/coaches", icon: Dumbbell },
+  { label: "Lịch tuần", path: "/portal/member/bookings", icon: Calendar },
+  { label: "Gói của tôi", path: "/portal/member/subscriptions", icon: CreditCard },
+  { label: "Giao dịch", path: "/portal/member/transactions", icon: History },
+  { label: "Hóa đơn", path: "/portal/member/invoices", icon: FileText },
+  { label: "Lịch sử", path: "/portal/member/history", icon: CheckCircle2 },
+  { label: "Hồ sơ", path: "/portal/member/profile", icon: User },
+  { label: "InBody", path: "/portal/member/progress", icon: Activity },
+  { label: "Giáo án", path: "/portal/member/workout-plans", icon: BookOpen },
+  { label: "Điểm danh", path: "/portal/member/attendances", icon: CheckCircle2 },
+  { label: "Tủ đồ", path: "/portal/member/lockers", icon: KeyRound },
+];
 
 export const MemberLayout: React.FC = () => {
   const { user, logout } = useAuth()

@@ -27,6 +27,15 @@ export interface PlanCarouselProps {
   isOrdering?: boolean;
 }
 
+function PlanDisciplineIcon({ name, className }: { name?: string; className?: string }) {
+  const lower = (name || "").toLowerCase();
+  if (lower.includes("yoga")) return <Sparkles className={className} />;
+  if (lower.includes("box") || lower.includes("combat")) return <Flame className={className} />;
+  if (lower.includes("dance") || lower.includes("zumba")) return <Music className={className} />;
+  if (lower.includes("gym")) return <Dumbbell className={className} />;
+  return <Activity className={className} />;
+}
+
 const INTERVAL_TIME = 5000; // 5 seconds per slide
 
 export const PlanCarousel: React.FC<PlanCarouselProps> = ({
@@ -93,17 +102,6 @@ export const PlanCarousel: React.FC<PlanCarouselProps> = ({
   );
 
 
-  const getDisciplineIcon = () => {
-    const name = (activePlan.discipline?.name || "").toLowerCase();
-    if (name.includes("yoga")) return Sparkles;
-    if (name.includes("box") || name.includes("combat")) return Flame;
-    if (name.includes("dance") || name.includes("zumba")) return Music;
-    if (name.includes("gym")) return Dumbbell;
-    return Activity;
-  };
-
-  const DiscIcon = getDisciplineIcon();
-
   return (
     <div
       onMouseEnter={() => setIsPaused(true)}
@@ -134,7 +132,7 @@ export const PlanCarousel: React.FC<PlanCarouselProps> = ({
             </span>
 
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase bg-black/40 text-slate-200 border border-white/20 backdrop-blur-md">
-              <DiscIcon className="w-3.5 h-3.5 text-emerald-400" />
+              <PlanDisciplineIcon name={activePlan.discipline?.name} className="w-3.5 h-3.5 text-emerald-400" />
               {activePlan.discipline?.name || "Bộ môn"}
             </span>
 

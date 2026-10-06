@@ -51,7 +51,7 @@ select,
 textarea {
   font: inherit;
 }
-button,
+button:not([class]),
 .button {
   border: 0;
   border-radius: 12px;
@@ -66,11 +66,11 @@ button,
   gap: 0.4rem;
   text-decoration: none;
 }
-button:hover,
+button:not([class]):hover,
 .button:hover {
   background: #0d554a;
 }
-button:disabled {
+button:not([class]):disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -371,8 +371,7 @@ small {
   flex-direction: column;
   gap: 1rem;
 }
-.form-stack label,
-label {
+.form-stack label {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;

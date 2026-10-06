@@ -4,3 +4,6 @@ export * from "./pages/progress-page";
 export * from "./pages/workout-plans-page";
 export * from "./pages/attendances-page";
 export * from "./pages/lockers-page";
+export * from "./types/profile.types";
+export * from "./services/profile-api.service";
+export * from "./utils/profile.utils";
