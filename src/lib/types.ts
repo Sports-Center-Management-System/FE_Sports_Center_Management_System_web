@@ -92,6 +92,7 @@ export interface Invoice {
   id: string
   invoiceCode: string
   subscriptionId: string
+  checkoutId?: string | null
   amount: string
   baseAmount: string | null
   ptAmount: string | null
