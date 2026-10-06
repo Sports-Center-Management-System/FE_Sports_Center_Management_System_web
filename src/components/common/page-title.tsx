@@ -11,10 +11,12 @@ export const PageTitle: React.FC<PageTitleProps> = ({
   title,
   children,
 }) => {
+  const isMemberScreenLabel = /^MEM-\d+\b/i.test(eyebrow?.trim() ?? "");
+
   return (
     <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
       <div>
-        {eyebrow && (
+        {eyebrow && !isMemberScreenLabel && (
           <p className="text-[11px] font-extrabold uppercase tracking-widest text-[#008b74] mb-1">
             {eyebrow}
           </p>
