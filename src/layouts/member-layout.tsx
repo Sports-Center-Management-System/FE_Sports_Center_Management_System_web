@@ -17,8 +17,10 @@ import {
   Menu,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import gymFacility from '@/assets/images/plan-gym-facility.jpg'
-import '@/features/member/components/inbody/inbody.css'
+import { Button } from '@/components/ui/button'
+
+const logoutButtonClassName =
+  'w-full border-slate-200 bg-white text-xs font-semibold text-slate-600 shadow-none hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 focus-visible:ring-rose-500'
 
 const memberNavLinks = [
   { label: "Gói tập", path: "/portal/member/plans", icon: Package },
@@ -75,10 +77,15 @@ export const MemberLayout: React.FC = () => {
               </NavLink>
             ))}
           </nav>
-          <button type="button" onClick={() => void handleLogout()} className="mt-3 w-full text-xs">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => void handleLogout()}
+            className={cn(logoutButtonClassName, 'mt-3')}
+          >
             <LogOut aria-hidden="true" className="h-4 w-4" />
-            Đăng xuất
-          </button>
+            <span>Đăng xuất</span>
+          </Button>
         </div>
       </details>
       {/* Sidebar Navigation */}
@@ -133,25 +140,24 @@ export const MemberLayout: React.FC = () => {
             <p className="text-[13px] text-slate-400 truncate">{user?.email}</p>
           </div>
 
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={() => void handleLogout()}
-            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl border 
-            border-slate-200 text-xs font-bold text-white hover:bg-green hover:border-rose-200 
-            transition-colors cursor-pointer"
+            className={logoutButtonClassName}
           >
-            <LogOut className="h-3.5 w-3.5 " />
+            <LogOut aria-hidden="true" className="h-4 w-4" />
             <span>Đăng xuất</span>
-          </button>
+          </Button>
         </div>
       </aside>
 
       {/* Main Workspace Area */}
       <main className="h-full min-h-0 overflow-y-auto p-4 sm:p-8 w-full min-w-0 relative isolate">
-        <div
+        {/* <div
           className="inbody-backdrop"
           style={{ backgroundImage: `url("${gymFacility}")` }}
-        />
+        /> */}
         <div className="relative">
           <Outlet />
         </div>
