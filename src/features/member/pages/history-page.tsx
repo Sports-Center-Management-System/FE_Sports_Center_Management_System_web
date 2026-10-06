@@ -33,6 +33,11 @@ const bookingStatusStyles: Record<
     className: 'border-rose-200 bg-rose-50 text-rose-800',
     icon: XCircle,
   },
+  EXPIRED: {
+    label: 'Đã hết hạn',
+    className: 'border-slate-200 bg-slate-100 text-slate-600',
+    icon: Clock,
+  },
   PENDING: {
     label: 'Chờ xác nhận',
     className: 'border-amber-200 bg-amber-50 text-amber-800',
