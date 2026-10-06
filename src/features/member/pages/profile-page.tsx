@@ -23,7 +23,6 @@ import {
   Award,
 } from "lucide-react";
 import { useSession } from "@/auth/session-context";
-import { PageTitle } from "@/components/common/page-title";
 import { StateMessage } from "@/components/feedback/state-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -850,7 +849,6 @@ export const ProfilePage: React.FC = () => {
   return (
     <div className="w-full max-w-5xl mx-auto space-y-6 pb-20">
       {/* Page Header Title */}
-      <PageTitle eyebrow="MEM-10 · HỒ SƠ" title="Thông tin cá nhân & Thể chất" />
 
       {/* Loading / Error States */}
       <StateMessage

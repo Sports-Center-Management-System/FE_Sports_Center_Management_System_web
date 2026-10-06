@@ -17,6 +17,8 @@ import {
   Menu,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import gymFacility from '@/assets/images/plan-gym-facility.jpg'
+import '@/features/member/components/inbody/inbody.css'
 
 const memberNavLinks = [
   { label: "Gói tập", path: "/portal/member/plans", icon: Package },
@@ -145,8 +147,14 @@ export const MemberLayout: React.FC = () => {
       </aside>
 
       {/* Main Workspace Area */}
-      <main className="h-full min-h-0 overflow-y-auto p-4 sm:p-8 w-full min-w-0">
-        <Outlet />
+      <main className="h-full min-h-0 overflow-y-auto p-4 sm:p-8 w-full min-w-0 relative isolate">
+        <div
+          className="inbody-backdrop"
+          style={{ backgroundImage: `url("${gymFacility}")` }}
+        />
+        <div className="relative">
+          <Outlet />
+        </div>
       </main>
     </div>
   )

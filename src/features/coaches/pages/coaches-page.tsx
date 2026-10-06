@@ -9,7 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { PageTitle } from "@/components/common/page-title";
+
 import { StateMessage } from "@/components/feedback/state-message";
 import { coachApiService } from "../services/coach-api.service";
 import { CoachCard } from "../components/coach-card";
@@ -91,7 +91,7 @@ const DisciplineCoachSection: React.FC<DisciplineCoachSectionProps> = ({
   return (
     <section className="space-y-4 pt-4">
       {/* Section Header */}
-      <div className="flex items-center gap-3 pb-3 border-b border-slate-200/80">
+      <div className="flex bg-white rounded-3xl p-3 items-center gap-3 pb-3 border-b border-slate-200/80">
         <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-[#008b74] flex items-center justify-center shrink-0 shadow-xs">
           <DisciplineIcon code={discipline.code} className="w-5 h-5" />
         </div>
@@ -288,154 +288,147 @@ export const CoachesPage: React.FC<CoachesPageProps> = () => {
   const error = disciplinesQuery.error || coachesQuery.error;
 
   return (
+
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8 pb-24">
-      {/* Header Eyebrow & Title */}
-      <div className="space-y-2">
-        <PageTitle
-          eyebrow="COACHES & PERSONAL TRAINERS"
-          title="Đội ngũ Huấn luyện viên chuyên biệt"
+     
+      <div className="relative">
+
+        {/* FILTER & SEARCH BAR */}
+        <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-xs space-y-4">
+          {/* Discipline Tabs */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {disciplineTabs.map((tab) => {
+              const active = selectedDiscipline === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setSelectedDiscipline(tab.id)}
+                  className={cn(
+                    "inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all duration-200 shrink-0 cursor-pointer border",
+                    active
+                      ? "!bg-[#008b74] !text-white !border-[#008b74] shadow-sm"
+                      : "!bg-slate-100/90 !text-slate-600 !border-slate-200/80 hover:!bg-slate-200/70 hover:!text-slate-900"
+                  )}
+                >
+                  {tab.code === "ALL" ? (
+                    <Layers className={cn("w-3.5 h-3.5", active ? "text-white" : "text-slate-500")} />
+                  ) : (
+                    <DisciplineIcon
+                      code={tab.code}
+                      className={cn("w-3.5 h-3.5", active ? "text-white" : "text-slate-500")}
+                    />
+                  )}
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Search & Sort Controls */}
+          <div className="flex flex-col sm:flex-row items-center gap-3 pt-1 border-t border-slate-100">
+            <div className="relative flex-1 w-full">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Tìm theo tên HLV, kỹ thuật chuyên môn (Hypertrophy, Boxing, Yoga trị liệu...)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full h-11 pl-10 pr-4 rounded-xl text-xs font-medium bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#008b74]/20 focus:border-[#008b74] transition-all"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  Xóa
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <span className="text-xs font-bold text-slate-500 shrink-0 flex items-center gap-1">
+                <ArrowUpDown className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Sắp xếp:</span>
+              </span>
+              <select
+                value={sortBy}
+                onChange={(e) =>
+                  setSortBy(e.target.value as "default" | "price-asc" | "price-desc" | "experience")
+                }
+                className="h-11 px-3.5 rounded-xl text-xs font-bold bg-slate-50 border border-slate-200 text-slate-700 cursor-pointer focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#008b74]/20"
+              >
+                <option value="default">Mặc định (Nổi bật)</option>
+                <option value="experience">Kinh nghiệm nhiều nhất (Năm)</option>
+                <option value="price-asc">Biểu phí: Thấp đến cao</option>
+                <option value="price-desc">Biểu phí: Cao đến thấp</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Loading & Error States */}
+        <StateMessage
+          loading={isLoading}
+          error={error}
+          onRetry={() => {
+            disciplinesQuery.refetch();
+            coachesQuery.refetch();
+          }}
         />
-        <p className="text-sm text-slate-500 max-w-2xl">
-          Đạt chứng chỉ chuyên môn quốc tế ISSA, NASM, Yoga Alliance. Đồng hành 1:1,
-          thiết kế giáo án riêng biệt và theo sát mục tiêu hình thể của bạn.
-        </p>
-      </div>
 
-      {/* FILTER & SEARCH BAR */}
-      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-xs space-y-4">
-        {/* Discipline Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {disciplineTabs.map((tab) => {
-            const active = selectedDiscipline === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setSelectedDiscipline(tab.id)}
-                className={cn(
-                  "inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all duration-200 shrink-0 cursor-pointer border",
-                  active
-                    ? "!bg-[#008b74] !text-white !border-[#008b74] shadow-sm"
-                    : "!bg-slate-100/90 !text-slate-600 !border-slate-200/80 hover:!bg-slate-200/70 hover:!text-slate-900"
-                )}
-              >
-                {tab.code === "ALL" ? (
-                  <Layers className={cn("w-3.5 h-3.5", active ? "text-white" : "text-slate-500")} />
-                ) : (
-                  <DisciplineIcon
-                    code={tab.code}
-                    className={cn("w-3.5 h-3.5", active ? "text-white" : "text-slate-500")}
-                  />
-                )}
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Search & Sort Controls */}
-        <div className="flex flex-col sm:flex-row items-center gap-3 pt-1 border-t border-slate-100">
-          <div className="relative flex-1 w-full">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Tìm theo tên HLV, kỹ thuật chuyên môn (Hypertrophy, Boxing, Yoga trị liệu...)"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-11 pl-10 pr-4 rounded-xl text-xs font-medium bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#008b74]/20 focus:border-[#008b74] transition-all"
-            />
-            {searchQuery && (
+        {/* VERTICAL DISCIPLINE SECTIONS WITH HORIZONTAL CAROUSEL */}
+        {!isLoading && disciplineSections.length > 0 ? (
+          <div className="space-y-12">
+            {disciplineSections.map((section) => (
+              <DisciplineCoachSection
+                key={section.discipline.id}
+                discipline={section.discipline}
+                tagline={section.tagline}
+                coaches={section.coaches}
+                onOpenDetail={(coach) => setActiveCoachDetail(coach)}
+                onBookSession={(coach) => setActiveCoachDetail(coach)}
+              />
+            ))}
+          </div>
+        ) : (
+          !isLoading && (
+            <div className="p-12 text-center bg-white rounded-3xl border border-slate-200 shadow-sm space-y-4 max-w-lg mx-auto">
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 mx-auto flex items-center justify-center">
+                <Users className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-800">
+                  Không tìm thấy Huấn luyện viên phù hợp
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Vui lòng thử từ khóa khác hoặc chuyển sang danh mục bộ môn khác.
+                </p>
+              </div>
               <button
                 type="button"
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 cursor-pointer"
+                onClick={() => {
+                  setSelectedDiscipline("ALL");
+                  setSearchQuery("");
+                  setSortBy("default");
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-[#008b74] text-white hover:bg-[#007360] transition-colors cursor-pointer"
               >
-                Xóa
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Đặt lại bộ lọc</span>
               </button>
-            )}
-          </div>
+            </div>
+          )
+        )}
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <span className="text-xs font-bold text-slate-500 shrink-0 flex items-center gap-1">
-              <ArrowUpDown className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Sắp xếp:</span>
-            </span>
-            <select
-              value={sortBy}
-              onChange={(e) =>
-                setSortBy(e.target.value as "default" | "price-asc" | "price-desc" | "experience")
-              }
-              className="h-11 px-3.5 rounded-xl text-xs font-bold bg-slate-50 border border-slate-200 text-slate-700 cursor-pointer focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#008b74]/20"
-            >
-              <option value="default">Mặc định (Nổi bật)</option>
-              <option value="experience">Kinh nghiệm nhiều nhất (Năm)</option>
-              <option value="price-asc">Biểu phí: Thấp đến cao</option>
-              <option value="price-desc">Biểu phí: Cao đến thấp</option>
-            </select>
-          </div>
-        </div>
+        {/* FULLSCREEN DETAIL MODAL */}
+        <CoachDetailModal
+          coach={activeCoachDetail}
+          isOpen={Boolean(activeCoachDetail)}
+          onClose={() => setActiveCoachDetail(null)}
+        />
       </div>
-
-      {/* Loading & Error States */}
-      <StateMessage
-        loading={isLoading}
-        error={error}
-        onRetry={() => {
-          disciplinesQuery.refetch();
-          coachesQuery.refetch();
-        }}
-      />
-
-      {/* VERTICAL DISCIPLINE SECTIONS WITH HORIZONTAL CAROUSEL */}
-      {!isLoading && disciplineSections.length > 0 ? (
-        <div className="space-y-12">
-          {disciplineSections.map((section) => (
-            <DisciplineCoachSection
-              key={section.discipline.id}
-              discipline={section.discipline}
-              tagline={section.tagline}
-              coaches={section.coaches}
-              onOpenDetail={(coach) => setActiveCoachDetail(coach)}
-              onBookSession={(coach) => setActiveCoachDetail(coach)}
-            />
-          ))}
-        </div>
-      ) : (
-        !isLoading && (
-          <div className="p-12 text-center bg-white rounded-3xl border border-slate-200 shadow-sm space-y-4 max-w-lg mx-auto">
-            <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 mx-auto flex items-center justify-center">
-              <Users className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-base font-extrabold text-slate-800">
-                Không tìm thấy Huấn luyện viên phù hợp
-              </h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Vui lòng thử từ khóa khác hoặc chuyển sang danh mục bộ môn khác.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedDiscipline("ALL");
-                setSearchQuery("");
-                setSortBy("default");
-              }}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-[#008b74] text-white hover:bg-[#007360] transition-colors cursor-pointer"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Đặt lại bộ lọc</span>
-            </button>
-          </div>
-        )
-      )}
-
-      {/* FULLSCREEN DETAIL MODAL */}
-      <CoachDetailModal
-        coach={activeCoachDetail}
-        isOpen={Boolean(activeCoachDetail)}
-        onClose={() => setActiveCoachDetail(null)}
-      />
     </div>
   );
 };

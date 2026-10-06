@@ -1,7 +1,6 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "@/auth/session-context";
-import { PageTitle } from "@/components/common/page-title";
 import { StateMessage } from "@/components/feedback/state-message";
 import { get } from "@/lib/api";
 import { vietnamTime } from "@/lib/date";
@@ -25,10 +24,6 @@ export const HistoryPage: React.FC = () => {
 
   return (
     <>
-      <PageTitle eyebrow="MEM-09 · LỊCH SỬ" title="Hoạt động tập luyện" />
-      <p className="muted intro text-xs text-slate-500 mb-6">
-        API hiện trả tối đa 200 booking/điểm danh và 100 giáo án; chưa có phân trang vô hạn.
-      </p>
       <div>
         <section className="card">
           <h2 className="text-base font-bold text-slate-900 mb-3">Đặt lịch</h2>

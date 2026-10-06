@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useSession } from '@/auth/session-context'
-import { PageTitle } from '@/components/common/page-title'
 import { StateMessage } from '@/components/feedback/state-message'
 import { Button } from '@/components/ui/button'
 import { get, money, query } from '@/lib/api'
@@ -48,35 +47,32 @@ export const TransactionsPage: React.FC = () => {
 
   return (
     <>
-      <PageTitle title="Lịch sử giao dịch" />
 
       <div className="toolbar">
-        <label>
-          Trạng thái
-          <select
-            value={status}
-            onChange={(event) => {
-              setStatus(event.target.value)
-              setCursor('')
-            }}
-          >
-            <option value="">Tất cả</option>
 
-            {[
-              'PENDING_PAYMENT',
-              'PAYMENT_FAILED',
-              'FULFILLED',
-              'EXPIRED',
-              'PAYMENT_REVIEW',
-              'REFUND_PENDING',
-              'REFUNDED',
-            ].map((value) => (
-              <option key={value} value={value}>
-                {statusLabels[value] ?? value}
-              </option>
-            ))}
-          </select>
-        </label>
+        <select
+          value={status}
+          onChange={(event) => {
+            setStatus(event.target.value)
+            setCursor('')
+          }}
+        >
+          <option value="">Tất cả</option>
+
+          {[
+            'PENDING_PAYMENT',
+            'PAYMENT_FAILED',
+            'FULFILLED',
+            'EXPIRED',
+            'PAYMENT_REVIEW',
+            'REFUND_PENDING',
+            'REFUNDED',
+          ].map((value) => (
+            <option key={value} value={value}>
+              {statusLabels[value] ?? value}
+            </option>
+          ))}
+        </select>
       </div>
 
       <StateMessage

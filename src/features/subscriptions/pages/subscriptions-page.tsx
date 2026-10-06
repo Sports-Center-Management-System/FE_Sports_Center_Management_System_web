@@ -3,7 +3,6 @@ import { ArrowRight, Dumbbell } from 'lucide-react'
 import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useSession } from '@/auth/session-context'
-import { PageTitle } from '@/components/common/page-title'
 import { StateMessage } from '@/components/feedback/state-message'
 import { buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -25,10 +24,6 @@ export const SubscriptionsPage: React.FC = () => {
 
   return (
     <>
-      <PageTitle eyebrow="QUYỀN LỢI HỘI VIÊN" title="Gói tập của tôi" />
-      <p className="mb-6 text-sm leading-relaxed text-slate-500">
-        Theo dõi quyền lợi, số buổi còn lại và thời hạn của từng gói tập.
-      </p>
       <StateMessage
         loading={subscriptions.isPending}
         error={subscriptions.error}

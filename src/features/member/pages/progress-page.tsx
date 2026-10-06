@@ -2,12 +2,10 @@ import { lazy, Suspense } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { CalendarDays } from 'lucide-react'
 import { useSession } from '@/auth/session-context'
-import { PageTitle } from '@/components/common/page-title'
 import { StateMessage } from '@/components/feedback/state-message'
 import { Card } from '@/components/ui/card'
 import { get } from '@/lib/api'
 import type { InbodyLog } from '@/lib/types'
-import gymFacility from '@/assets/images/plan-gym-facility.jpg'
 import { InbodyBodyViewer } from '../components/inbody/inbody-body-viewer'
 import { InbodyMetricCard } from '../components/inbody/inbody-metric-card'
 import { InbodyComparison } from '../components/inbody/inbody-comparison'
@@ -36,16 +34,12 @@ export const ProgressPage = () => {
 
   return (
     <div className="inbody-dashboard relative isolate mx-auto min-w-0 max-w-6xl overflow-hidden rounded-3xl bg-slate-50 p-4 sm:p-6">
-      <div
+      {/* <div
         className="inbody-backdrop"
-        aria-hidden="true"
         style={{ backgroundImage: `url("${gymFacility}")` }}
-      />
+      /> */}
       <div className="relative">
-        <PageTitle eyebrow="INBODY · HÀNH TRÌNH LUYỆN TẬP" title="Chỉ số cơ thể" />
-        <p className="-mt-3 mb-7 text-sm text-slate-600">
-          Theo dõi sự thay đổi cơ thể của bạn theo thời gian.
-        </p>
+      
         <div aria-live="polite" aria-busy={progress.isPending}>
           <StateMessage
             loading={progress.isPending}
