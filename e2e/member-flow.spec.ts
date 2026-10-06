@@ -38,7 +38,7 @@ test('member can log in, inspect catalog, VIP quote, subscriptions and weekly ca
 
   await page.getByRole('link', { name: 'Gói của tôi' }).click()
   await expect(page.getByRole('heading', { name: 'Gói tập của tôi' })).toBeVisible()
-  await expect(page.locator('.card .mono').first()).toBeVisible()
+  await expect(page.getByRole('article').first()).toBeVisible()
   await page.getByRole('link', { name: 'Hóa đơn' }).click()
   await expect(page.getByRole('heading', { name: 'Hóa đơn của tôi' })).toBeVisible()
   for (const [link, heading] of [
