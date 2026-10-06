@@ -184,13 +184,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   })
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
-      <div
-        className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <aside
+      aria-label="Chi tiết buổi tập"
+      className="fixed right-5 top-24 z-50 flex w-[calc(100vw-2.5rem)] max-w-sm flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl animate-in slide-in-from-right duration-200"
+    >
+      <div className="flex max-h-[calc(100vh-7rem)] min-h-0 flex-1 flex-col">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
+        <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-white">
           <div className="flex items-center gap-2">
             <span
               className={cn(
@@ -208,13 +208,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             type="button"
             onClick={onClose}
             className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+            aria-label="Đóng chi tiết buổi tập"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Body content */}
-        <div className="p-6 space-y-5 overflow-y-auto flex-1">
+        <div className="p-5 space-y-5 overflow-y-auto flex-1">
           {errorMsg && (
             <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2">
               <AlertTriangle className="h-4 w-4 shrink-0 text-rose-500 mt-0.5" />
@@ -386,7 +387,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   type="button"
                   disabled={isStarted}
                   onClick={() => setShowCancelConfirm(true)}
-                  className="w-full py-2 px-4 rounded-lg border border-rose-300 text-rose-700 hover:bg-rose-50 text-xs font-bold transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-full py-2 px-4 rounded-lg border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-bold transition disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
                 >
                   Yêu cầu hủy đặt chỗ
                 </button>
@@ -397,7 +398,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
         {/* Footer Actions if NOT booked yet */}
         {!existingBooking && (
-          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/60 flex items-center justify-end gap-2">
+          <div className="px-5 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
@@ -439,6 +440,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           </div>
         )}
       </div>
-    </div>
+    </aside>
   )
 }
