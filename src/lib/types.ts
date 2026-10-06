@@ -80,6 +80,7 @@ export interface Subscription {
   status: string
   startDate: string
   endDate: string
+  createdAt: string
   remainingGroupSessions: number | null
   remainingPtSessions: number | null
   remainingSessions: number | null

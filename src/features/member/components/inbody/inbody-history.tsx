@@ -9,9 +9,9 @@ export function InbodyHistory({
   latestKey?: string
 }) {
   return (
-    <Card className="min-w-0 p-6">
+    <Card role="region" aria-label="Lịch sử InBody" className="min-w-0 rounded-3xl p-4 sm:p-6">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-bold text-slate-900">Lịch sử InBody</h2>
+        <h2 className="text-lg font-bold tracking-tight text-slate-900">Lịch sử InBody</h2>
         <span className="text-xs text-slate-500">{measurements.length} lần đo</span>
       </div>
       {measurements.length === 0 ? (
@@ -19,11 +19,11 @@ export function InbodyHistory({
       ) : (
         <div
           role="region"
-          aria-label="Bảng lịch sử InBody, cuộn ngang để xem tất cả chỉ số"
+          aria-label="Bảng lịch sử InBody"
           tabIndex={0}
-          className="overflow-x-auto rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#008b74]"
+          className="min-w-0 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#008b74]"
         >
-          <table className="text-sm tabular-nums">
+          <table className="inbody-history-table text-sm tabular-nums">
             <caption className="sr-only">
               Các lần đo InBody, mới nhất trước. Chỉ số chưa được cung cấp hiển thị dấu —.
             </caption>
@@ -56,7 +56,11 @@ export function InbodyHistory({
                     )}
                   </th>
                   {inbodyMetrics.map((metric) => (
-                    <td key={metric.key} className="whitespace-nowrap text-slate-600">
+                    <td
+                      key={metric.key}
+                      data-label={metric.label}
+                      className="whitespace-nowrap text-slate-600"
+                    >
                       {formatMetric(item[metric.key], metric.unit)}
                     </td>
                   ))}
