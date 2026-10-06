@@ -10,7 +10,6 @@ import {
   XCircle,
 } from 'lucide-react'
 import { useSession } from '@/auth/session-context'
-import { PageTitle } from '@/components/common/page-title'
 import { StateMessage } from '@/components/feedback/state-message'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -64,10 +63,6 @@ export const HistoryPage: React.FC = () => {
 
   return (
     <>
-      <PageTitle title="Hoạt động tập luyện" />
-      <p className="mb-6 text-sm leading-relaxed text-slate-500">
-        Theo dõi các buổi tập và lịch đặt của bạn.
-      </p>
       <section aria-labelledby="booking-history-title">
         <Card className="rounded-3xl p-5 shadow-none sm:p-6">
           <div className="mb-2 flex items-center gap-3">

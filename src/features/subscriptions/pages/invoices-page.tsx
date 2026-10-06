@@ -13,7 +13,6 @@ import {
   XCircle,
 } from 'lucide-react'
 import { useSession } from '@/auth/session-context'
-import { PageTitle } from '@/components/common/page-title'
 import { StateMessage } from '@/components/feedback/state-message'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -71,10 +70,6 @@ export const InvoicesPage: React.FC = () => {
 
   return (
     <>
-      <PageTitle title="Hóa đơn của tôi" />
-      <p className="mb-6 text-sm leading-relaxed text-slate-500">
-        Theo dõi hóa đơn và các khoản thanh toán của bạn.
-      </p>
       <section aria-labelledby="invoice-list-title">
         <Card className="rounded-3xl p-5 shadow-none sm:p-6">
           <div className="mb-2 flex items-center gap-3">

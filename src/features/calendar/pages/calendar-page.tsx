@@ -166,7 +166,7 @@ export const CalendarPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen rounded-3xl bg-slate-100 flex flex-col font-sans">
       {/* Toast Alert */}
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-5 duration-200">

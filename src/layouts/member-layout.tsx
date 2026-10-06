@@ -19,6 +19,8 @@ import {
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 
+import gymFacility from "@/assets/images/plan-gym-facility.jpg";
+
 const logoutButtonClassName =
   'w-full border-slate-200 bg-white text-xs font-semibold text-slate-600 shadow-none hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 focus-visible:ring-rose-500'
 
@@ -154,10 +156,10 @@ export const MemberLayout: React.FC = () => {
 
       {/* Main Workspace Area */}
       <main className="h-full min-h-0 overflow-y-auto p-4 sm:p-8 w-full min-w-0 relative isolate">
-        {/* <div
+        <div
           className="inbody-backdrop"
           style={{ backgroundImage: `url("${gymFacility}")` }}
-        /> */}
+        />
         <div className="relative">
           <Outlet />
         </div>

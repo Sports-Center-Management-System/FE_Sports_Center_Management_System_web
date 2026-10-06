@@ -1,7 +1,6 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "@/auth/session-context";
-import { PageTitle } from "@/components/common/page-title";
 import { StateMessage } from "@/components/feedback/state-message";
 import { get } from "@/lib/api";
 import { vietnamTime } from "@/lib/date";
@@ -16,8 +15,6 @@ export const WorkoutPlansPage: React.FC = () => {
 
   return (
     <>
-      <PageTitle eyebrow="MEM-12 · GIÁO ÁN" title="Bài tập của tôi" />
-      <p className="muted intro text-xs text-slate-500 mb-6">Danh sách hiện có tối đa 100 giáo án từ API.</p>
       <StateMessage
         loading={plans.isPending}
         error={plans.error}
