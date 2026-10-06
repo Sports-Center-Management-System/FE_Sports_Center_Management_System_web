@@ -1,3 +1,53 @@
+/* Keep the fitness background and layout scoped to this dashboard. */
+.inbody-backdrop {
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 auto;
+  height: 640px;
+  background-position: center top;
+  background-size: cover;
+  pointer-events: none;
+}
+.inbody-backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(248, 250, 252, 0.8),
+    rgba(248, 250, 252, 0.94) 65%,
+    #f8fafc
+  );
+}
+.inbody-overview {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: stretch;
+}
+.inbody-dashboard .inbody-visual-card {
+  min-width: 0;
+  border-radius: 1.5rem;
+  padding: 1rem;
+}
+.inbody-model-stage {
+  height: 360px;
+  min-height: 360px;
+  flex: 1;
+}
+.inbody-chart-plot {
+  height: 340px;
+  min-height: 340px;
+  min-width: 0;
+  flex: 1;
+}
+.inbody-history-table {
+  min-width: 0;
+  width: 100%;
+  margin-bottom: 0;
+}
+
 /* Scoped overrides for legacy global button rules; other pages stay unchanged. */
 .inbody-dashboard button {
   min-height: 36px;
@@ -18,4 +68,78 @@
 }
 .inbody-dashboard select {
   font-weight: 500;
+}
+
+@media (min-width: 640px) {
+  .inbody-dashboard .inbody-visual-card {
+    padding: 1.5rem;
+  }
+  .inbody-model-stage {
+    height: 400px;
+    min-height: 400px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .inbody-overview {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.2fr);
+    gap: 1.5rem;
+  }
+  .inbody-dashboard .inbody-visual-card {
+    min-height: 610px;
+  }
+}
+
+/* Stack table cells into measurement cards without duplicating history data. */
+@media (max-width: 1279px) {
+  .inbody-history-table,
+  .inbody-history-table tbody {
+    display: block;
+  }
+  .inbody-history-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .inbody-history-table tbody {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .inbody-history-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    padding: 1rem;
+  }
+  .inbody-history-table tbody th,
+  .inbody-history-table tbody td {
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .inbody-history-table tbody th {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .inbody-history-table tbody td {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .inbody-history-table tbody td::before {
+    content: attr(data-label);
+    color: #64748b;
+    font-size: 0.6875rem;
+    font-weight: 600;
+  }
 }
