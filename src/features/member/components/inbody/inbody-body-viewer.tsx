@@ -25,7 +25,7 @@ function ViewerPlaceholder({ loading = false, message }: { loading?: boolean; me
       <p className="mb-0 max-w-xs text-xs leading-relaxed text-slate-500">
         {loading
           ? 'Vui lòng đợi trong giây lát.'
-          : 'Bạn vẫn có thể theo dõi đầy đủ các chỉ số và lịch sử bên cạnh.'}
+          : 'Bạn vẫn có thể theo dõi đầy đủ các chỉ số và lịch sử bên dưới.'}
       </p>
     </div>
   )
@@ -65,11 +65,14 @@ export function InbodyBodyViewer() {
   const disabled = !ready || failed
 
   return (
-    <Card className="min-w-0 overflow-hidden p-6">
+    <Card
+      role="region"
+      aria-label="Tổng quan cơ thể 3D"
+      className="inbody-visual-card flex flex-col overflow-hidden"
+    >
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
-          <h2 className="font-bold text-slate-900">Tổng quan cơ thể</h2>
-          <p className="mb-0 mt-2 text-xs text-slate-500">Mô hình 3D · Xoay để khám phá</p>
+          <h2 className="text-lg font-bold tracking-tight text-slate-900">Tổng quan cơ thể</h2>
         </div>
         <span className="rounded-lg bg-emerald-50 p-2 text-[#008b74]">
           <Box className="h-5 w-5" aria-hidden="true" />
@@ -78,7 +81,7 @@ export function InbodyBodyViewer() {
       <div
         role="group"
         aria-label="Trình xem mô hình cơ thể 3D minh họa"
-        className="relative h-[380px] overflow-hidden rounded-xl border border-slate-100 bg-slate-50"
+        className="inbody-model-stage relative overflow-hidden rounded-2xl border border-slate-100 bg-slate-50"
       >
         {model.isPending ? (
           <ViewerPlaceholder loading message="Đang kiểm tra mô hình 3D..." />

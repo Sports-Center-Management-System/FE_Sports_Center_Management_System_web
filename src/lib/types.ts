@@ -80,6 +80,7 @@ export interface Subscription {
   status: string
   startDate: string
   endDate: string
+  createdAt: string
   remainingGroupSessions: number | null
   remainingPtSessions: number | null
   remainingSessions: number | null
@@ -91,6 +92,7 @@ export interface Invoice {
   id: string
   invoiceCode: string
   subscriptionId: string
+  checkoutId?: string | null
   amount: string
   baseAmount: string | null
   ptAmount: string | null

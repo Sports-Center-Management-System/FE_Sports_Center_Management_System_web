@@ -31,6 +31,15 @@ export interface PlanDetailModalProps {
   isOrdering?: boolean;
 }
 
+function ModalDisciplineIcon({ name, className }: { name?: string; className?: string }) {
+  const lower = (name || "").toLowerCase();
+  if (lower.includes("yoga")) return <Sparkles className={className} />;
+  if (lower.includes("box") || lower.includes("combat")) return <Flame className={className} />;
+  if (lower.includes("dance") || lower.includes("zumba")) return <Music className={className} />;
+  if (lower.includes("gym")) return <Dumbbell className={className} />;
+  return <Activity className={className} />;
+}
+
 export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
   plan,
   isOpen,
@@ -39,6 +48,12 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
   isOrdering = false,
 }) => {
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+  const [prevPlanId, setPrevPlanId] = useState(plan?.id);
+
+  if (plan?.id !== prevPlanId) {
+    setPrevPlanId(plan?.id);
+    setActivePhotoIndex(0);
+  }
 
   // Filter gallery to strictly include only photos of this specific discipline
   const photos = useMemo(() => {
@@ -47,11 +62,6 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
       plan.discipline?.name || plan.discipline?.code || plan.disciplineId,
       plan.name
     );
-  }, [plan]);
-
-  // Reset active photo index to 0 whenever a new plan opens
-  useEffect(() => {
-    setActivePhotoIndex(0);
   }, [plan]);
 
   // Handle ESC key and arrow keys to navigate
@@ -94,17 +104,6 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
     if (photos.length <= 1) return;
     setActivePhotoIndex((prev) => (prev > 0 ? prev - 1 : photos.length - 1));
   };
-
-  const getDisciplineIcon = () => {
-    const name = (plan.discipline?.name || "").toLowerCase();
-    if (name.includes("yoga")) return Sparkles;
-    if (name.includes("box") || name.includes("combat")) return Flame;
-    if (name.includes("dance") || name.includes("zumba")) return Music;
-    if (name.includes("gym")) return Dumbbell;
-    return Activity;
-  };
-
-  const DisciplineIcon = getDisciplineIcon();
 
   // Render via portal directly to body so it covers 100% of the viewport from the very top (0,0)
   return createPortal(
@@ -236,7 +235,7 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase bg-white/10 text-slate-200 border border-white/15">
-                  <DisciplineIcon className="w-3.5 h-3.5 text-emerald-400" />
+                  <ModalDisciplineIcon name={plan.discipline?.name} className="w-3.5 h-3.5 text-emerald-400" />
                   {plan.discipline?.name || "Bộ môn"}
                 </span>
 

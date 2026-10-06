@@ -50,14 +50,13 @@ function normalizeDiscipline(str?: string): "gym" | "boxing" | "zumba" | "yoga" 
   return "other";
 }
 
-function getDisciplineIcon(nameOrCode?: string) {
-  if (!nameOrCode) return Activity;
+function DisciplineIconComponent({ nameOrCode, className }: { nameOrCode?: string; className?: string }) {
   const norm = normalizeDiscipline(nameOrCode);
-  if (norm === "gym") return Dumbbell;
-  if (norm === "boxing") return Flame;
-  if (norm === "zumba") return Music;
-  if (norm === "yoga") return Sparkles;
-  return Activity;
+  if (norm === "gym") return <Dumbbell className={className} />;
+  if (norm === "boxing") return <Flame className={className} />;
+  if (norm === "zumba") return <Music className={className} />;
+  if (norm === "yoga") return <Sparkles className={className} />;
+  return <Activity className={className} />;
 }
 
 const DISCIPLINE_PRESETS: Record<
@@ -114,7 +113,6 @@ const PlanCard: React.FC<PlanCardProps> = ({ plan, onOpenDetail, onSelectPlan, i
     plan.name,
     plan.id
   );
-  const DiscIcon = getDisciplineIcon(plan.discipline?.name || plan.disciplineId);
 
   return (
     <article
@@ -134,7 +132,7 @@ const PlanCard: React.FC<PlanCardProps> = ({ plan, onOpenDetail, onSelectPlan, i
         {/* Top Badges */}
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase bg-black/50 text-white backdrop-blur-md border border-white/20">
-            <DiscIcon className="w-3.5 h-3.5 text-emerald-400" />
+            <DisciplineIconComponent nameOrCode={plan.discipline?.name || plan.disciplineId} className="w-3.5 h-3.5 text-emerald-400" />
             {plan.discipline?.name || "Bộ môn"}
           </span>
 
@@ -313,15 +311,13 @@ const DisciplinePlanSection: React.FC<DisciplinePlanSectionProps> = ({
     }
   };
 
-  const DiscIcon = getDisciplineIcon(section.name || section.code || section.id);
-
   return (
     <section className="space-y-4 pt-4">
       {/* Section Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 pb-2 border-b border-slate-200/80">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-[#008b74] flex items-center justify-center shrink-0 shadow-xs">
-            <DiscIcon className="w-5 h-5" />
+            <DisciplineIconComponent nameOrCode={section.name || section.code || section.id} className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
@@ -421,7 +417,7 @@ const DisciplinePlanSection: React.FC<DisciplinePlanSectionProps> = ({
   );
 };
 
-export const PlanCatalog: React.FC<PlanCatalogProps> = ({ member: _member }) => {
+export const PlanCatalog: React.FC<PlanCatalogProps> = () => {
   const { user } = useSession();
   const navigate = useNavigate();
   const [disciplineId, setDisciplineId] = useState("");
@@ -601,7 +597,6 @@ export const PlanCatalog: React.FC<PlanCatalogProps> = ({ member: _member }) => 
 
           {tabDisciplines.map((item) => {
             const isActive = disciplineId === item.id;
-            const Icon = getDisciplineIcon(item.name || item.code || item.id);
             return (
               <button
                 key={item.id}
@@ -614,7 +609,8 @@ export const PlanCatalog: React.FC<PlanCatalogProps> = ({ member: _member }) => 
                     : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-900"
                 )}
               >
-                <Icon
+                <DisciplineIconComponent
+                  nameOrCode={item.name || item.code || item.id}
                   className={cn("w-3.5 h-3.5", isActive ? "text-emerald-400" : "text-slate-400")}
                 />
                 <span>{item.name}</span>

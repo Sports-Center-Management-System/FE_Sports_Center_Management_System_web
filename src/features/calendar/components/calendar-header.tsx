@@ -5,12 +5,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar as CalendarIcon,
-  Dumbbell,
-  LogOut,
   Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useAuth } from '@/context/auth-context'
 
 const disciplineTagClass = (discipline: Discipline) => {
   const value = `${discipline.code} ${discipline.name}`.toLowerCase()
@@ -42,49 +39,14 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   subscriptions,
   isLoading,
 }) => {
-  const { user, logout } = useAuth()
 
   return (
-    <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+    <header className="bg-white border-b border-slate-200 top-0 z-30 shadow-xs rounded-t-3xl">
       {/* Top Navbar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          {/* Logo & Title */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#008b74] to-[#005f4f] flex items-center justify-center text-white shadow-md shadow-emerald-900/10">
-                <Dumbbell className="h-5 w-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-lg font-bold text-slate-900 tracking-tight">
-                    Lịch tập & Đặt chỗ
-                  </h1>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    Hội viên
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500">
-                  Thời khóa biểu trung tâm theo tuần (Asia/Ho_Chi_Minh)
-                </p>
-              </div>
-            </div>
-
-            {/* User profile / Logout on mobile */}
-            <div className="flex md:hidden items-center gap-2">
-              <button
-                type="button"
-                onClick={() => logout()}
-                className="p-2 text-slate-500 hover:text-rose-600 rounded-lg border border-slate-200 hover:bg-slate-50"
-                title="Đăng xuất"
-              >
-                <LogOut className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-
           {/* Navigation Controls: Today, Prev, Next, Range */}
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="flex relative items-center gap-2 sm:gap-3">
             <button
               type="button"
               onClick={onGoToCurrentWeek}
@@ -116,23 +78,6 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
               </button>
             </div>
 
-            {/* Desktop User Info & Logout */}
-            <div className="hidden md:flex items-center gap-3 pl-2 border-l border-slate-200">
-              <div className="text-right">
-                <div className="text-xs font-bold text-slate-800 line-clamp-1">
-                  {user?.fullName || 'Hội viên'}
-                </div>
-                <div className="text-[10px] text-slate-500">{user?.email}</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => logout()}
-                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                title="Đăng xuất"
-              >
-                <LogOut className="h-4 w-4" />
-              </button>
-            </div>
           </div>
         </div>
 
