@@ -1,26 +1,30 @@
 import React from 'react'
-import type { CalendarViewMode, Discipline, CalendarSubscription } from '../types/calendar.types'
+import type { Discipline, CalendarSubscription } from '../types/calendar.types'
 import { formatRangeLabel } from '../utils/calendar-date.utils'
 import {
   ChevronLeft,
   ChevronRight,
   Calendar as CalendarIcon,
-  Filter,
   Dumbbell,
-  UserCheck,
-  Users,
   LogOut,
   Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/auth-context'
 
+const disciplineTagClass = (discipline: Discipline) => {
+  const value = `${discipline.code} ${discipline.name}`.toLowerCase()
+  if (value.includes('gym') || value.includes('fitness')) return 'border-orange-200 bg-orange-50 text-orange-800 hover:bg-orange-100'
+  if (value.includes('box') || value.includes('combat')) return 'border-rose-200 bg-rose-50 text-rose-800 hover:bg-rose-100'
+  if (value.includes('yoga')) return 'border-violet-200 bg-violet-50 text-violet-800 hover:bg-violet-100'
+  if (value.includes('dance') || value.includes('zumba')) return 'border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100'
+  return 'border-cyan-200 bg-cyan-50 text-cyan-800 hover:bg-cyan-100'
+}
+
 interface CalendarHeaderProps {
   currentWeek: string
   onWeekChange: (direction: 'prev' | 'next') => void
   onGoToCurrentWeek: () => void
-  viewMode: CalendarViewMode
-  onViewModeChange: (view: CalendarViewMode) => void
   selectedDisciplineId: string
   onDisciplineChange: (disciplineId: string) => void
   disciplines: Discipline[]
@@ -32,8 +36,6 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   currentWeek,
   onWeekChange,
   onGoToCurrentWeek,
-  viewMode,
-  onViewModeChange,
   selectedDisciplineId,
   onDisciplineChange,
   disciplines,
@@ -136,81 +138,34 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
 
         {/* Filter bar & Subscriptions Summary */}
         <div className="mt-3 pt-3 border-t border-slate-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-          {/* View Mode Filters & Discipline Select */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* View filter buttons */}
-            <div className="inline-flex p-1 bg-slate-100 rounded-lg border border-slate-200 text-xs font-medium">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               <button
                 type="button"
-                onClick={() => onViewModeChange('all')}
+                onClick={() => onDisciplineChange('all')}
                 className={cn(
-                  'px-2.5 py-1 rounded-md transition flex items-center gap-1.5',
-                  viewMode === 'all'
-                    ? 'bg-white text-slate-900 font-bold shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900',
+                  'rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
+                  selectedDisciplineId === 'all'
+                    ? 'border-slate-800 bg-slate-800 text-white'
+                    : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50',
                 )}
               >
-                <span>Tất cả</span>
+                Tất cả bộ môn
               </button>
-              <button
-                type="button"
-                onClick={() => onViewModeChange('group')}
-                className={cn(
-                  'px-2.5 py-1 rounded-md transition flex items-center gap-1.5',
-                  viewMode === 'group'
-                    ? 'bg-white text-sky-700 font-bold shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900',
-                )}
-              >
-                <Users className="h-3.5 w-3.5 text-sky-600" />
-                <span>Lớp nhóm</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onViewModeChange('pt')}
-                className={cn(
-                  'px-2.5 py-1 rounded-md transition flex items-center gap-1.5',
-                  viewMode === 'pt'
-                    ? 'bg-white text-purple-700 font-bold shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900',
-                )}
-              >
-                <UserCheck className="h-3.5 w-3.5 text-purple-600" />
-                <span>HLV kèm 1-1 (PT)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onViewModeChange('mine')}
-                className={cn(
-                  'px-2.5 py-1 rounded-md transition flex items-center gap-1.5',
-                  viewMode === 'mine'
-                    ? 'bg-white text-emerald-700 font-bold shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900',
-                )}
-              >
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                <span>Lịch của tôi</span>
-              </button>
-            </div>
-
-            {/* Discipline Dropdown */}
-            <div className="flex items-center gap-1.5">
-              <div className="relative">
-                <select
-                  value={selectedDisciplineId}
-                  onChange={(e) => onDisciplineChange(e.target.value)}
-                  className="appearance-none pl-7 pr-8 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-[#008b74]/20 focus:border-[#008b74]"
+              {disciplines.map((discipline) => (
+                <button
+                  key={discipline.id}
+                  type="button"
+                  onClick={() => onDisciplineChange(discipline.id)}
+                  className={cn(
+                    'rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
+                    disciplineTagClass(discipline),
+                    selectedDisciplineId === discipline.id && 'ring-2 ring-offset-1 ring-slate-500',
+                  )}
                 >
-                  <option value="all">Tất cả bộ môn</option>
-                  {disciplines.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
-                <Filter className="h-3.5 w-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <ChevronRight className="h-3.5 w-3.5 text-slate-400 rotate-90 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              </div>
+                  {discipline.name}
+                </button>
+              ))}
             </div>
 
             {isLoading && (
