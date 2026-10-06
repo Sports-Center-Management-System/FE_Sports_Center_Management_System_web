@@ -11,7 +11,7 @@ import {
   CheckCircle2,
   Package,
   Dumbbell,
-  KeyRound,
+  // KeyRound,
   FileText,
   LogOut,
   Menu,
@@ -29,8 +29,8 @@ const memberNavLinks = [
   { label: "Hồ sơ", path: "/portal/member/profile", icon: User },
   { label: "InBody", path: "/portal/member/progress", icon: Activity },
   { label: "Giáo án", path: "/portal/member/workout-plans", icon: BookOpen },
-  { label: "Điểm danh", path: "/portal/member/attendances", icon: CheckCircle2 },
-  { label: "Tủ đồ", path: "/portal/member/lockers", icon: KeyRound },
+  // { label: "Điểm danh", path: "/portal/member/attendances", icon: CheckCircle2 },
+  // { label: "Tủ đồ", path: "/portal/member/lockers", icon: KeyRound },
 ];
 
 export const MemberLayout: React.FC = () => {

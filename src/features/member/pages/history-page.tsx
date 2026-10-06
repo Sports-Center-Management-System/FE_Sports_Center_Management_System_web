@@ -6,7 +6,7 @@ import { StateMessage } from "@/components/feedback/state-message";
 import { get } from "@/lib/api";
 import { vietnamTime } from "@/lib/date";
 import { memberKeys } from "@/lib/keys";
-import type { Attendance, Booking, WorkoutPlan } from "@/lib/types";
+import type {Booking} from "@/lib/types";
 
 export const HistoryPage: React.FC = () => {
   const { user } = useSession();
@@ -14,14 +14,14 @@ export const HistoryPage: React.FC = () => {
     queryKey: memberKeys.history(user!.id),
     queryFn: () => get<Booking[]>("/bookings"),
   });
-  const attendances = useQuery({
-    queryKey: ["member", user!.id, "attendances"],
-    queryFn: () => get<Attendance[]>("/attendances"),
-  });
-  const workouts = useQuery({
-    queryKey: ["member", user!.id, "workouts"],
-    queryFn: () => get<WorkoutPlan[]>("/workout-plans"),
-  });
+  // const attendances = useQuery({
+  //   queryKey: ["member", user!.id, "attendances"],
+  //   queryFn: () => get<Attendance[]>("/attendances"),
+  // });
+  // const workouts = useQuery({
+  //   queryKey: ["member", user!.id, "workouts"],
+  //   queryFn: () => get<WorkoutPlan[]>("/workout-plans"),
+  // });
 
   return (
     <>
@@ -29,7 +29,7 @@ export const HistoryPage: React.FC = () => {
       <p className="muted intro text-xs text-slate-500 mb-6">
         API hiện trả tối đa 200 booking/điểm danh và 100 giáo án; chưa có phân trang vô hạn.
       </p>
-      <div className="three-column">
+      <div>
         <section className="card">
           <h2 className="text-base font-bold text-slate-900 mb-3">Đặt lịch</h2>
           <StateMessage
@@ -55,7 +55,7 @@ export const HistoryPage: React.FC = () => {
             </div>
           ))}
         </section>
-
+{/* 
         <section className="card">
           <h2 className="text-base font-bold text-slate-900 mb-3">Điểm danh</h2>
           <StateMessage
@@ -86,7 +86,7 @@ export const HistoryPage: React.FC = () => {
               </small>
             </div>
           ))}
-        </section>
+        </section> */}
       </div>
     </>
   );
