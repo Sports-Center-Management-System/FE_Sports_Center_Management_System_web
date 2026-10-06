@@ -73,7 +73,6 @@ export function InbodyBodyViewer() {
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold tracking-tight text-slate-900">Tổng quan cơ thể</h2>
-          <p className="mb-0 mt-2 text-xs text-slate-500">Mô hình 3D · Xoay để khám phá</p>
         </div>
         <span className="rounded-lg bg-emerald-50 p-2 text-[#008b74]">
           <Box className="h-5 w-5" aria-hidden="true" />
