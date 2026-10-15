@@ -1,7 +1,11 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { readTokens, saveTokens, clearTokens } from "@/lib/api";
+import { resolveBackendConfig } from "@/lib/backend-config";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api/v1";
+const { apiBaseUrl: BASE_URL } = resolveBackendConfig(
+  import.meta.env.VITE_API_BASE_URL,
+  import.meta.env.DEV,
+);
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
