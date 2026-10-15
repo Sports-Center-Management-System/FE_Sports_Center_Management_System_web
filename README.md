@@ -1,4 +1,4 @@
-# Sports Center Management System - Web Portal
+﻿# Sports Center Management System - Web Portal
 
 > Cổng thông tin và bảng điều khiển quản trị web dành cho Quản lý Trung tâm (Center Manager) và Nhân viên Lễ tân (Receptionist), cung cấp giao diện trực quan cho quản lý lớp học, phân quyền, thanh toán và check-in thời gian thực.
 

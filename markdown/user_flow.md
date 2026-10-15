@@ -1,10 +1,10 @@
 # Triển khai luồng MEMBER trên Web Portal
 
-Tài liệu này dành cho repo `app/web` (tên thư mục frontend hiện tại). Nguồn màn hình: [`MEMBER_SCREEN_LIST.md`](../../erd/active/screen%20lists/MEMBER_SCREEN_LIST.md); nguồn nghiệp vụ: [`business_rule_final.md`](../../erd/active/business%20rules/business_rule_final.md). Chỉ dựng luồng MEMBER trước. Cấu trúc backend, URL `/`, `/portal`, `/console` và quyền API được giữ nguyên. Web hiện là scaffold React/Vite/TypeScript, chưa cài router, API cache hoặc Socket.IO client; code dưới đây là **template triển khai**, chưa phải file đã chạy.
+Tài liệu này dành cho repo `app/web` (tên thư mục frontend hiện tại). Nguồn màn hình: [`MEMBER_SCREEN_LIST.md`](../../erd/active/screen%20lists/MEMBER_SCREEN_LIST.md); nguồn nghiệp vụ: [`business_rule_final.md`](../../erd/active/business%20rules/business_rule_final.md). Chỉ dựng luồng MEMBER trước. Cấu trúc backend, URL `/`, `/portal`, `/console` và quyền API được giữ nguyên. Web đã có implementation trong `src/`; các đoạn code dưới đây giữ vai trò **template tham chiếu** cho quyết định routing và cache. Kiểm tra mã nguồn thật khi bảo trì.
 
 ## 1. Routing template
 
-Cài `react-router`, `@tanstack/react-query` và `socket.io-client` khi bắt đầu triển khai; kiểm tra phiên bản tương thích với React 19 hiện có. [React Router Data Mode](https://reactrouter.com/start/data/installation) hiện dùng `createBrowserRouter` từ `react-router` và `RouterProvider` từ `react-router/dom`. Tạo page components theo `MEM-01` đến `MEM-14`; dùng modal/drawer cho thao tác thay vì tạo URL cho từng nút. Ví dụ route config TypeScript/React Router:
+Các package `react-router`, `@tanstack/react-query` và `socket.io-client` đã được cài và kiểm tra tương thích với React 19. [React Router Data Mode](https://reactrouter.com/start/data/installation) hiện dùng `createBrowserRouter` từ `react-router` và `RouterProvider` từ `react-router/dom`. Tạo page components theo `MEM-01` đến `MEM-14`; dùng modal/drawer cho thao tác thay vì tạo URL cho từng nút. Ví dụ route config TypeScript/React Router:
 
 ```tsx
 // src/routes/member-routes.tsx — template; import Page/Layout từ feature thật khi triển khai
@@ -154,7 +154,7 @@ Subscription list, invoice, calendar `subscriptions[]` và `days[].eligibility[]
 ## 3. Thứ tự triển khai frontend
 
 1. Tạo router, public/member layout, guard 4 trạng thái, API client + token refresh, error envelope; chưa dựng role khác. Xác minh deep link, refresh trang, logout/xóa cache và 403.
-2. Tạo MEM-01 đăng ký/đăng nhập, MEM-02 catalog theo môn và tier. Chỉ render SKU trả từ API; seed hiện chưa đủ ma trận 4 môn trong `business_rule_final.md` nên phải ghi trạng thái dữ liệu thiếu, không giả plan trên FE.
+2. Tạo MEM-01 đăng ký/đăng nhập, MEM-02 catalog theo môn và tier. Seed đã nạp ma trận 4 môn. Chỉ render SKU trả từ API và báo trạng thái thiếu dữ liệu nếu môi trường triển khai chưa seed.
 3. Tạo MEM-03 quote VIP read-only và lựa chọn Coach; Trial/Drop-in/Plus dùng giá catalog. Tạo MEM-04 checkout và MEM-05 lịch sử giao dịch; tích hợp `/mock-payment` chỉ cho demo, trạng thái bằng GET/polling trước Socket.IO.
 4. Tạo MEM-06 subscriptions/quota và MEM-07 invoices; mỗi card/hàng có `subscriptionId`, môn, hạn, Coach, quota nhóm/PT tách biệt. Renew/add-on tạo checkout riêng và xác nhận giá order.
 5. Tạo MEM-08 lịch tuần hợp nhất: URL Monday Việt Nam, Back/Next ±7 ngày, lọc môn/view, eligibility theo gói, đặt/hủy nhóm/PT. Dùng một GET aggregate tuần, không ghép ba GET cap. Xử lý lớp đầy, quota hết, PT cùng môn/ngày, hai môn trùng giờ, hủy đúng/muộn và race.
