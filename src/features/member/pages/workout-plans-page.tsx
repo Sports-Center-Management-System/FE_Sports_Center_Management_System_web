@@ -1,3 +1,20 @@
+import React, { useEffect, useState } from 'react'
+
+type Exercise = {
+  id: string
+  name: string
+  sets: number
+  reps: number
+  restSeconds: number
+}
+
+type WorkoutPlan = {
+  id: string
+  title: string
+  week: number
+  order: number
+  exercises: Exercise[]
+}
 
 const workoutPlans: WorkoutPlan[] = [
   {
@@ -447,13 +464,7 @@ const workoutPlans: WorkoutPlan[] = [
 
 /* =========================================================
    PAGE
-import React from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useSession } from "@/auth/session-context";
-import { StateMessage } from "@/components/feedback/state-message";
-import { get } from "@/lib/api";
-import { vietnamTime } from "@/lib/date";
-import type { WorkoutPlan } from "@/lib/types";
+========================================================= */
 
 export const WorkoutPlansPage: React.FC = () => {
   const [selectedPlan, setSelectedPlan] = useState<WorkoutPlan | null>(null)
@@ -490,11 +501,6 @@ export const WorkoutPlansPage: React.FC = () => {
 
   return (
     <>
-      <StateMessage
-        loading={plans.isPending}
-        error={plans.error}
-        empty={plans.data?.length === 0}
-      />
       <div className="card-grid">
         {workoutPlans.map((plan) => (
           <article
