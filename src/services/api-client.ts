@@ -7,6 +7,18 @@ const { apiBaseUrl: BASE_URL } = resolveBackendConfig(
   import.meta.env.DEV,
 );
 
+// Helpers theo chuẩn tích hợp Auth
+export const getAccessToken = (): string | undefined => readTokens()?.accessToken;
+export const getRefreshToken = (): string | undefined => readTokens()?.refreshToken;
+export const clearAllTokens = (): void => {
+  clearTokens();
+};
+export const disconnectSocket = (): void => {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("auth:disconnect-socket"));
+  }
+};
+
 export const apiClient = axios.create({
   baseURL: BASE_URL,
   headers: {
@@ -15,11 +27,14 @@ export const apiClient = axios.create({
   timeout: 10000,
 });
 
-// Request interceptor to inject stored Bearer token
+// Alias api theo chuẩn cấu hình mẫu
+export const api = apiClient;
+
+// 1. Request Interceptor: Luôn đính kèm Bearer token
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const tokens = readTokens();
-  if (tokens?.accessToken && config.headers) {
-    config.headers.Authorization = `Bearer ${tokens.accessToken}`;
+  const token = getAccessToken();
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
@@ -59,26 +74,63 @@ apiClient.interceptors.response.use(
       _retry?: boolean;
     }) | undefined;
 
-    // If 401 Unauthorized and not on an auth endpoint
+    const statusCode = error.response?.status;
+    const errData = error.response?.data as
+      | { errorCode?: string; message?: string | string[] }
+      | undefined;
+    const errorCode =
+      errData?.errorCode ||
+      (typeof errData?.message === "string" ? errData.message : undefined);
+
+    // TRƯỜNG HỢP A: Tài khoản bị vô hiệu hóa hoặc phiên bị thu hồi tức thì
     if (
-      error.response?.status === 401 &&
+      statusCode === 401 &&
+      (errorCode === "SESSION_REVOKED" ||
+        errorCode === "REFRESH_TOKEN_REUSED_OR_REVOKED" ||
+        errorCode === "REFRESH_TOKEN_INVALID_OR_EXPIRED" ||
+        (typeof errData?.message === "string" &&
+          (errData.message.includes("SESSION_REVOKED") ||
+            errData.message.includes("REFRESH_TOKEN_REUSED"))))
+    ) {
+      processQueue(new Error("SESSION_REVOKED"), null);
+      // 1. Xóa sạch token ở client
+      clearAllTokens();
+      // 2. Ngắt kết nối socket realtime nếu đang mở
+      disconnectSocket();
+      try {
+        sessionStorage.setItem("auth_revoked_reason", "SESSION_REVOKED");
+      } catch {
+        // Ignore storage error
+      }
+      // 3. Hiển thị thông báo và redirect về trang Login
+      if (typeof window !== "undefined") {
+        alert("Tài khoản của bạn đã bị vô hiệu hóa hoặc đăng xuất từ xa.");
+        window.location.href = "/login";
+      }
+      return Promise.reject(error);
+    }
+
+    // TRƯỜNG HỢP B: Access Token hết hạn thông thường (15 phút) -> Thử refresh token
+    if (
+      statusCode === 401 &&
       originalRequest &&
       !originalRequest._retry &&
       !originalRequest.url?.includes("/auth/login") &&
       !originalRequest.url?.includes("/auth/register") &&
       !originalRequest.url?.includes("/auth/refresh")
     ) {
-      const tokens = readTokens();
-      const refreshToken = tokens?.refreshToken;
+      const refreshToken = getRefreshToken();
 
       if (!refreshToken) {
-        clearTokens();
-        if (window.location.pathname !== "/login" && window.location.pathname !== "/auth/login") {
-          window.location.href = "/auth/login";
+        clearAllTokens();
+        disconnectSocket();
+        if (typeof window !== "undefined" && window.location.pathname !== "/login" && window.location.pathname !== "/auth/login") {
+          window.location.href = "/login";
         }
         return Promise.reject(error);
       }
 
+      // Đưa vào hàng đợi nếu đang trong tiến trình refresh để chống Replay Attack do race condition
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -96,32 +148,43 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshRes = await axios.post(`${BASE_URL}/auth/refresh`, {
-          refreshToken,
-        });
+        const refreshRes = await axios.post(
+          `${apiClient.defaults.baseURL}/auth/refresh`,
+          { refreshToken }
+        );
 
         const data = refreshRes.data?.data || refreshRes.data;
-        const newAccessToken = data.accessToken;
-        const newRefreshToken = data.refreshToken;
+        const newAccess = data.accessToken;
+        const newRefresh = data.refreshToken;
 
-        if (newAccessToken) {
+        if (newAccess && newRefresh) {
+          // Lưu cặp token mới ngay lập tức (Token Rotation: single-use refresh token)
           saveTokens({
-            accessToken: newAccessToken,
-            refreshToken: newRefreshToken || refreshToken,
+            accessToken: newAccess,
+            refreshToken: newRefresh,
           });
+
+          // Gửi lại request ban đầu với Access Token mới
           if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+            originalRequest.headers.Authorization = `Bearer ${newAccess}`;
           }
-          processQueue(null, newAccessToken);
+          processQueue(null, newAccess);
           return apiClient(originalRequest);
         } else {
-          throw new Error("Invalid token refresh payload");
+          throw new Error("Invalid token refresh payload from server");
         }
-      } catch (refreshErr: unknown) {
-        processQueue(refreshErr instanceof Error ? refreshErr : new Error(String(refreshErr)), null);
-        clearTokens();
-        if (window.location.pathname !== "/login" && window.location.pathname !== "/auth/login") {
-          window.location.href = "/auth/login";
+      } catch (refreshErr) {
+        // Refresh token cũng hết hạn hoặc bị thu hồi
+        processQueue(
+          refreshErr instanceof Error
+            ? refreshErr
+            : new Error(String(refreshErr)),
+          null
+        );
+        clearAllTokens();
+        disconnectSocket();
+        if (typeof window !== "undefined" && window.location.pathname !== "/login" && window.location.pathname !== "/auth/login") {
+          window.location.href = "/login";
         }
         return Promise.reject(refreshErr);
       } finally {

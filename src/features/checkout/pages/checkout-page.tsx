@@ -89,8 +89,19 @@ export const CheckoutPage: React.FC = () => {
     socket.on("connect", () => {
       void cache.invalidateQueries({ queryKey: memberKeys.checkout(user!.id, checkoutId) });
     });
+    socket.on("disconnect", (reason) => {
+      if (reason === "io server disconnect") {
+        socket.disconnect();
+      }
+    });
+
+    const handleAuthDisconnect = () => {
+      socket.disconnect();
+    };
+    window.addEventListener("auth:disconnect-socket", handleAuthDisconnect);
 
     return () => {
+      window.removeEventListener("auth:disconnect-socket", handleAuthDisconnect);
       socket.off("checkout.updated", invalidate);
       socket.disconnect();
     };

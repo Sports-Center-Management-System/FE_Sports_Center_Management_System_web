@@ -46,6 +46,7 @@ export function clearTokens() {
   localStorage.removeItem('refresh_token')
   localStorage.removeItem('auth_user')
   window.dispatchEvent(new Event('session-changed'))
+  window.dispatchEvent(new CustomEvent('auth:disconnect-socket'))
 }
 export function apiOrigin() {
   return socketOrigin || window.location.origin
@@ -73,13 +74,24 @@ async function refreshTokens(): Promise<Tokens> {
         message?: string
       } | null
       if (!response.ok || !payload?.data?.accessToken) {
-        if (response.status === 401 || response.status === 403) clearTokens()
+        clearTokens()
+        if (
+          payload?.errorCode === 'SESSION_REVOKED' ||
+          payload?.errorCode === 'REFRESH_TOKEN_REUSED_OR_REVOKED'
+        ) {
+          try {
+            sessionStorage.setItem('auth_revoked_reason', 'SESSION_REVOKED')
+          } catch {
+            // Ignore storage error
+          }
+        }
         throw new ApiError(
           response.status,
           payload?.errorCode ?? 'REFRESH_FAILED',
           String(payload?.message ?? 'Không thể làm mới phiên'),
         )
       }
+      // Token Rotation: ghi đè ngay lập tức cặp tokens mới vào storage
       saveTokens(payload.data)
       return payload.data
     })().finally(() => {
@@ -109,9 +121,37 @@ export async function request<T>(
     return response
   }
   let response = await call(isPublic ? undefined : readTokens()?.accessToken)
-  if (response.status === 401 && !isPublic && readTokens()?.refreshToken) {
-    const renewed = await refreshTokens()
-    response = await call(renewed.accessToken)
+  if (response.status === 401 && !isPublic) {
+    // Đọc body kiểm tra mã lỗi SESSION_REVOKED trước khi thử refresh
+    const clone = response.clone()
+    const errBody = (await clone.json().catch(() => null)) as {
+      errorCode?: string
+      message?: string | string[]
+    } | null
+    const errCode =
+      errBody?.errorCode || (typeof errBody?.message === 'string' ? errBody.message : undefined)
+
+    if (
+      errCode === 'SESSION_REVOKED' ||
+      errCode === 'REFRESH_TOKEN_REUSED_OR_REVOKED' ||
+      errCode === 'REFRESH_TOKEN_INVALID_OR_EXPIRED'
+    ) {
+      clearTokens()
+      try {
+        sessionStorage.setItem('auth_revoked_reason', 'SESSION_REVOKED')
+      } catch {
+        // Ignore storage error
+      }
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/auth/login') {
+        window.location.href = '/auth/login'
+      }
+      throw new ApiError(401, errCode, 'Phiên làm việc đã bị thu hồi hoặc tài khoản bị vô hiệu hóa')
+    }
+
+    if (readTokens()?.refreshToken) {
+      const renewed = await refreshTokens()
+      response = await call(renewed.accessToken)
+    }
   }
   const body = (await response.json().catch(() => null)) as {
     success?: boolean

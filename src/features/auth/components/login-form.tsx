@@ -21,7 +21,18 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(() => {
+    try {
+      const reason = sessionStorage.getItem("auth_revoked_reason");
+      if (reason === "SESSION_REVOKED") {
+        sessionStorage.removeItem("auth_revoked_reason");
+        return "Tài khoản của bạn đã bị vô hiệu hóa hoặc phiên đăng nhập đã bị thu hồi từ xa.";
+      }
+    } catch {
+      // Ignore storage read error
+    }
+    return null;
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
