@@ -1,6 +1,9 @@
-﻿import { Navigate, useSearchParams, useLocation } from 'react-router'
+﻿import { Navigate, Outlet, useSearchParams, useLocation } from 'react-router'
 import type { ReactNode } from 'react'
+import type { UserRole } from '@/types'
 import { useSession } from '../auth/session-context'
+import { ProtectedRoute } from './protected-route'
+import { RoleGuard } from './role-guard'
 import { isMonday, mondayInVietnam } from '../lib/date'
 import { CalendarPage } from '../pages/CalendarPage'
 export function MemberGuard({ children }: { children: ReactNode }) {
@@ -22,6 +25,25 @@ export function MemberGuard({ children }: { children: ReactNode }) {
     )
   if (user?.role !== 'MEMBER') return <Navigate to="/forbidden" replace />
   return <>{children}</>
+}
+/** Layout route: login first (keeps the return path), then role check. */
+export function StaffGuard({ roles }: { roles: UserRole[] }) {
+  return (
+    <ProtectedRoute>
+      <RoleGuard allowedRoles={roles}>
+        <Outlet />
+      </RoleGuard>
+    </ProtectedRoute>
+  )
+}
+/** Stand-in until the staff pages are ported onto this router. */
+export function PortalPlaceholder({ title }: { title: string }) {
+  return (
+    <div className="p-8 max-w-xl mx-auto text-center space-y-3 bg-white rounded-2xl border border-slate-200 shadow-sm mt-8">
+      <h2 className="text-xl font-bold text-slate-800">{title}</h2>
+      <p className="text-xs text-slate-500">Trang này đang được phát triển.</p>
+    </div>
+  )
 }
 export function CalendarRoute() {
   const [params] = useSearchParams()
