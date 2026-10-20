@@ -1,4 +1,4 @@
-﻿import { Navigate, Outlet, useSearchParams, useLocation } from 'react-router'
+import { Navigate, Outlet, useSearchParams, useLocation } from 'react-router'
 import type { ReactNode } from 'react'
 import type { UserRole } from '@/types'
 import { useSession } from '../auth/session-context'
@@ -42,6 +42,24 @@ export function PortalPlaceholder({ title }: { title: string }) {
     <div className="p-8 max-w-xl mx-auto text-center space-y-3 bg-white rounded-2xl border border-slate-200 shadow-sm mt-8">
       <h2 className="text-xl font-bold text-slate-800">{title}</h2>
       <p className="text-xs text-slate-500">Trang này đang được phát triển.</p>
+    </div>
+  )
+}
+
+export function PortalErrorFallback() {
+  return (
+    <div className="p-8 max-w-xl mx-auto text-center space-y-4 bg-rose-50 rounded-2xl border border-rose-200 shadow-sm mt-8 text-rose-900">
+      <h2 className="text-base font-bold">Đã xảy ra sự cố khi tải dữ liệu</h2>
+      <p className="text-xs text-rose-700">
+        Dữ liệu nhận từ server có thể thiếu một số trường thông tin liên kết.
+      </p>
+      <button
+        type="button"
+        onClick={() => window.location.reload()}
+        className="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold hover:bg-rose-700 transition-colors cursor-pointer"
+      >
+        Tải lại trang
+      </button>
     </div>
   )
 }
