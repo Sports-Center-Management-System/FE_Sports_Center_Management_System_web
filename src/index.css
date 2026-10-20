@@ -36,12 +36,59 @@
 
     --radius: 0.75rem;
 
+    /* Coach Calendar Design Tokens */
+    --coach-page-bg: #f8fafc;
+    --coach-surface: #ffffff;
+    --coach-ink: #0f172a;
+    --coach-ink-muted: #64748b;
+    --coach-accent-teal: #0d9488;
+    --coach-accent-teal-soft: #f0fdfa;
+    --coach-pt-stripe: #7c3aed;
+    --coach-pt-bg: #faf5ff;
+    --coach-pt-text: #4c1d95;
+    --coach-class-stripe: #059669;
+    --coach-class-bg: #ecfdf5;
+    --coach-class-text: #064e3b;
+    --coach-avail-stripe: #d97706;
+    --coach-avail-bg: #fffbeb;
+    --coach-avail-text: #78350f;
+    --coach-completed-bg: #f8fafc;
+    --coach-completed-text: #64748b;
+
     font-family: 'DM Sans', system-ui, sans-serif;
     color: #18302e;
     background: #f5f7f4;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
+  }
+
+  .dark {
+    --coach-page-bg: #0b0f17;
+    --coach-surface: #131b26;
+    --coach-ink: #f8fafc;
+    --coach-ink-muted: #94a3b8;
+    --coach-accent-teal: #14b8a6;
+    --coach-accent-teal-soft: rgba(20, 184, 166, 0.08);
+    --coach-pt-stripe: #a855f7;
+    --coach-pt-bg: rgba(88, 28, 135, 0.25);
+    --coach-pt-text: #f3e8ff;
+    --coach-class-stripe: #10b981;
+    --coach-class-bg: rgba(6, 78, 59, 0.25);
+    --coach-class-text: #ecfdf5;
+    --coach-avail-stripe: #f59e0b;
+    --coach-avail-bg: rgba(180, 83, 9, 0.15);
+    --coach-avail-text: #fef3c7;
+    --coach-completed-bg: rgba(30, 41, 59, 0.4);
+    --coach-completed-text: #94a3b8;
+  }
+
+  html, body, #root {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
   }
 }
 

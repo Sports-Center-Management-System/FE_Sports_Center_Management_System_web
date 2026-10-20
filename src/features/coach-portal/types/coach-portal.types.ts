@@ -1,4 +1,4 @@
-export type AttendanceStatus = 'ATTENDED' | 'ABSENT' | 'CANCELLED';
+export type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'LATE' | 'ATTENDED';
 
 export interface StudentBookingItem {
   id: string;

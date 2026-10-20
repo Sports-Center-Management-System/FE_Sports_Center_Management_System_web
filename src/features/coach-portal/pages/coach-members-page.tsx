@@ -41,6 +41,22 @@ export const CoachMembersPage: React.FC = () => {
     queryFn: () => coachPortalApi.getAssignedMembers(searchTerm.trim() || undefined),
   });
 
+  // Utility to clean empty/undefined/literal "null" strings to clean fallbacks or null
+  const sanitizeText = (val: unknown, fallback: string | null = null): string | null => {
+    if (val === null || val === undefined) return fallback;
+    const str = String(val).trim();
+    if (
+      !str ||
+      str.toLowerCase() === 'null' ||
+      str.toLowerCase() === 'undefined' ||
+      str === '{}' ||
+      str === '[]'
+    ) {
+      return fallback;
+    }
+    return str;
+  };
+
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
       {/* Header */}
@@ -58,7 +74,7 @@ export const CoachMembersPage: React.FC = () => {
           variant="outline"
           onClick={() => void refetch()}
           disabled={isLoading || isRefetching}
-          className="self-start sm:self-auto text-xs font-bold border-slate-200 bg-white shadow-xs"
+          className="self-start sm:self-auto text-xs font-bold border-slate-200 bg-white shadow-xs cursor-pointer"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${isRefetching ? 'animate-spin' : ''}`} />
           <span>Làm mới</span>
@@ -102,9 +118,14 @@ export const CoachMembersPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {members.map((item) => {
           const user = item?.user || ({} as any);
-          const memberName = user.fullName || 'Học viên';
+          const memberName = sanitizeText(user.fullName, 'Học viên') || 'Học viên';
+          const memberPhone = sanitizeText(user.phone);
+          const memberEmail = sanitizeText(user.email);
+          const contactInfo = memberPhone || memberEmail || '--';
+
           const memberLogs = Array.isArray(user.memberInbodyLogs) ? user.memberInbodyLogs : [];
           const latestInbody = memberLogs[0];
+          const fitnessGoal = sanitizeText(user.memberProfile?.fitnessGoals);
 
           return (
             <div
@@ -130,7 +151,7 @@ export const CoachMembersPage: React.FC = () => {
                       <h3 className="text-sm font-extrabold text-slate-900 leading-tight">
                         {memberName}
                       </h3>
-                      <p className="text-xs text-slate-500 mt-0.5">{user.phone || user.email || 'Chưa cập nhật'}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{contactInfo}</p>
                     </div>
                   </div>
 
@@ -160,12 +181,11 @@ export const CoachMembersPage: React.FC = () => {
                 </div>
 
                 {/* Fitness Goals */}
-                {user.memberProfile?.fitnessGoals && (
+                {fitnessGoal && (
                   <div className="flex items-start gap-1.5 text-xs text-slate-600">
                     <Target className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" />
                     <span className="line-clamp-2">
-                      <strong className="text-slate-800">Mục tiêu:</strong>{' '}
-                      {user.memberProfile.fitnessGoals}
+                      <strong className="text-slate-800">Mục tiêu:</strong> {fitnessGoal}
                     </span>
                   </div>
                 )}
@@ -189,19 +209,19 @@ export const CoachMembersPage: React.FC = () => {
                       <div className="bg-white rounded-lg p-1.5 border border-teal-100">
                         <span className="text-[10px] text-slate-400 block font-bold">Cân nặng</span>
                         <span className="font-extrabold text-slate-900 text-xs">
-                          {latestInbody.weightKg} kg
+                          {sanitizeText(latestInbody.weightKg) ? `${latestInbody.weightKg} kg` : '--'}
                         </span>
                       </div>
                       <div className="bg-white rounded-lg p-1.5 border border-teal-100">
                         <span className="text-[10px] text-slate-400 block font-bold">Lượng cơ</span>
                         <span className="font-extrabold text-teal-700 text-xs">
-                          {latestInbody.muscleMassKg ? `${latestInbody.muscleMassKg} kg` : '--'}
+                          {sanitizeText(latestInbody.muscleMassKg) ? `${latestInbody.muscleMassKg} kg` : '--'}
                         </span>
                       </div>
                       <div className="bg-white rounded-lg p-1.5 border border-teal-100">
                         <span className="text-[10px] text-slate-400 block font-bold">Lượng mỡ</span>
                         <span className="font-extrabold text-rose-600 text-xs">
-                          {latestInbody.bodyFatKg ? `${latestInbody.bodyFatKg} kg` : '--'}
+                          {sanitizeText(latestInbody.bodyFatKg) ? `${latestInbody.bodyFatKg} kg` : '--'}
                         </span>
                       </div>
                     </div>
@@ -219,7 +239,7 @@ export const CoachMembersPage: React.FC = () => {
                   variant="outline"
                   size="sm"
                   onClick={() => setSelectedMember(item)}
-                  className="flex-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  className="flex-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
                 >
                   <FileText className="h-3.5 w-3.5 mr-1" />
                   Xem hồ sơ
@@ -233,7 +253,7 @@ export const CoachMembersPage: React.FC = () => {
                       memberName: memberName,
                     })
                   }
-                  className="flex-1 text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white gap-1"
+                  className="flex-1 text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white gap-1 cursor-pointer"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   Đo InBody
@@ -251,16 +271,18 @@ export const CoachMembersPage: React.FC = () => {
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-slate-50">
               <div>
                 <h3 className="text-base font-bold text-slate-900">
-                  Hồ sơ học viên: {selectedMember.user?.fullName || 'Học viên'}
+                  Hồ sơ học viên: {sanitizeText(selectedMember.user?.fullName, 'Học viên')}
                 </h3>
                 <p className="text-xs text-slate-500">
-                  {selectedMember.user?.phone || selectedMember.user?.email || 'Chưa cập nhật'}
+                  {sanitizeText(selectedMember.user?.phone) ||
+                    sanitizeText(selectedMember.user?.email) ||
+                    'Chưa cập nhật thông tin liên hệ'}
                 </p>
               </div>
               <button
                 onClick={() => setSelectedMember(null)}
                 type="button"
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600 cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -274,21 +296,21 @@ export const CoachMembersPage: React.FC = () => {
                   <div>
                     <span className="text-slate-500 block">Mục tiêu luyện tập:</span>
                     <span className="font-bold text-slate-900">
-                      {selectedMember.user?.memberProfile?.fitnessGoals || 'Chưa cập nhật'}
+                      {sanitizeText(selectedMember.user?.memberProfile?.fitnessGoals, 'Chưa cập nhật')}
                     </span>
                   </div>
                   <div>
                     <span className="text-slate-500 block">Chiều cao:</span>
                     <span className="font-bold text-slate-900">
-                      {selectedMember.user?.memberProfile?.heightCm
-                        ? `${selectedMember.user.memberProfile.heightCm} cm`
+                      {sanitizeText(selectedMember.user?.memberProfile?.heightCm)
+                        ? `${selectedMember.user?.memberProfile?.heightCm} cm`
                         : 'Chưa cập nhật'}
                     </span>
                   </div>
                   <div className="col-span-2">
                     <span className="text-slate-500 block">Tiền sử chấn thương / bệnh lý:</span>
                     <span className="font-semibold text-rose-700">
-                      {selectedMember.user?.memberProfile?.medicalHistory || 'Không có'}
+                      {sanitizeText(selectedMember.user?.memberProfile?.medicalHistory, 'Không có')}
                     </span>
                   </div>
                 </div>
@@ -305,17 +327,18 @@ export const CoachMembersPage: React.FC = () => {
                     onClick={() => {
                       setInbodyModalData({
                         memberId: selectedMember.user?.id || selectedMember.id,
-                        memberName: selectedMember.user?.fullName || 'Học viên',
+                        memberName: sanitizeText(selectedMember.user?.fullName, 'Học viên') || 'Học viên',
                       });
                     }}
-                    className="h-7 text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white gap-1"
+                    className="h-7 text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white gap-1 cursor-pointer"
                   >
                     <Plus className="h-3 w-3" />
                     Thêm lượt đo
                   </Button>
                 </div>
 
-                {Array.isArray(selectedMember.user?.memberInbodyLogs) && selectedMember.user.memberInbodyLogs.length > 0 ? (
+                {Array.isArray(selectedMember.user?.memberInbodyLogs) &&
+                selectedMember.user.memberInbodyLogs.length > 0 ? (
                   <div className="overflow-x-auto rounded-xl border border-slate-200">
                     <table className="w-full text-left text-xs">
                       <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
@@ -334,16 +357,20 @@ export const CoachMembersPage: React.FC = () => {
                             <td className="p-3 text-slate-900 font-bold">
                               {new Date(log.measuredAt).toLocaleDateString('vi-VN')}
                             </td>
-                            <td className="p-3 text-slate-800 font-semibold">{log.weightKg} kg</td>
+                            <td className="p-3 text-slate-800 font-semibold">
+                              {sanitizeText(log.weightKg) ? `${log.weightKg} kg` : '--'}
+                            </td>
                             <td className="p-3 text-teal-700">
-                              {log.muscleMassKg ? `${log.muscleMassKg} kg` : '--'}
+                              {sanitizeText(log.muscleMassKg) ? `${log.muscleMassKg} kg` : '--'}
                             </td>
                             <td className="p-3 text-rose-600">
-                              {log.bodyFatKg ? `${log.bodyFatKg} kg` : '--'}
+                              {sanitizeText(log.bodyFatKg) ? `${log.bodyFatKg} kg` : '--'}
                             </td>
-                            <td className="p-3 font-bold text-indigo-700">{log.score || '--'}</td>
+                            <td className="p-3 font-bold text-indigo-700">
+                              {sanitizeText(log.score, '--')}
+                            </td>
                             <td className="p-3 text-slate-500 max-w-xs truncate">
-                              {log.notes || '--'}
+                              {sanitizeText(log.notes, '--')}
                             </td>
                           </tr>
                         ))}
@@ -396,7 +423,7 @@ export const CoachMembersPage: React.FC = () => {
                               </span>
                             </td>
                             <td className="p-3 text-slate-600 max-w-xs truncate">
-                              {att.notes || '--'}
+                              {sanitizeText(att.notes, '--')}
                             </td>
                           </tr>
                         ))}
@@ -416,7 +443,7 @@ export const CoachMembersPage: React.FC = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => setSelectedMember(null)}
-                className="text-xs font-semibold"
+                className="text-xs font-semibold cursor-pointer"
               >
                 Đóng
               </Button>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, X, Loader2, ShieldAlert, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -62,10 +63,17 @@ export const EmergencyCancelModal: React.FC<EmergencyCancelModalProps> = ({
   });
 
   if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden relative z-10"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-rose-100 px-6 py-4 bg-rose-50/70">
           <div className="flex items-center gap-2.5">
@@ -93,7 +101,7 @@ export const EmergencyCancelModal: React.FC<EmergencyCancelModalProps> = ({
               <CheckCircle2 className="h-12 w-12 text-emerald-600 mx-auto animate-bounce" />
               <h4 className="text-base font-bold text-slate-900">Đã gửi yêu cầu thành công!</h4>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Yêu cầu đã chuyển sang trạng thái PENDING để Center Manager / Lễ tân phê duyệt. 
+                Yêu cầu đã được gửi và đang ở trạng thái Chờ duyệt để Ban Quản Lý / Lễ tân phê duyệt. 
                 Học viên sẽ được hoàn 100% lượt tập ngay sau khi duyệt.
               </p>
             </div>
@@ -119,9 +127,9 @@ export const EmergencyCancelModal: React.FC<EmergencyCancelModalProps> = ({
               <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900">
                 <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
                 <div className="space-y-1">
-                  <p className="font-bold">Quy tắc nghiệp vụ Mục 6.5:</p>
+                  <p className="font-bold">Lưu ý khi gửi yêu cầu:</p>
                   <p className="text-[11px] leading-relaxed text-amber-800">
-                    HLV không thể tự hủy trực tiếp. Yêu cầu sẽ tạo bản ghi chờ duyệt. 100% học viên bị ảnh hưởng sẽ được hệ thống hoàn đủ 01 lượt tập (không phụ thuộc mốc 2 giờ).
+                    HLV không thể tự hủy trực tiếp. Yêu cầu sẽ tạo bản ghi chờ duyệt. 100% học viên bị ảnh hưởng sẽ được hệ thống hoàn đủ 01 lượt tập.
                   </p>
                 </div>
               </div>
@@ -199,6 +207,7 @@ export const EmergencyCancelModal: React.FC<EmergencyCancelModalProps> = ({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

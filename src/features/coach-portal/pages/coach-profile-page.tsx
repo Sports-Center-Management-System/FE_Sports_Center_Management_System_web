@@ -234,7 +234,7 @@ export const CoachProfilePage: React.FC = () => {
             </h3>
           </div>
           <span className="text-[11px] text-slate-400">
-            Cấu hình bởi Center Manager (Mục 3.2 & 6.1a)
+            Cấu hình bởi Quản Lý Trung Tâm
           </span>
         </div>
 

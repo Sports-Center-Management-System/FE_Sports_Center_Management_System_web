@@ -8,11 +8,11 @@ import {
   Loader2,
   Plus,
   Sparkles,
-  ShieldCheck,
   Sun,
   Sunset,
   Coffee,
 } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { coachPortalApi } from '../api/coach-portal-api';
 
@@ -156,8 +156,8 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
       ? DUTY_PRESETS
       : DUTY_PRESETS.filter((p) => p.period === selectedPeriod);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
       <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-gradient-to-r from-emerald-50/80 via-slate-50 to-white">
@@ -193,18 +193,6 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
             </div>
           )}
 
-          {/* Guidelines Notice */}
-          <div className="flex items-start gap-2.5 rounded-xl border border-emerald-100 bg-emerald-50/70 p-3 text-xs text-emerald-950">
-            <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-            <div className="space-y-0.5">
-              <p className="font-bold">Khuyến nghị phân ca theo COACH_DUTY.md:</p>
-              <p className="text-[11px] text-emerald-900 leading-relaxed">
-                • <strong>Thời lượng:</strong> 60 phút tiêu chuẩn (5p khởi động, 45p giáo án, 10p hồi sức & đo InBody).<br />
-                • <strong>Toàn vẹn thời gian:</strong> Hệ thống sử dụng PostgreSQL Advisory Lock chặn tuyệt đối xung đột chéo giữa lịch lớp nhóm (schedules) và lịch mở PT cá nhân.
-              </p>
-            </div>
-          </div>
-
           {/* Date Picker */}
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
@@ -225,7 +213,7 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                 <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                <span>Khung giờ vàng chuẩn (COACH_DUTY)</span>
+                <span>Khung giờ gợi ý phổ biến</span>
               </label>
               <span className="text-[10px] text-slate-400 font-semibold">Bấm để chọn nhanh</span>
             </div>
@@ -348,7 +336,21 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
         {/* Footer Actions */}
         <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-6 py-4">
           <div className="text-xs font-semibold text-slate-600">
-            Slot: <span className="text-emerald-700 font-bold">{startTime} - {endTime}</span> ngày {new Date(date).toLocaleDateString('vi-VN')}
+            Ca tập: <span className="text-emerald-700 font-bold">{startTime} - {endTime}</span>
+            {(() => {
+              const [sh, sm] = startTime.split(':').map(Number);
+              const [eh, em] = endTime.split(':').map(Number);
+              const diff = (eh * 60 + em) - (sh * 60 + sm);
+              if (diff > 0) {
+                const h = Math.floor(diff / 60);
+                const m = diff % 60;
+                const durStr = h > 0 && m > 0 ? `${h} giờ ${m} phút` : h > 0 ? `${h} giờ` : `${m} phút`;
+                return <span className="text-slate-500 font-medium"> ({durStr})</span>;
+              }
+              return null;
+            })()}
+            {' · '}
+            <span className="text-slate-700 font-medium">{new Date(date).toLocaleDateString('vi-VN')}</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -377,6 +379,7 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
