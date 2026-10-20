@@ -14,13 +14,19 @@ import {
   AttendancesPage,
   LockersPage,
 } from "@/features/member";
+import {
+  FrontDeskPage,
+  GateCheckinPage,
+  InbodyPage,
+  MembersPage,
+  PosPage,
+} from "@/features/front-desk";
 import { mondayInVietnam } from "@/lib/date";
 import {
   MemberGuard,
   CalendarRoute,
   CalendarAlias,
   StaffGuard,
-  PortalPlaceholder,
 } from "./route-elements";
 
 export const router = createBrowserRouter([
@@ -84,36 +90,38 @@ export const router = createBrowserRouter([
           { path: "lockers", element: <LockersPage /> },
         ],
       },
-      {
-        path: "portal/desk",
-        children: [
-          {
-            element: <StaffGuard roles={["RECEPTIONIST", "CENTER_MANAGER"]} />,
-            children: [
-              { index: true, element: <PortalPlaceholder title="Quầy lễ tân" /> },
-              { path: "gate-checkin", element: <PortalPlaceholder title="Check-in cổng" /> },
-              { path: "pos", element: <PortalPlaceholder title="Bán gói tập" /> },
-              { path: "subscriptions", element: <PortalPlaceholder title="Gia hạn gói tập" /> },
-              { path: "members", element: <PortalPlaceholder title="Hội viên" /> },
-              { path: "members/:memberId", element: <PortalPlaceholder title="Hội viên" /> },
-            ],
-          },
-          {
-            element: <StaffGuard roles={["RECEPTIONIST", "COACH"]} />,
-            children: [{ path: "inbody", element: <PortalPlaceholder title="Đo InBody" /> }],
-          },
-        ],
-      },
-      {
-        path: "portal/coach",
-        element: <StaffGuard roles={["COACH"]} />,
-        children: [
-          { index: true, element: <Navigate to="/portal/coach/schedule" replace /> },
-          { path: "schedule", element: <PortalPlaceholder title="Lịch dạy" /> },
-        ],
-      },
       { path: "404", element: <NotFoundPage /> },
       { path: "*", element: <NotFoundPage /> },
+    ],
+  },
+  // Staff pages render their own full-screen layout, so they sit outside PublicLayout.
+  {
+    path: "/portal/desk",
+    children: [
+      {
+        element: <StaffGuard roles={["RECEPTIONIST", "CENTER_MANAGER"]} />,
+        children: [
+          { index: true, element: <FrontDeskPage /> },
+          { path: "gate-checkin", element: <GateCheckinPage /> },
+          { path: "pos", element: <PosPage key="sale" /> },
+          { path: "subscriptions", element: <PosPage key="subscriptions" initialMode="RENEW" /> },
+          { path: "members", element: <MembersPage /> },
+          { path: "members/:memberId", element: <MembersPage /> },
+        ],
+      },
+      {
+        element: <StaffGuard roles={["RECEPTIONIST", "COACH"]} />,
+        children: [{ path: "inbody", element: <InbodyPage /> }],
+      },
+    ],
+  },
+  {
+    path: "/portal/coach",
+    element: <StaffGuard roles={["COACH"]} />,
+    children: [
+      // No coach schedule page yet; coach works from the InBody page as before.
+      { index: true, element: <Navigate to="/portal/desk/inbody" replace /> },
+      { path: "schedule", element: <Navigate to="/portal/desk/inbody" replace /> },
     ],
   },
 ]);
