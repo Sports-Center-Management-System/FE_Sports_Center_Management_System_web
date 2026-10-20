@@ -1,5 +1,5 @@
 import { Navigate, createBrowserRouter } from "react-router";
-import { PublicLayout, MemberLayout } from "@/layouts";
+import { PublicLayout, MemberLayout, CoachLayout } from "@/layouts";
 import { LoginPage, NotFoundPage } from "@/features/auth";
 import { PublicPlansPage, MockPaymentPage } from "@/features/public";
 import { PlansPage, QuotePage } from "@/features/plans";
@@ -21,12 +21,21 @@ import {
   MembersPage,
   PosPage,
 } from "@/features/front-desk";
+import {
+  CoachSchedulePage,
+  CoachAvailabilityPage,
+  CoachMembersPage,
+  CoachWorkoutPlansPage,
+  CoachRequestsPage,
+  CoachProfilePage,
+} from "@/features/coach-portal";
 import { mondayInVietnam } from "@/lib/date";
 import {
   MemberGuard,
   CalendarRoute,
   CalendarAlias,
   StaffGuard,
+  PortalErrorFallback,
 } from "./route-elements";
 
 export const router = createBrowserRouter([
@@ -90,11 +99,30 @@ export const router = createBrowserRouter([
           { path: "lockers", element: <LockersPage /> },
         ],
       },
+      {
+        path: "portal/coach",
+        element: <StaffGuard roles={["COACH"]} />,
+        errorElement: <PortalErrorFallback />,
+        children: [
+          {
+            element: <CoachLayout />,
+            children: [
+              { index: true, element: <Navigate to="/portal/coach/schedule" replace /> },
+              { path: "schedule", element: <CoachSchedulePage /> },
+              { path: "availability", element: <CoachAvailabilityPage /> },
+              { path: "members", element: <CoachMembersPage /> },
+              { path: "workout-plans", element: <CoachWorkoutPlansPage /> },
+              { path: "requests", element: <CoachRequestsPage /> },
+              { path: "profile", element: <CoachProfilePage /> },
+            ],
+          },
+        ],
+      },
       { path: "404", element: <NotFoundPage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },
-  // Staff pages render their own full-screen layout, so they sit outside PublicLayout.
+  // Front-desk pages render their own full-screen layout, so they sit outside PublicLayout.
   {
     path: "/portal/desk",
     children: [
@@ -113,15 +141,6 @@ export const router = createBrowserRouter([
         element: <StaffGuard roles={["RECEPTIONIST", "COACH"]} />,
         children: [{ path: "inbody", element: <InbodyPage /> }],
       },
-    ],
-  },
-  {
-    path: "/portal/coach",
-    element: <StaffGuard roles={["COACH"]} />,
-    children: [
-      // No coach schedule page yet; coach works from the InBody page as before.
-      { index: true, element: <Navigate to="/portal/desk/inbody" replace /> },
-      { path: "schedule", element: <Navigate to="/portal/desk/inbody" replace /> },
     ],
   },
 ]);
