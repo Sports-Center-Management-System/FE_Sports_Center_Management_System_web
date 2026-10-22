@@ -11,7 +11,7 @@ import {
   HOUR_HEIGHT_PX,
   calculateEventPosition,
   getCurrentTimeTop,
-  formatTimeHHmm,
+  formatBookingSlotRange,
   formatDateToYMD,
 } from '../utils/calendar-date.utils'
 import { Users, UserCheck, CheckCircle2, Clock, MapPin } from 'lucide-react'
@@ -91,11 +91,16 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
       return bDate === dateString && ACTIVE_BOOKING_STATUSES.has(b.status)
     })
 
+    const visiblePtSlots = ptSlots.filter((ptSlot) => {
+      if (formatDateToYMD(new Date(ptSlot.startAt)) !== dateString) return false
+      return !ptSlot.isBooked || !!getBookingForPtSlot(ptSlot.id)
+    })
+
     // 1. Every discipline view includes group classes.
     schedules
         .filter((s) => formatDateToYMD(new Date(s.startAt)) === dateString)
         .forEach((schedule) => {
-          const { top, height } = calculateEventPosition(schedule.startAt, schedule.endAt)
+          const { top, height } = calculateEventPosition(schedule.startAt)
           const booking = getBookingForSchedule(schedule.id)
           const isBooked = !!booking
           const isFull = schedule.currentEnrolled >= schedule.capacity && !isBooked
@@ -144,7 +149,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
               <div className="flex items-center gap-1 text-[11px] opacity-85 mb-0.5 font-medium">
                 <Clock className="h-3 w-3 shrink-0" />
                 <span>
-                  {formatTimeHHmm(schedule.startAt)} - {formatTimeHHmm(schedule.endAt)}
+                  {formatBookingSlotRange(schedule.startAt)}
                 </span>
               </div>
 
@@ -164,18 +169,18 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
           )
         })
 
-    // 2. It also includes available PT slots.
-    ptSlots
-        .filter((pt) => formatDateToYMD(new Date(pt.startAt)) === dateString)
+    // 2. PT slots from different coaches can share one time. Give every coach a lane
+    // instead of stacking their cards on top of one another.
+    visiblePtSlots
         .forEach((ptSlot) => {
-          const { top, height } = calculateEventPosition(ptSlot.startAt, ptSlot.endAt)
+          const { top, height } = calculateEventPosition(ptSlot.startAt)
           const booking = getBookingForPtSlot(ptSlot.id)
           const isBookedByMe = !!booking
-
-          // If booked by another member and not me, hide or show occupied
-          if (ptSlot.isBooked && !isBookedByMe) {
-            return
-          }
+          const matchingSlots = visiblePtSlots.filter(
+            (slot) => slot.startAt === ptSlot.startAt,
+          )
+          const laneIndex = matchingSlots.findIndex((slot) => slot.id === ptSlot.id)
+          const laneWidth = 100 / matchingSlots.length
 
           events.push(
             <div
@@ -184,9 +189,11 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
               style={{
                 top: `${top}px`,
                 height: `${height}px`,
+                left: `calc(${laneIndex * laneWidth}% + 4px)`,
+                width: `calc(${laneWidth}% - 8px)`,
               }}
               className={cn(
-                'absolute inset-x-1 rounded-lg p-2 text-xs transition-all duration-150 cursor-pointer overflow-hidden border shadow-2xs select-none',
+                'absolute rounded-lg p-2 text-xs transition-all duration-150 cursor-pointer overflow-hidden border shadow-2xs select-none',
                 isBookedByMe
                   ? 'bg-emerald-500/15 border-emerald-500 text-emerald-950 ring-1 ring-emerald-500/30 hover:bg-emerald-500/25'
                   : 'bg-purple-50 border-purple-300 text-purple-950 hover:bg-purple-100/90 hover:border-purple-400 hover:shadow-xs',
@@ -208,7 +215,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
               <div className="flex items-center gap-1 text-[11px] opacity-85 mb-0.5 font-medium">
                 <Clock className="h-3 w-3 shrink-0" />
                 <span>
-                  {formatTimeHHmm(ptSlot.startAt)} - {formatTimeHHmm(ptSlot.endAt)}
+                  {formatBookingSlotRange(ptSlot.startAt)}
                 </span>
               </div>
 
@@ -229,7 +236,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
           !ptSlots.some((slot) => slot.id === booking.coachAvailabilityId),
       )
       .forEach((b) => {
-        const { top, height } = calculateEventPosition(b.startAt, b.endAt)
+        const { top, height } = calculateEventPosition(b.startAt)
         events.push(
           <div
             key={`mine-${b.id}`}
@@ -255,7 +262,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
             <div className="flex items-center gap-1 text-[11px] opacity-90 mb-0.5 font-semibold">
               <Clock className="h-3 w-3 shrink-0" />
               <span>
-                {formatTimeHHmm(b.startAt)} - {formatTimeHHmm(b.endAt)}
+                {formatBookingSlotRange(b.startAt)}
               </span>
             </div>
 

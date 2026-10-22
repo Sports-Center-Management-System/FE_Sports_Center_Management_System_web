@@ -6,7 +6,7 @@ import type {
   CalendarSubscription,
   Discipline,
 } from '../types/calendar.types'
-import { formatTimeHHmm } from '../utils/calendar-date.utils'
+import { formatBookingSlotRange } from '../utils/calendar-date.utils'
 import type { CalendarEventItem } from './calendar-grid'
 import {
   X,
@@ -66,7 +66,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   // Extract common details based on event type
   let title = ''
   let startAt = ''
-  let endAt = ''
   let coachName = ''
   let roomName = ''
   let disciplineName = ''
@@ -80,7 +79,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     existingBooking = event.booking
     title = scheduleData.class?.name || scheduleData.discipline?.name || 'Lớp nhóm'
     startAt = scheduleData.startAt
-    endAt = scheduleData.endAt
     coachName = scheduleData.coach?.fullName || 'Chưa phân công'
     roomName = scheduleData.room?.name || 'Phòng tập'
     disciplineName = scheduleData.discipline?.name || ''
@@ -89,7 +87,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     existingBooking = event.booking
     title = 'Khung giờ HLV cá nhân 1-1 (PT)'
     startAt = ptData.startAt
-    endAt = ptData.endAt
     coachName = ptData.coach?.fullName || 'Huấn luyện viên'
     disciplineName = ptData.discipline?.name || ''
   } else if (event.type === 'BOOKING_STANDALONE') {
@@ -99,7 +96,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       existingBooking.discipline?.name ||
       (existingBooking.type === 'PERSONAL_TRAINING' ? 'Buổi tập PT 1-1' : 'Lớp học nhóm')
     startAt = existingBooking.startAt
-    endAt = existingBooking.endAt
     coachName = existingBooking.coach?.fullName || ''
     roomName = existingBooking.room?.name || ''
     disciplineName = existingBooking.discipline?.name || ''
@@ -255,7 +251,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 Thời gian
               </div>
               <div className="font-bold text-slate-800">
-                {formatTimeHHmm(startAt)} - {formatTimeHHmm(endAt)}
+                {formatBookingSlotRange(startAt)}
               </div>
             </div>
 
