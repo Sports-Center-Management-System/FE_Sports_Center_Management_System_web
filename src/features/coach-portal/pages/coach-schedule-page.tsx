@@ -227,12 +227,12 @@ export const CoachSchedulePage: React.FC = () => {
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="w-full max-w-7xl mx-auto space-y-6 pb-12">
       {/* Top Header & View Mode Switcher */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-slate-200/80">
         <div>
           <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">
+            <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">
               Lịch Giảng Dạy & Huấn Luyện
             </h1>
             {liveSession ? (
@@ -246,7 +246,7 @@ export const CoachSchedulePage: React.FC = () => {
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-white mt-1">
             Quản lý lịch dạy theo tuần/ngày, điểm danh học viên và kiểm soát thiết bị phòng tập
           </p>
         </div>

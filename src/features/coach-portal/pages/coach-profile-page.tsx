@@ -94,13 +94,13 @@ export const CoachProfilePage: React.FC = () => {
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">
+    <div className="w-full max-w-5xl mx-auto space-y-6 pb-12">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-black tracking-tight text-slate-900">
+        <h1 className="text-2xl font-black tracking-tight text-white">
           Hồ Sơ Huấn Luyện Viên
         </h1>
-        <p className="text-xs text-slate-500 mt-0.5">
+        <p className="text-xs text-white mt-0.5">
           Quản lý thông tin cá nhân, chuyên môn và tra cứu biểu phí dạy kèm được duyệt
         </p>
       </div>

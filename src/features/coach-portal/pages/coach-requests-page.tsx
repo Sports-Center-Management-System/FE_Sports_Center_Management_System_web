@@ -35,15 +35,15 @@ export const CoachRequestsPage: React.FC = () => {
   });
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="w-full max-w-7xl mx-auto space-y-6 pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900">
+          <h1 className="text-2xl font-black tracking-tight text-white">
             Đơn Hủy Khẩn Cấp & Kỷ Luật
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Theo dõi tiến trình phê duyệt 2 tầng và hệ thống hỗ trợ ra quyết định kỷ luật (DSS - Mục 6.5)
+          <p className="text-xs text-white mt-0.5">
+            Theo dõi tiến trình phê duyệt và hệ thống hỗ trợ ra quyết định kỷ luật
           </p>
         </div>
 
@@ -65,27 +65,14 @@ export const CoachRequestsPage: React.FC = () => {
         </Button>
       </div>
 
-      {/* Policy Explainer Banner */}
-      <div className="flex items-start gap-3 rounded-2xl border border-amber-200/90 bg-amber-50/70 p-4 text-xs text-amber-950 shadow-xs">
-        <Info className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-        <div className="space-y-1">
-          <p className="font-bold">Quy trình Hủy lịch khẩn cấp 2 Tầng (Mục 6.5):</p>
-          <p className="text-[11px] leading-relaxed text-amber-900">
-            • <strong>Tầng 1 (Gốc):</strong> Center Manager trực tiếp duyệt trên Web Dashboard.<br />
-            • <strong>Tầng 2 (Dự phòng):</strong> Lễ tân trực quầy được quyền duyệt thay thế nếu Quản lý không online.<br />
-            • <strong>Quyền lợi học viên:</strong> Bất kể thời điểm hủy, 100% học viên bị ảnh hưởng đều được tự động hoàn lại 01 lượt tập vô điều kiện.
-          </p>
-        </div>
-      </div>
-
-      {/* Tabs */}
+        {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
         <button
           onClick={() => setActiveTab('REQUESTS')}
-          className={`rounded-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-2 ${
+          className={`rounded-t-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-2 ${
             activeTab === 'REQUESTS'
-              ? 'bg-slate-900 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
+              ? 'bg-white shadow-xs'
+              : 'text-white hover:bg-slate-100 hover:text-black'
           }`}
         >
           <span>Đơn xin hủy khẩn cấp</span>
@@ -96,13 +83,13 @@ export const CoachRequestsPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('PENALTIES')}
-          className={`rounded-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-2 ${
+          className={`rounded-t-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-2 ${
             activeTab === 'PENALTIES'
-              ? 'bg-amber-600 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
+              ? 'bg-white shadow-xs'
+              : 'text-white hover:bg-slate-100 hover:text-black'
           }`}
         >
-          <span>Chế tài kỷ luật DSS</span>
+          <span>Chế tài kỷ luật</span>
           <span className="rounded-full bg-amber-700 text-white px-2 py-0.2 text-[10px]">
             {penalties.length}
           </span>

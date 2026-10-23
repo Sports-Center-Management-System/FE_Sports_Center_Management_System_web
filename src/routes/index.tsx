@@ -1,5 +1,5 @@
 import { Navigate, createBrowserRouter } from "react-router";
-import { PublicLayout, MemberLayout, CoachLayout } from "@/layouts";
+import { PublicLayout, MemberLayout, CoachLayout, ReceptionistLayout } from "@/layouts";
 import { LoginPage, NotFoundPage } from "@/features/auth";
 import { PublicPlansPage, MockPaymentPage } from "@/features/public";
 import { PlansPage, QuotePage } from "@/features/plans";
@@ -125,6 +125,7 @@ export const router = createBrowserRouter([
   // Front-desk pages render their own full-screen layout, so they sit outside PublicLayout.
   {
     path: "/portal/desk",
+    element: <ReceptionistLayout />,
     children: [
       {
         element: <StaffGuard roles={["RECEPTIONIST", "CENTER_MANAGER"]} />,

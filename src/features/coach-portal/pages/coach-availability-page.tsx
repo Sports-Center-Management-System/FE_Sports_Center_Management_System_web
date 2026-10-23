@@ -66,14 +66,14 @@ export const CoachAvailabilityPage: React.FC = () => {
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="w-full max-w-7xl mx-auto space-y-6 pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900">
+          <h1 className="text-2xl font-black tracking-tight text-white">
             Khung Giờ Rảnh PT 1-1
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-white mt-0.5">
             Mở các khung giờ rảnh để hội viên có gói VIP hoặc PT Add-on có thể đặt lịch kèm riêng
           </p>
         </div>
@@ -103,9 +103,9 @@ export const CoachAvailabilityPage: React.FC = () => {
       <div className="flex items-start gap-3 rounded-2xl border border-emerald-200/80 bg-emerald-50/60 p-4 text-xs text-emerald-950 shadow-xs">
         <ShieldAlert className="h-5 w-5 text-emerald-700 shrink-0 mt-0.5" />
         <div className="space-y-1">
-          <p className="font-bold">Quy tắc đặt lịch cá nhân (Mục 1.2 & 6.2):</p>
-          <p className="text-[11px] leading-relaxed text-emerald-900">
-            Hệ thống sử dụng Transaction Advisory Lock để ngăn chặn tuyệt đối tình trạng đặt trùng giữa lịch rảnh PT và lịch lớp nhóm. Khi hội viên đặt slot rảnh của bạn, slot sẽ tự động chuyển sang trạng thái "Đã có người đặt" và không thể bị người khác đặt lại.
+          <p className="text-[14px] font-bold">Quy tắc đặt lịch cá nhân:</p>
+          <p className="text-[14px] leading-relaxed text-emerald-950">
+            Hệ thống ngăn chặn tuyệt đối tình trạng đặt trùng giữa lịch rảnh PT và lịch lớp nhóm. Khi hội viên đặt slot rảnh của bạn, slot sẽ tự động chuyển sang trạng thái "Đã có người đặt" và không thể bị người khác đặt lại.
           </p>
         </div>
       </div>
@@ -114,31 +114,28 @@ export const CoachAvailabilityPage: React.FC = () => {
       <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
         <button
           onClick={() => setFilter('ALL')}
-          className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${
-            filter === 'ALL'
-              ? 'bg-slate-900 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
+          className={`rounded-t-xl px-3.5 py-1.5 text-xs font-bold transition-all ${filter === 'ALL'
+              ? 'bg-white shadow-xs'
+              : 'text-white hover:bg-slate-100 hover:text-black'
+            }`}
         >
           Tất cả ({slots.length})
         </button>
         <button
           onClick={() => setFilter('UNBOOKED')}
-          className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${
-            filter === 'UNBOOKED'
-              ? 'bg-emerald-600 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
+          className={`rounded-t-xl px-3.5 py-1.5 text-xs font-bold transition-all ${filter === 'UNBOOKED'
+              ? 'bg-white shadow-xs'
+              : 'text-white hover:bg-slate-100 hover:text-black'
+            }`}
         >
           Còn trống ({slots.filter((s) => !s.isBooked && !s.isEmergencyCancelled).length})
         </button>
         <button
           onClick={() => setFilter('BOOKED')}
-          className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${
-            filter === 'BOOKED'
-              ? 'bg-blue-600 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
+          className={`rounded-t-xl px-3.5 py-1.5 text-xs font-bold transition-all ${filter === 'BOOKED'
+              ? 'bg-white shadow-xs'
+              : 'text-white hover:bg-slate-100 hover:text-black'
+            }`}
         >
           Đã được đặt ({slots.filter((s) => s.isBooked).length})
         </button>
@@ -167,10 +164,10 @@ export const CoachAvailabilityPage: React.FC = () => {
       <div className="space-y-6">
         {Object.entries(groupedSlots).map(([dateLabel, dateSlots]) => (
           <div key={dateLabel} className="space-y-3">
-            <div className="flex items-center gap-2 text-xs font-extrabold text-slate-700 uppercase tracking-wide">
+            <div className="flex items-center gap-2 text-xs font-extrabold text-white uppercase tracking-wide">
               <Calendar className="h-4 w-4 text-emerald-600" />
               <span>{dateLabel}</span>
-              <span className="rounded-full bg-slate-200 text-slate-700 px-2 py-0.2 text-[10px] font-bold">
+              <span className="rounded-full bg-slate-200 text-slate-800 px-2 py-0.2 text-[10px] font-bold">
                 {dateSlots.length} slot
               </span>
             </div>
@@ -179,23 +176,22 @@ export const CoachAvailabilityPage: React.FC = () => {
               {dateSlots.map((slot) => (
                 <div
                   key={slot.id}
-                  className={`rounded-2xl border p-4 shadow-xs transition-all flex flex-col justify-between ${
-                    slot.isBooked
+                  className={`rounded-2xl border p-4 shadow-xs transition-all flex flex-col justify-between ${slot.isBooked
                       ? 'border-blue-200 bg-gradient-to-br from-blue-50/60 to-white'
                       : slot.isEmergencyCancelled
-                      ? 'border-rose-200 bg-rose-50/40'
-                      : 'border-slate-200/90 bg-white hover:border-emerald-300'
-                  }`}
+                        ? 'border-rose-200 bg-rose-50/40'
+                        : 'border-slate-200/90 bg-white hover:border-emerald-300'
+                    }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 text-sm font-extrabold text-slate-900">
-                        <Clock className="h-4 w-4 text-slate-500" />
+                        <Clock className="h-4 w-4 text-slate-800" />
                         <span>
                           {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-500">Thời lượng 60 phút</p>
+                      <p className="text-[14px] text-slate-800">Thời lượng 60 phút</p>
                     </div>
 
                     {slot.isBooked ? (
@@ -217,7 +213,7 @@ export const CoachAvailabilityPage: React.FC = () => {
                   </div>
 
                   <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                    <span className="text-[11px] text-slate-400">
+                    <span className="text-[11px] text-slate-800">
                       ID: {slot.id.slice(0, 8)}...
                     </span>
 

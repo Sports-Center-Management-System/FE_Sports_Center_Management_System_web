@@ -135,14 +135,14 @@ export const CoachWorkoutPlansPage: React.FC = () => {
   );
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="w-full max-w-7xl mx-auto space-y-6 pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900">
+          <h1 className="text-2xl font-black tracking-tight text-white">
             Giáo Án Tập Luyện
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-white mt-0.5">
             Thiết lập kế hoạch tập luyện cá nhân hóa, lựa chọn bài tập từ thư viện chuẩn
           </p>
         </div>
