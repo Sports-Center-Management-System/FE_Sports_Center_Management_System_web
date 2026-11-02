@@ -21,13 +21,13 @@ import { Button } from '@/components/ui/button';
 import logo3tc from '@/assets/images/logo-3tc.png';
 
 const coachNavLinks = [
-  { label: 'Lịch giảng dạy & Calendar', path: '/portal/coach/schedule', icon: CalendarCheck },
+  { label: 'Lịch giảng dạy & Huấn luyện', path: '/portal/coach/schedule', icon: CalendarCheck },
   { label: 'Khung giờ rảnh PT', path: '/portal/coach/availability', icon: Clock },
   { label: 'Học viên của tôi', path: '/portal/coach/members', icon: Users },
   { label: 'Giáo án bài tập', path: '/portal/coach/workout-plans', icon: Dumbbell },
   { label: 'Đơn hủy & Kỷ luật', path: '/portal/coach/requests', icon: ShieldAlert },
   { label: 'Hồ sơ cá nhân', path: '/portal/coach/profile', icon: UserCheck },
-];
+]
 
 export const CoachLayout: React.FC = () => {
   const { user, logout } = useAuth();
@@ -36,49 +36,49 @@ export const CoachLayout: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
 
   useEffect(() => {
-    const tokens = readTokens();
-    if (!tokens?.accessToken) return;
+    const tokens = readTokens()
+    if (!tokens?.accessToken) return
 
     const socket = io(`${apiOrigin()}/realtime`, {
       transports: ['websocket', 'polling'],
       auth: { token: tokens.accessToken },
-    });
+    })
 
     const invalidateSchedule = () => {
-      queryClient.invalidateQueries({ queryKey: ['coach', 'today-schedule'] });
-      queryClient.invalidateQueries({ queryKey: ['coach', 'multi-day-schedule'] });
-      queryClient.invalidateQueries({ queryKey: ['coach', 'availability'] });
-    };
+      queryClient.invalidateQueries({ queryKey: ['coach', 'today-schedule'] })
+      queryClient.invalidateQueries({ queryKey: ['coach', 'multi-day-schedule'] })
+      queryClient.invalidateQueries({ queryKey: ['coach', 'availability'] })
+    }
 
     const invalidateRequests = () => {
-      queryClient.invalidateQueries({ queryKey: ['coach', 'cancellation-requests'] });
-      queryClient.invalidateQueries({ queryKey: ['coach', 'penalties'] });
-      queryClient.invalidateQueries({ queryKey: ['coach', 'today-schedule'] });
-      queryClient.invalidateQueries({ queryKey: ['coach', 'multi-day-schedule'] });
-    };
+      queryClient.invalidateQueries({ queryKey: ['coach', 'cancellation-requests'] })
+      queryClient.invalidateQueries({ queryKey: ['coach', 'penalties'] })
+      queryClient.invalidateQueries({ queryKey: ['coach', 'today-schedule'] })
+      queryClient.invalidateQueries({ queryKey: ['coach', 'multi-day-schedule'] })
+    }
 
-    socket.on('cancellation.reviewed', invalidateRequests);
-    socket.on('schedule.updated', invalidateSchedule);
-    socket.on('attendance.updated', invalidateSchedule);
-    socket.on('booking.updated', invalidateSchedule);
-    socket.on('booking.created', invalidateSchedule);
-    socket.on('booking.cancelled', invalidateSchedule);
+    socket.on('cancellation.reviewed', invalidateRequests)
+    socket.on('schedule.updated', invalidateSchedule)
+    socket.on('attendance.updated', invalidateSchedule)
+    socket.on('booking.updated', invalidateSchedule)
+    socket.on('booking.created', invalidateSchedule)
+    socket.on('booking.cancelled', invalidateSchedule)
 
     return () => {
-      socket.off('cancellation.reviewed', invalidateRequests);
-      socket.off('schedule.updated', invalidateSchedule);
-      socket.off('attendance.updated', invalidateSchedule);
-      socket.off('booking.updated', invalidateSchedule);
-      socket.off('booking.created', invalidateSchedule);
-      socket.off('booking.cancelled', invalidateSchedule);
-      socket.disconnect();
-    };
-  }, [queryClient, user?.id]);
+      socket.off('cancellation.reviewed', invalidateRequests)
+      socket.off('schedule.updated', invalidateSchedule)
+      socket.off('attendance.updated', invalidateSchedule)
+      socket.off('booking.updated', invalidateSchedule)
+      socket.off('booking.created', invalidateSchedule)
+      socket.off('booking.cancelled', invalidateSchedule)
+      socket.disconnect()
+    }
+  }, [queryClient, user?.id])
 
   const handleLogout = async () => {
-    navigate('/auth/login', { replace: true });
-    await logout();
-  };
+    navigate('/auth/login', { replace: true })
+    await logout()
+  }
 
   return (
     <div
@@ -101,8 +101,8 @@ export const CoachLayout: React.FC = () => {
             Menu
           </span>
         </summary>
-        <div className="absolute inset-x-0 top-full max-h-[75vh] overflow-y-auto border-b border-slate-200 bg-white p-4 shadow-xl">
-          <nav aria-label="Điều hướng HLV" className="grid gap-1.5">
+        <div className="absolute inset-x-0 top-full max-h-[70vh] overflow-y-auto border-b border-slate-200 bg-white p-4 shadow-lg">
+          <nav aria-label="Điều hướng huấn luyện viên" className="grid gap-1">
             {coachNavLinks.map(({ label, path, icon: Icon }) => (
               <NavLink
                 key={path}
@@ -110,10 +110,8 @@ export const CoachLayout: React.FC = () => {
                 onClick={(event) => event.currentTarget.closest('details')?.removeAttribute('open')}
                 className={({ isActive }) =>
                   cn(
-                    'flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-bold transition-all',
-                    isActive
-                      ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20'
-                      : 'text-slate-600 hover:bg-slate-100'
+                    'flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold',
+                    isActive ? 'bg-emerald-50 text-[#008b74]' : 'text-slate-600 hover:bg-slate-50',
                   )
                 }
               >
@@ -122,30 +120,15 @@ export const CoachLayout: React.FC = () => {
               </NavLink>
             ))}
           </nav>
-          <div className="mt-4 pt-3 border-t border-slate-200">
-            <div className="flex items-center gap-3 px-2 py-2 mb-2">
-              <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-xs uppercase overflow-hidden">
-                {user?.avatarUrl ? (
-                  <img src={user.avatarUrl} alt={user.fullName} className="h-full w-full object-cover" />
-                ) : (
-                  user?.fullName?.charAt(0) || 'C'
-                )}
-              </div>
-              <div className="truncate">
-                <p className="text-xs font-bold text-slate-900 truncate">{user?.fullName}</p>
-                <p className="text-[11px] text-slate-500 truncate">{user?.email}</p>
-              </div>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => void handleLogout()}
-              className="w-full justify-center gap-2 border-slate-200 bg-white text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:border-rose-200"
-            >
-              <LogOut aria-hidden="true" className="h-4 w-4" />
-              <span>Đăng xuất</span>
-            </Button>
-          </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => void handleLogout()}
+            className={cn(logoutButtonClassName, 'mt-3')}
+          >
+            <LogOut aria-hidden="true" className="h-4 w-4" />
+            <span>Đăng xuất</span>
+          </Button>
         </div>
       </details>
 
@@ -197,8 +180,8 @@ export const CoachLayout: React.FC = () => {
                     'group flex items-center rounded-xl text-xs font-bold transition-all',
                     isCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2',
                     isActive
-                      ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/30'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                      ? 'bg-emerald-50 text-[#008b74] shadow-xs'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
                   )
                 }
               >
@@ -277,10 +260,16 @@ export const CoachLayout: React.FC = () => {
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <main className="h-full overflow-y-auto min-w-0">
-        <Outlet />
+      {/* Main Workspace Area */}
+      <main className="h-full min-h-0 overflow-y-auto p-4 sm:p-8 w-full min-w-0 relative isolate">
+        <div
+          className="inbody-backdrop"
+          style={{ backgroundImage: `url("${gymFacility}")` }}
+        />
+        <div className="relative">
+          <Outlet />
+        </div>
       </main>
     </div>
-  );
-};
+  )
+}

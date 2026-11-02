@@ -35,11 +35,11 @@ export const CoachRequestsPage: React.FC = () => {
   });
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="w-full max-w-7xl mx-auto space-y-6 pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900">
+          <h1 className="text-2xl font-black tracking-tight text-white">
             Đơn Hủy Khẩn Cấp & Kỷ Luật
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -82,10 +82,10 @@ export const CoachRequestsPage: React.FC = () => {
       <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
         <button
           onClick={() => setActiveTab('REQUESTS')}
-          className={`rounded-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-2 ${
+          className={`rounded-t-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-2 ${
             activeTab === 'REQUESTS'
-              ? 'bg-slate-900 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
+              ? 'bg-white shadow-xs'
+              : 'text-white hover:bg-slate-100 hover:text-black'
           }`}
         >
           <span>Đơn xin hủy khẩn cấp</span>
@@ -96,13 +96,13 @@ export const CoachRequestsPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('PENALTIES')}
-          className={`rounded-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-2 ${
+          className={`rounded-t-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-2 ${
             activeTab === 'PENALTIES'
-              ? 'bg-amber-600 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
+              ? 'bg-white shadow-xs'
+              : 'text-white hover:bg-slate-100 hover:text-black'
           }`}
         >
-          <span>Chế tài kỷ luật DSS</span>
+          <span>Chế tài kỷ luật</span>
           <span className="rounded-full bg-amber-700 text-white px-2 py-0.2 text-[10px]">
             {penalties.length}
           </span>

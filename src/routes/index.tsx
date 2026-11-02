@@ -1,5 +1,5 @@
 import { Navigate, createBrowserRouter } from "react-router";
-import { PublicLayout, MemberLayout, CoachLayout } from "@/layouts";
+import { PublicLayout, MemberLayout, CoachLayout, ReceptionistLayout } from "@/layouts";
 import { LoginPage, NotFoundPage } from "@/features/auth";
 import { PublicPlansPage, MockPaymentPage } from "@/features/public";
 import { PlansPage, QuotePage } from "@/features/plans";
@@ -15,6 +15,13 @@ import {
   LockersPage,
 } from "@/features/member";
 import {
+  FrontDeskPage,
+  GateCheckinPage,
+  InbodyPage,
+  MembersPage,
+  PosPage,
+} from "@/features/front-desk";
+import {
   CoachSchedulePage,
   CoachAvailabilityPage,
   CoachMembersPage,
@@ -28,7 +35,6 @@ import {
   CalendarRoute,
   CalendarAlias,
   StaffGuard,
-  PortalPlaceholder,
   PortalErrorFallback,
 } from "./route-elements";
 

@@ -11,7 +11,7 @@ import {
   HOUR_HEIGHT_PX,
   calculateEventPosition,
   getCurrentTimeTop,
-  formatTimeHHmm,
+  formatBookingSlotRange,
   formatDateToYMD,
 } from '../utils/calendar-date.utils'
 import { Users, UserCheck, CheckCircle2, Clock } from 'lucide-react'

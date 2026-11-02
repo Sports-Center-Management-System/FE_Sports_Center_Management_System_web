@@ -81,11 +81,11 @@ export const CoachAvailabilityPage: React.FC = () => {
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="w-full max-w-7xl mx-auto space-y-6 pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900">
+          <h1 className="text-2xl font-black tracking-tight text-white">
             Khung Giờ Rảnh PT 1-1
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -171,7 +171,7 @@ export const CoachAvailabilityPage: React.FC = () => {
       <div className="space-y-6">
         {Object.entries(groupedSlots).map(([dateLabel, dateSlots]) => (
           <div key={dateLabel} className="space-y-3">
-            <div className="flex items-center gap-2 text-xs font-extrabold text-slate-700 uppercase tracking-wide">
+            <div className="flex items-center gap-2 text-xs font-extrabold text-white uppercase tracking-wide">
               <Calendar className="h-4 w-4 text-emerald-600" />
               <span>{dateLabel}</span>
               <span className="rounded-full bg-slate-200 text-slate-700 px-2.5 py-0.5 text-[10px] font-bold">

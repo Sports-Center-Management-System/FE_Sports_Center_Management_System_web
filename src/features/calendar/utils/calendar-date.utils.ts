@@ -86,16 +86,26 @@ export const formatRangeLabel = (mondayYMD: string): string => {
 export const CALENDAR_START_HOUR = 5 // 05:00, allowing early morning sessions to be visible
 export const CALENDAR_END_HOUR = 23 // Synchronized with coach calendar: visible boundary up to 23:00
 export const HOUR_HEIGHT_PX = 68 // Height in px for 1 hour row
+export const BOOKING_SLOT_DURATION_MS = 60 * 60 * 1000
+
+export const getBookingSlotEndAt = (startAt: string): string => {
+  const start = new Date(startAt)
+  return new Date(start.getTime() + BOOKING_SLOT_DURATION_MS).toISOString()
+}
+
+export const formatBookingSlotRange = (startAt: string): string => {
+  return `${formatTimeHHmm(startAt)} - ${formatTimeHHmm(getBookingSlotEndAt(startAt))}`
+}
 
 /**
- * Calculates top offset and height in pixels for an event spanning startAt to endAt
+ * Every member booking occupies one calendar hour. The UI deliberately ignores
+ * an invalid or legacy endAt value returned by the API.
  */
 export const calculateEventPosition = (
   startAt: string,
-  endAt: string,
 ): { top: number; height: number } => {
   const start = new Date(startAt)
-  const end = new Date(endAt)
+  const end = new Date(getBookingSlotEndAt(startAt))
 
   const startHour = start.getHours() + start.getMinutes() / 60
   const endHour = end.getHours() + end.getMinutes() / 60

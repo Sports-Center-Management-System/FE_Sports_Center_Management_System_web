@@ -36,16 +36,6 @@ export function StaffGuard({ roles }: { roles: UserRole[] }) {
     </ProtectedRoute>
   )
 }
-/** Stand-in until the staff pages are ported onto this router. */
-export function PortalPlaceholder({ title }: { title: string }) {
-  return (
-    <div className="p-8 max-w-xl mx-auto text-center space-y-3 bg-white rounded-2xl border border-slate-200 shadow-sm mt-8">
-      <h2 className="text-xl font-bold text-slate-800">{title}</h2>
-      <p className="text-xs text-slate-500">Trang này đang được phát triển.</p>
-    </div>
-  )
-}
-
 export function PortalErrorFallback() {
   return (
     <div className="p-8 max-w-xl mx-auto text-center space-y-4 bg-rose-50 rounded-2xl border border-rose-200 shadow-sm mt-8 text-rose-900">
