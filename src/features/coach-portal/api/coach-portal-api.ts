@@ -14,6 +14,9 @@ import type {
   ExerciseKnowledgeItem,
   WorkoutPlanItem,
   CreateWorkoutPlanPayload,
+  WorkoutTemplateItem,
+  BookingWorkoutPlan,
+  UpdateSessionWorkoutPlanPayload,
   CoachRateItem,
   EquipmentItem,
   StudentBookingItem,
@@ -487,6 +490,31 @@ export const coachPortalApi = {
     return res.data;
   },
 
+  // Lộ trình khung 12 buổi mẫu & Giáo án theo ca PT (M14 & M14.1)
+  getWorkoutTemplates: async (discipline?: string): Promise<WorkoutTemplateItem[]> => {
+    const res = await apiClient.get<WorkoutTemplateItem[]>('/workout-templates', {
+      params: discipline ? { discipline } : undefined,
+    });
+    return res.data;
+  },
+
+  getWorkoutPlanByBooking: async (bookingId: string): Promise<BookingWorkoutPlan | null> => {
+    try {
+      const res = await apiClient.get<BookingWorkoutPlan>(`/bookings/${bookingId}/workout-plan`);
+      return res.data;
+    } catch {
+      return null;
+    }
+  },
+
+  updateSessionWorkoutPlan: async (
+    planId: string,
+    payload: UpdateSessionWorkoutPlanPayload
+  ): Promise<BookingWorkoutPlan> => {
+    const res = await apiClient.put<BookingWorkoutPlan>(`/workout-plans/${planId}`, payload);
+    return res.data;
+  },
+
   // Hủy lịch khẩn cấp & Chế tài kỷ luật DSS
   requestEmergencyCancel: async (
     payload: CancellationRequestPayload
@@ -500,6 +528,16 @@ export const coachPortalApi = {
 
   getMyCancellationRequests: async (): Promise<CancellationRequestItem[]> => {
     const res = await apiClient.get<CancellationRequestItem[]>('/cancellation-requests');
+    return res.data;
+  },
+
+  withdrawCancellationRequest: async (
+    id: string
+  ): Promise<CancellationRequestItem> => {
+    const res = await apiClient.put<CancellationRequestItem>(
+      `/cancellation-requests/${id}/cancel`,
+      {}
+    );
     return res.data;
   },
 

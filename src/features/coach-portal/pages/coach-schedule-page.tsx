@@ -19,10 +19,12 @@ import {
   CalendarRange,
   Filter,
   Phone,
+  Lock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { coachPortalApi } from '../api/coach-portal-api';
 import { AttendanceModal } from '../components/attendance-modal';
+import { SessionWorkoutPlanModal } from '../components/session-workout-plan-modal';
 import { EmergencyCancelModal } from '../components/emergency-cancel-modal';
 import { ScheduleDatePickerModal } from '../components/schedule-date-picker-modal';
 import { useAuth } from '@/context/auth-context';
@@ -42,11 +44,21 @@ export const CoachSchedulePage: React.FC = () => {
   const [isEquipmentDrawerOpen, setIsEquipmentDrawerOpen] = useState<boolean>(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState<boolean>(false);
 
-  // Selected booking and session start time for attendance modal
+  // Selected booking and session start/end time for attendance modal
   const [selectedBookingData, setSelectedBookingData] = useState<{
     booking: StudentBookingItem;
     sessionStartTime: string;
+    sessionEndTime: string;
   } | null>(null);
+
+  // Selected booking for workout plan modal
+  const [selectedWorkoutBookingData, setSelectedWorkoutBookingData] = useState<{
+    booking: StudentBookingItem;
+    sessionTitle: string;
+  } | null>(null);
+
+  // Time rule feedback alert for coach
+  const [timeAlertMessage, setTimeAlertMessage] = useState<string | null>(null);
 
   // Selected session for emergency cancellation modal
   const [cancelModalData, setCancelModalData] = useState<{
@@ -301,6 +313,23 @@ export const CoachSchedulePage: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {/* Alert Banner for time rule feedback */}
+      {timeAlertMessage && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl bg-amber-500/10 border border-amber-400/40 p-4 text-xs font-semibold text-amber-200 shadow-md backdrop-blur-md animate-in fade-in duration-200">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Clock className="h-5 w-5 shrink-0 text-amber-400" />
+            <span className="whitespace-pre-line text-white">{timeAlertMessage}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setTimeAlertMessage(null)}
+            className="rounded-lg p-1 text-amber-300 hover:bg-amber-400/20 transition-colors shrink-0"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Week Selector Bar (Active for both views) */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs">
@@ -678,6 +707,9 @@ export const CoachSchedulePage: React.FC = () => {
                 const timeStatus = getSessionTimeStatus(session.startTime, session.endTime);
                 const isPt = session.type === 'PERSONAL_TRAINING';
                 const started = isSessionStarted(session.startTime);
+                const isEditWindowClosed = Boolean(
+                  session.endTime && Date.now() - new Date(session.endTime).getTime() > 24 * 60 * 60 * 1000
+                );
 
                 return (
                   <div
@@ -735,27 +767,45 @@ export const CoachSchedulePage: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Action trigger: Emergency cancellation */}
-                      {!session.isEmergencyCancelled &&
-                        timeStatus.status === 'UPCOMING' &&
-                        (!isPt || session.bookings.length > 0) && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            setCancelModalData({
-                              scheduleId: session.scheduleId || undefined,
-                              bookingId: isPt ? session.bookings[0]?.id : undefined,
-                              sessionTitle: session.title,
-                              sessionTime: `${formatTime(session.startTime)} - ${formatTime(session.endTime)}`,
-                            })
-                          }
-                          className="self-start sm:self-auto text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-transparent hover:border-rose-200"
-                        >
-                          <AlertTriangle className="h-3.5 w-3.5 mr-1" />
-                          Hủy khẩn cấp ca
-                        </Button>
-                      )}
+                      {/* Action trigger: Workout Plan & Emergency cancellation */}
+                      <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                        {isPt && session.bookings.length > 0 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setSelectedWorkoutBookingData({
+                                booking: session.bookings[0],
+                                sessionTitle: session.title,
+                              })
+                            }
+                            className="text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 shadow-2xs"
+                          >
+                            <Dumbbell className="h-3.5 w-3.5 mr-1 text-emerald-600" />
+                            Giáo án PT
+                          </Button>
+                        )}
+                        {!session.isEmergencyCancelled &&
+                          timeStatus.status === 'UPCOMING' &&
+                          (!isPt || session.bookings.length > 0) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              setCancelModalData({
+                                scheduleId: session.scheduleId || undefined,
+                                bookingId: isPt ? session.bookings[0]?.id : undefined,
+                                sessionTitle: session.title,
+                                sessionTime: `${formatTime(session.startTime)} - ${formatTime(session.endTime)}`,
+                              })
+                            }
+                            className="text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-transparent hover:border-rose-200"
+                          >
+                            <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                            Hủy khẩn cấp ca
+                          </Button>
+                        )}
+                      </div>
                     </div>
 
                     {/* Temporal integrity hint if session not started */}
@@ -764,6 +814,16 @@ export const CoachSchedulePage: React.FC = () => {
                         <Clock className="h-4 w-4 text-amber-600 shrink-0" />
                         <span>
                           <strong>Quy tắc điểm danh (Rule 6.3):</strong> Điểm danh sẽ tự động mở khi ca học bắt đầu ({formatTime(session.startTime)}).
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Notice if session ended > 24 hours */}
+                    {isEditWindowClosed && (
+                      <div className="flex items-center gap-2 rounded-xl bg-slate-100 border border-slate-200/80 p-2.5 text-xs text-slate-700">
+                        <Lock className="h-4 w-4 text-slate-500 shrink-0" />
+                        <span>
+                          <strong>Đã hết hạn điểm danh:</strong> Ca dạy đã kết thúc quá 24 giờ. Hệ thống đã khóa điểm danh và chuyển sang chế độ chỉ xem.
                         </span>
                       </div>
                     )}
@@ -785,6 +845,11 @@ export const CoachSchedulePage: React.FC = () => {
                             const attStatus = booking.attendance?.status;
                             const isAttended = attStatus === 'ATTENDED';
                             const isAbsent = attStatus === 'ABSENT';
+                            // Backend domain rule: referenceTime = existing?.checkInTime ?? session.endTime, window = 86400000 ms (24h)
+                            const referenceTime = booking.attendance?.checkInTime ?? session.endTime;
+                            const isBookingEditWindowClosed = Boolean(
+                              referenceTime && Date.now() - new Date(referenceTime).getTime() > 86400000
+                            );
 
                             return (
                               <div
@@ -845,37 +910,98 @@ export const CoachSchedulePage: React.FC = () => {
                                   </div>
                                 </div>
 
-                                {/* Check-in Button */}
-                                <div>
-                                  <Button
-                                    size="sm"
-                                    disabled={!started || session.isEmergencyCancelled}
-                                    onClick={() =>
-                                      setSelectedBookingData({
-                                        booking,
-                                        sessionStartTime: session.startTime,
-                                      })
-                                    }
-                                    className={`text-xs font-bold gap-1 shadow-xs transition-all ${
-                                      isAttended
-                                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                                        : !started
-                                        ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
-                                        : 'bg-slate-900 hover:bg-slate-800 text-white'
-                                    }`}
-                                  >
-                                    {isAttended ? (
-                                      <>
-                                        <CheckCircle2 className="h-3.5 w-3.5" />
-                                        <span>Đã điểm danh</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <FileEdit className="h-3.5 w-3.5" />
-                                        <span>Điểm danh</span>
-                                      </>
-                                    )}
-                                  </Button>
+                                {/* Check-in & Workout Plan Actions */}
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  {isPt && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      type="button"
+                                      onClick={() =>
+                                        setSelectedWorkoutBookingData({
+                                          booking,
+                                          sessionTitle: session.title,
+                                        })
+                                      }
+                                      className="text-xs font-bold gap-1 border-emerald-300 text-emerald-800 bg-emerald-50 hover:bg-emerald-100 transition-all cursor-pointer shadow-2xs"
+                                      title="Xem giáo án 12 buổi, chỉnh sửa tạ/hiệp và ghi nhận xét buổi tập (M14.1)"
+                                    >
+                                      <Dumbbell className="h-3.5 w-3.5 text-emerald-600" />
+                                      <span className="hidden sm:inline">Giáo án</span>
+                                    </Button>
+                                  )}
+
+                                  {!started ? (
+                                    <Button
+                                      size="sm"
+                                      type="button"
+                                      onClick={() => {
+                                        const msg = `Ca dạy chưa đến giờ bắt đầu!\n\nKhung giờ: ${formatTime(session.startTime)} - ${formatTime(session.endTime)}.\nHệ thống chỉ cho phép điểm danh khi ca học đã chính thức bắt đầu.`;
+                                        setTimeAlertMessage(msg);
+                                        if (typeof window !== 'undefined') {
+                                          window.alert(msg);
+                                        }
+                                      }}
+                                      className="text-xs font-bold gap-1 shadow-none bg-slate-100 hover:bg-slate-200 text-slate-400 hover:text-slate-600 border border-slate-200 transition-all cursor-pointer"
+                                    >
+                                      <Clock className="h-3.5 w-3.5 text-slate-400" />
+                                      <span>Điểm danh</span>
+                                    </Button>
+                                  ) : isBookingEditWindowClosed ? (
+                                    <Button
+                                      size="sm"
+                                      type="button"
+                                      onClick={() => {
+                                        const msg = `Đã hết thời hạn chỉnh sửa điểm danh (quá 24 giờ kể từ ${
+                                          booking.attendance?.checkInTime ? 'lúc điểm danh' : 'khi kết thúc ca'
+                                        } theo quy định của hệ thống).`;
+                                        setTimeAlertMessage(msg);
+                                        if (typeof window !== 'undefined') {
+                                          window.alert(msg);
+                                        }
+                                      }}
+                                      className="text-xs font-bold gap-1 shadow-none bg-slate-100 hover:bg-slate-200 text-slate-400 hover:text-slate-600 border border-slate-200 transition-all cursor-pointer"
+                                    >
+                                      <Lock className="h-3.5 w-3.5 text-slate-400" />
+                                      <span>Đã khóa (&gt;24h)</span>
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      disabled={session.isEmergencyCancelled}
+                                      onClick={() =>
+                                        setSelectedBookingData({
+                                          booking,
+                                          sessionStartTime: session.startTime,
+                                          sessionEndTime: session.endTime,
+                                        })
+                                      }
+                                      className={`text-xs font-bold gap-1 shadow-xs transition-all ${
+                                        isAttended
+                                          ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                                          : isAbsent
+                                          ? 'bg-rose-600 hover:bg-rose-700 text-white'
+                                          : 'bg-slate-900 hover:bg-slate-800 text-white'
+                                      }`}
+                                    >
+                                      {isAttended ? (
+                                        <>
+                                          <CheckCircle2 className="h-3.5 w-3.5" />
+                                          <span>Sửa điểm danh</span>
+                                        </>
+                                      ) : isAbsent ? (
+                                        <>
+                                          <X className="h-3.5 w-3.5" />
+                                          <span>Vắng mặt (Sửa)</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <FileEdit className="h-3.5 w-3.5" />
+                                          <span>Điểm danh</span>
+                                        </>
+                                      )}
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                             );
@@ -978,8 +1104,19 @@ export const CoachSchedulePage: React.FC = () => {
         <AttendanceModal
           booking={selectedBookingData.booking}
           sessionStartTime={selectedBookingData.sessionStartTime}
+          sessionEndTime={selectedBookingData.sessionEndTime}
           isOpen={Boolean(selectedBookingData)}
           onClose={() => setSelectedBookingData(null)}
+        />
+      )}
+
+      {/* Session Workout Plan Modal (M14.1) */}
+      {selectedWorkoutBookingData && (
+        <SessionWorkoutPlanModal
+          booking={selectedWorkoutBookingData.booking}
+          sessionTitle={selectedWorkoutBookingData.sessionTitle}
+          isOpen={Boolean(selectedWorkoutBookingData)}
+          onClose={() => setSelectedWorkoutBookingData(null)}
         />
       )}
 

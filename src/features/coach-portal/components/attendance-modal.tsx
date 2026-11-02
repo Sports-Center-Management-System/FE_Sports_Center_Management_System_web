@@ -8,6 +8,7 @@ import type { StudentBookingItem, AttendanceStatus } from '../types/coach-portal
 interface AttendanceModalProps {
   booking: StudentBookingItem;
   sessionStartTime?: string;
+  sessionEndTime?: string;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -15,6 +16,7 @@ interface AttendanceModalProps {
 export const AttendanceModal: React.FC<AttendanceModalProps> = ({
   booking,
   sessionStartTime,
+  sessionEndTime,
   isOpen,
   onClose,
 }) => {
@@ -22,7 +24,13 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
   const currentAttendance = booking.attendance;
 
   const isNotStarted = Boolean(
-    sessionStartTime && new Date(sessionStartTime) > new Date()
+    sessionStartTime && new Date(sessionStartTime).getTime() > Date.now()
+  );
+
+  // Backend rule: referenceTime = existing?.checkInTime ?? session.endTime, window = 86400000 ms (24h)
+  const referenceTime = currentAttendance?.checkInTime ?? sessionEndTime;
+  const isEditWindowClosed = Boolean(
+    referenceTime && Date.now() - new Date(referenceTime).getTime() > 86400000
   );
 
   const [status, setStatus] = useState<AttendanceStatus>(
@@ -36,6 +44,11 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
       if (isNotStarted) {
         throw new Error(
           'Ca tập chưa đến giờ bắt đầu. Vui lòng quay lại điểm danh khi buổi học diễn ra.'
+        );
+      }
+      if (isEditWindowClosed) {
+        throw new Error(
+          'Đã hết thời hạn chỉnh sửa điểm danh (quá 24 giờ sau khi kết thúc ca).'
         );
       }
       if (currentAttendance?.id) {
@@ -64,6 +77,8 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
         typeof msg === 'string'
           ? msg.includes('SESSION_NOT_STARTED')
             ? 'Ca tập chưa đến giờ bắt đầu. Vui lòng quay lại điểm danh khi buổi học diễn ra.'
+            : msg.includes('ATTENDANCE_EDIT_WINDOW_CLOSED') || msg.includes('24')
+            ? 'Đã hết thời hạn chỉnh sửa điểm danh (quá 24 giờ sau khi kết thúc ca theo quy định hệ thống).'
             : msg
           : JSON.stringify(msg);
       setErrorMessage(formatted);
@@ -120,6 +135,18 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
             </div>
           )}
 
+          {isEditWindowClosed && (
+            <div className="flex items-start gap-2.5 rounded-xl bg-slate-100 border border-slate-300 p-3 text-xs text-slate-800">
+              <AlertCircle className="h-4 w-4 shrink-0 text-slate-500 mt-0.5" />
+              <div className="space-y-0.5">
+                <p className="font-bold text-slate-800">Đã hết thời hạn chỉnh sửa điểm danh</p>
+                <p className="text-[11px] text-slate-600 leading-relaxed">
+                  Ca dạy đã kết thúc quá 24 giờ. Hệ thống đã khóa chức năng điểm danh và chuyển sang chế độ chỉ xem.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Member Summary */}
           <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50/60 border border-emerald-100">
             <div className="h-10 w-10 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-sm uppercase overflow-hidden shrink-0">
@@ -130,7 +157,7 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
                   className="h-full w-full object-cover"
                 />
               ) : (
-                (booking.member?.fullName?.charAt(0) || 'H')
+                booking.member?.fullName?.charAt(0) || 'H'
               )}
             </div>
             <div className="text-xs min-w-0">
@@ -154,8 +181,9 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
+                disabled={isEditWindowClosed}
                 onClick={() => setStatus('ATTENDED')}
-                className={`flex items-center justify-center gap-2 rounded-xl border p-3 text-xs font-bold transition-all ${
+                className={`flex items-center justify-center gap-2 rounded-xl border p-3 text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                   status === 'ATTENDED'
                     ? 'border-emerald-500 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-500/20'
                     : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
@@ -167,8 +195,9 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
 
               <button
                 type="button"
+                disabled={isEditWindowClosed}
                 onClick={() => setStatus('ABSENT')}
-                className={`flex items-center justify-center gap-2 rounded-xl border p-3 text-xs font-bold transition-all ${
+                className={`flex items-center justify-center gap-2 rounded-xl border p-3 text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                   status === 'ABSENT'
                     ? 'border-rose-500 bg-rose-50 text-rose-800 ring-2 ring-rose-500/20'
                     : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
@@ -188,11 +217,12 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
             </label>
             <textarea
               value={notes}
+              disabled={isEditWindowClosed}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Ghi chép thể lực, mức tạ, kỹ thuật động tác hoặc nhận xét sau buổi tập..."
               rows={4}
               maxLength={2000}
-              className="w-full rounded-xl border border-slate-200 p-3 text-xs text-slate-800 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 resize-none transition-all"
+              className="w-full rounded-xl border border-slate-200 p-3 text-xs text-slate-800 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 resize-none transition-all disabled:bg-slate-100 disabled:cursor-not-allowed"
             />
             <p className="text-[11px] text-slate-400 text-right mt-1">
               {notes.length}/2000 ký tự
@@ -209,16 +239,22 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
             disabled={mutation.isPending}
             className="text-xs font-semibold"
           >
-            Hủy bỏ
+            Đóng
           </Button>
           <Button
             type="button"
             onClick={() => mutation.mutate()}
-            disabled={isNotStarted || mutation.isPending}
+            disabled={isNotStarted || isEditWindowClosed || mutation.isPending}
             className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold gap-1.5 disabled:opacity-50"
           >
             {mutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            <span>{isNotStarted ? 'Chưa đến giờ tập' : 'Lưu điểm danh'}</span>
+            <span>
+              {isNotStarted
+                ? 'Chưa đến giờ tập'
+                : isEditWindowClosed
+                ? 'Đã khóa điểm danh (>24h)'
+                : 'Lưu điểm danh'}
+            </span>
           </Button>
         </div>
       </div>

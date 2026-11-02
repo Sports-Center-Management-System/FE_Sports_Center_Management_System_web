@@ -119,7 +119,7 @@ export interface CancellationRequestItem {
   scheduleId?: string | null;
   bookingId?: string | null;
   targetType: 'PERSONAL_TRAINING' | 'GROUP_CLASS';
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
   reasonMessage: string;
   internalNote?: string | null;
   isFrontdeskOverride?: boolean;
@@ -196,6 +196,71 @@ export interface WorkoutExerciseDto {
   weightKg?: number;
   restSeconds?: number;
   coachFeedback?: string;
+}
+
+export interface WorkoutTemplateExercise {
+  id: string;
+  exerciseId: string;
+  sets?: number;
+  reps?: number;
+  unit?: string;
+  weightKg?: number | null;
+  restSeconds?: number;
+  orderIndex: number;
+  exercise: {
+    title: string;
+    category: string;
+    instructions?: string;
+  };
+}
+
+export interface WorkoutTemplateItem {
+  id: string;
+  templateCode: string;
+  disciplineCode: string;
+  title: string;
+  weekNumber: number;
+  sessionOrder: number;
+  description?: string;
+  exercises: WorkoutTemplateExercise[];
+}
+
+export interface BookingWorkoutExercise {
+  id: string;
+  exerciseId: string;
+  sets?: number;
+  reps?: number;
+  weightKg?: number | null;
+  restSeconds?: number;
+  coachFeedback?: string | null;
+  orderIndex: number;
+  exercise?: {
+    id?: string;
+    title: string;
+    category: string;
+    instructions?: string;
+  };
+}
+
+export interface BookingWorkoutPlan {
+  id: string;
+  bookingId: string;
+  sessionOrder?: number;
+  title: string;
+  notes?: string | null;
+  exercises: BookingWorkoutExercise[];
+}
+
+export interface UpdateSessionWorkoutPlanPayload {
+  notes?: string;
+  exercises: Array<{
+    exerciseId: string;
+    sets?: number;
+    reps?: number;
+    weightKg?: number | null;
+    restSeconds?: number;
+    coachFeedback?: string;
+  }>;
 }
 
 export interface WorkoutExerciseItem extends WorkoutExerciseDto {

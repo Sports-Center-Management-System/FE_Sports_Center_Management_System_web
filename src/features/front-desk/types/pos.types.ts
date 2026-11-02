@@ -18,6 +18,8 @@ export interface MembershipPlan {
 export interface PosCoach {
   id: string;
   fullName: string;
+  phone?: string | null;
+  email?: string | null;
   avatarUrl: string | null;
   coachProfile: {
     coachSpecialties: Array<{ specialty: { disciplineId: string } }>;
