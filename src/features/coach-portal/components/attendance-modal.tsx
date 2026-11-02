@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, X, FileText, Loader2, AlertCircle } from 'lucide-react';
+import { Check, X, FileText, Loader2, AlertCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { coachPortalApi } from '../api/coach-portal-api';
 import type { StudentBookingItem, AttendanceStatus } from '../types/coach-portal.types';
@@ -32,10 +33,17 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
   const isEditWindowClosed = Boolean(
     referenceTime && Date.now() - new Date(referenceTime).getTime() > 86400000
   );
+  const isCancelled = booking.status === 'CANCELLED';
 
-  const [status, setStatus] = useState<AttendanceStatus>(
-    currentAttendance?.status || 'ATTENDED'
-  );
+  const initialStatus: AttendanceStatus = (() => {
+    const s = currentAttendance?.status;
+    if (s === 'PRESENT' || s === 'ATTENDED') return 'PRESENT';
+    if (s === 'LATE') return 'LATE';
+    if (s === 'ABSENT') return 'ABSENT';
+    return 'PRESENT';
+  })();
+
+  const [status, setStatus] = useState<AttendanceStatus>(initialStatus);
   const [notes, setNotes] = useState<string>(currentAttendance?.notes || '');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -53,13 +61,13 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
       }
       if (currentAttendance?.id) {
         return coachPortalApi.updateCheckin(currentAttendance.id, {
-          status,
+          status: backendStatus,
           notes: notes.trim() || undefined,
         });
       }
       return coachPortalApi.classCheckin({
         bookingId: booking.id,
-        status,
+        status: backendStatus,
         notes: notes.trim() || undefined,
       });
     },
@@ -86,10 +94,17 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
   });
 
   if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-      <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden relative z-10"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-slate-50">
           <div>
@@ -113,6 +128,13 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
             <div className="flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-800">
               <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
               <span>{errorMessage}</span>
+            </div>
+          )}
+
+          {isCancelled && (
+            <div className="flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-800">
+              <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+              <span>Lịch đặt chỗ của học viên này đã bị hủy. Không thể thực hiện điểm danh.</span>
             </div>
           )}
 
@@ -165,11 +187,14 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
                 {booking.member?.fullName || (booking.memberId ? `Học viên (#${booking.memberId.slice(0, 8)})` : 'Học viên')}
               </p>
               <p className="text-slate-500">{booking.member?.phone || 'Chưa có SĐT'}</p>
-              {booking.member?.memberProfile?.fitnessGoals && (
-                <p className="text-[11px] text-emerald-800 mt-0.5 line-clamp-1">
-                  Mục tiêu: {booking.member.memberProfile.fitnessGoals}
-                </p>
-              )}
+              {booking.member?.memberProfile?.fitnessGoals &&
+                !['null', 'undefined', '{}', '[]'].includes(
+                  String(booking.member.memberProfile.fitnessGoals).trim().toLowerCase()
+                ) && (
+                  <p className="text-[11px] text-emerald-800 mt-0.5 line-clamp-1">
+                    Mục tiêu: {booking.member.memberProfile.fitnessGoals}
+                  </p>
+                )}
             </div>
           </div>
 
@@ -178,33 +203,45 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
             <label className="block text-xs font-bold text-slate-700 mb-2">
               Trạng thái có mặt
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-2.5">
               <button
                 type="button"
-                disabled={isEditWindowClosed}
-                onClick={() => setStatus('ATTENDED')}
-                className={`flex items-center justify-center gap-2 rounded-xl border p-3 text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                  status === 'ATTENDED'
+                onClick={() => setStatus('PRESENT')}
+                className={`flex items-center justify-center gap-1.5 rounded-xl border p-3 text-xs font-bold transition-all cursor-pointer ${
+                  status === 'PRESENT' || status === 'ATTENDED'
                     ? 'border-emerald-500 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-500/20'
                     : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                 }`}
               >
                 <Check className="h-4 w-4 text-emerald-600" />
-                <span>Có mặt (Attended)</span>
+                <span>Có mặt</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStatus('LATE')}
+                className={`flex items-center justify-center gap-1.5 rounded-xl border p-3 text-xs font-bold transition-all cursor-pointer ${
+                  status === 'LATE'
+                    ? 'border-amber-500 bg-amber-50 text-amber-800 ring-2 ring-amber-500/20'
+                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <Clock className="h-4 w-4 text-amber-600" />
+                <span>Đi muộn</span>
               </button>
 
               <button
                 type="button"
                 disabled={isEditWindowClosed}
                 onClick={() => setStatus('ABSENT')}
-                className={`flex items-center justify-center gap-2 rounded-xl border p-3 text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                className={`flex items-center justify-center gap-1.5 rounded-xl border p-3 text-xs font-bold transition-all cursor-pointer ${
                   status === 'ABSENT'
                     ? 'border-rose-500 bg-rose-50 text-rose-800 ring-2 ring-rose-500/20'
                     : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                 }`}
               >
                 <X className="h-4 w-4 text-rose-600" />
-                <span>Vắng mặt (Absent)</span>
+                <span>Vắng mặt</span>
               </button>
             </div>
           </div>
@@ -258,6 +295,7 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

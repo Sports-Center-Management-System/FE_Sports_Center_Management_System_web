@@ -39,6 +39,7 @@ import {
 } from "./route-elements";
 
 export const router = createBrowserRouter([
+  // 1. PUBLIC ROUTES (wrapped in PublicLayout with public header)
   {
     path: "/",
     element: <PublicLayout />,
@@ -69,6 +70,7 @@ export const router = createBrowserRouter([
           </div>
         ),
       },
+      // 2. MEMBER PORTAL
       {
         path: "portal/member",
         element: (
@@ -99,6 +101,30 @@ export const router = createBrowserRouter([
           { path: "lockers", element: <LockersPage /> },
         ],
       },
+
+      // 3. DESK PORTAL
+      {
+        path: "portal/desk",
+        children: [
+          {
+            element: <StaffGuard roles={["RECEPTIONIST", "CENTER_MANAGER"]} />,
+            children: [
+              { index: true, element: <PortalPlaceholder title="Quầy lễ tân" /> },
+              { path: "gate-checkin", element: <PortalPlaceholder title="Check-in cổng" /> },
+              { path: "pos", element: <PortalPlaceholder title="Bán gói tập" /> },
+              { path: "subscriptions", element: <PortalPlaceholder title="Gia hạn gói tập" /> },
+              { path: "members", element: <PortalPlaceholder title="Hội viên" /> },
+              { path: "members/:memberId", element: <PortalPlaceholder title="Hội viên" /> },
+            ],
+          },
+          {
+            element: <StaffGuard roles={["RECEPTIONIST", "COACH"]} />,
+            children: [{ path: "inbody", element: <PortalPlaceholder title="Đo InBody" /> }],
+          },
+        ],
+      },
+
+      // 4. COACH PORTAL (/portal/coach and /coach)
       {
         path: "portal/coach",
         element: <StaffGuard roles={["COACH"]} />,
@@ -118,32 +144,31 @@ export const router = createBrowserRouter([
           },
         ],
       },
-      { path: "404", element: <NotFoundPage /> },
-      { path: "*", element: <NotFoundPage /> },
-    ],
-  },
-  // Front-desk pages render their own full-screen layout, so they sit outside PublicLayout.
-  {
-    path: "/portal/desk",
-    element: <ReceptionistLayout />,
-    children: [
       {
-        element: <StaffGuard roles={["RECEPTIONIST", "CENTER_MANAGER"]} />,
+        path: "coach",
+        element: <StaffGuard roles={["COACH"]} />,
+        errorElement: <PortalErrorFallback />,
         children: [
-          { index: true, element: <FrontDeskPage /> },
-          { path: "gate-checkin", element: <GateCheckinPage /> },
-          { path: "pos", element: <PosPage key="sale" /> },
-          { path: "subscriptions", element: <PosPage key="subscriptions" initialMode="RENEW" /> },
-          { path: "members", element: <MembersPage /> },
-          { path: "members/:memberId", element: <MembersPage /> },
+          {
+            element: <CoachLayout />,
+            children: [
+              { index: true, element: <Navigate to="/coach/schedule" replace /> },
+              { path: "schedule", element: <CoachSchedulePage /> },
+              { path: "availability", element: <CoachAvailabilityPage /> },
+              { path: "members", element: <CoachMembersPage /> },
+              { path: "workout-plans", element: <CoachWorkoutPlansPage /> },
+              { path: "requests", element: <CoachRequestsPage /> },
+              { path: "profile", element: <CoachProfilePage /> },
+            ],
+          },
         ],
       },
-      {
-        element: <StaffGuard roles={["RECEPTIONIST", "COACH"]} />,
-        children: [{ path: "inbody", element: <InbodyPage /> }],
-      },
     ],
   },
+
+  // 5. 404 Catch-all
+  { path: "404", element: <NotFoundPage /> },
+  { path: "*", element: <NotFoundPage /> },
 ]);
 
 export default router;

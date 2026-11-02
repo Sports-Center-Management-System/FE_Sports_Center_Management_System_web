@@ -1,5 +1,6 @@
 import React, { type ReactNode } from "react";
 import gymFacilityBg from "@/assets/images/gym-facility-bg.png";
+import logo3tc from "@/assets/images/logo-3tc.png";
 
 export interface AuthLayoutProps {
   children: ReactNode;
@@ -25,23 +26,6 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
 
         {/* Soft, light gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/40 to-slate-950/25 pointer-events-none" />
-
-        {/* Top Brand Logo */}
-        <div className="relative z-10 drop-shadow-md">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#008b74] text-white shadow-lg shadow-black/30 font-black text-sm tracking-wider">
-              3TC
-            </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-white leading-none drop-shadow-sm">
-                3TC Fitness
-              </h1>
-              <p className="text-[10px] font-bold tracking-widest text-emerald-300 mt-1 uppercase drop-shadow-sm">
-                SPORTS & WELLNESS CENTER
-              </p>
-            </div>
-          </div>
-        </div>
 
         {/* Middle Feature Highlights */}
         <div className="relative z-10 my-auto py-10 space-y-7">
@@ -85,11 +69,8 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
       <div className="flex-1 flex flex-col justify-center items-center p-6 sm:p-10 lg:p-14 overflow-y-auto">
         <div className="w-full max-w-md space-y-6">
           {/* Mobile Brand Logo */}
-          <div className="lg:hidden flex items-center gap-2.5 mb-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#008b74] text-white shadow-md shadow-[#008b74]/20 font-black text-xs tracking-wider">
-              3TC
-            </div>
-            <span className="text-base font-bold text-[#008b74]">3TC Fitness</span>
+          <div className="lg:hidden flex items-center mb-2">
+            <img src={logo3tc} alt="3TC FITNESS" className="h-8 w-auto object-contain" />
           </div>
 
           {/* Form Header */}

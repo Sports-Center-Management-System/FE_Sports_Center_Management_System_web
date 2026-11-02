@@ -83,8 +83,8 @@ export const formatRangeLabel = (mondayYMD: string): string => {
   return `${start.dayNumber}/${start.monthNumber} - ${end.dayNumber}/${end.monthNumber}/${end.date.getFullYear()}`
 }
 
-export const CALENDAR_START_HOUR = 5 // 05:00, allowing 05:45 sessions to be visible
-export const CALENDAR_END_HOUR = 21 // The final visible boundary is 21:00
+export const CALENDAR_START_HOUR = 5 // 05:00, allowing early morning sessions to be visible
+export const CALENDAR_END_HOUR = 23 // Synchronized with coach calendar: visible boundary up to 23:00
 export const HOUR_HEIGHT_PX = 68 // Height in px for 1 hour row
 export const BOOKING_SLOT_DURATION_MS = 60 * 60 * 1000
 

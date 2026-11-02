@@ -9,7 +9,6 @@ import {
   RefreshCw,
   AlertCircle,
   Loader2,
-  ShieldAlert,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { coachPortalApi } from '../api/coach-portal-api';
@@ -65,6 +64,22 @@ export const CoachAvailabilityPage: React.FC = () => {
     }
   };
 
+  const calculateDuration = (startTime: string, endTime: string) => {
+    try {
+      const start = new Date(startTime).getTime();
+      const end = new Date(endTime).getTime();
+      const diffMinutes = Math.round((end - start) / (1000 * 60));
+      if (isNaN(diffMinutes) || diffMinutes <= 0) return '60 phút';
+      const hours = Math.floor(diffMinutes / 60);
+      const mins = diffMinutes % 60;
+      if (hours > 0 && mins > 0) return `${hours} giờ ${mins} phút`;
+      if (hours > 0) return `${hours} giờ`;
+      return `${mins} phút`;
+    } catch {
+      return '60 phút';
+    }
+  };
+
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 pb-12">
       {/* Header */}
@@ -73,8 +88,8 @@ export const CoachAvailabilityPage: React.FC = () => {
           <h1 className="text-2xl font-black tracking-tight text-white">
             Khung Giờ Rảnh PT 1-1
           </h1>
-          <p className="text-xs text-white mt-0.5">
-            Mở các khung giờ rảnh để hội viên có gói VIP hoặc PT Add-on có thể đặt lịch kèm riêng
+          <p className="text-xs text-slate-500 mt-0.5">
+            Mở các khung giờ rảnh để hội viên VIP có thể đặt lịch kèm riêng trực tiếp với bạn
           </p>
         </div>
 
@@ -99,43 +114,35 @@ export const CoachAvailabilityPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Rules Notice */}
-      <div className="flex items-start gap-3 rounded-2xl border border-emerald-200/80 bg-emerald-50/60 p-4 text-xs text-emerald-950 shadow-xs">
-        <ShieldAlert className="h-5 w-5 text-emerald-700 shrink-0 mt-0.5" />
-        <div className="space-y-1">
-          <p className="text-[14px] font-bold">Quy tắc đặt lịch cá nhân:</p>
-          <p className="text-[14px] leading-relaxed text-emerald-950">
-            Hệ thống ngăn chặn tuyệt đối tình trạng đặt trùng giữa lịch rảnh PT và lịch lớp nhóm. Khi hội viên đặt slot rảnh của bạn, slot sẽ tự động chuyển sang trạng thái "Đã có người đặt" và không thể bị người khác đặt lại.
-          </p>
-        </div>
-      </div>
-
       {/* Filter Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
         <button
           onClick={() => setFilter('ALL')}
-          className={`rounded-t-xl px-3.5 py-1.5 text-xs font-bold transition-all ${filter === 'ALL'
-              ? 'bg-white shadow-xs'
-              : 'text-white hover:bg-slate-100 hover:text-black'
-            }`}
+          className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+            filter === 'ALL'
+              ? 'bg-slate-900 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
         >
           Tất cả ({slots.length})
         </button>
         <button
           onClick={() => setFilter('UNBOOKED')}
-          className={`rounded-t-xl px-3.5 py-1.5 text-xs font-bold transition-all ${filter === 'UNBOOKED'
-              ? 'bg-white shadow-xs'
-              : 'text-white hover:bg-slate-100 hover:text-black'
-            }`}
+          className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+            filter === 'UNBOOKED'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
         >
           Còn trống ({slots.filter((s) => !s.isBooked && !s.isEmergencyCancelled).length})
         </button>
         <button
           onClick={() => setFilter('BOOKED')}
-          className={`rounded-t-xl px-3.5 py-1.5 text-xs font-bold transition-all ${filter === 'BOOKED'
-              ? 'bg-white shadow-xs'
-              : 'text-white hover:bg-slate-100 hover:text-black'
-            }`}
+          className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+            filter === 'BOOKED'
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
         >
           Đã được đặt ({slots.filter((s) => s.isBooked).length})
         </button>
@@ -167,79 +174,98 @@ export const CoachAvailabilityPage: React.FC = () => {
             <div className="flex items-center gap-2 text-xs font-extrabold text-white uppercase tracking-wide">
               <Calendar className="h-4 w-4 text-emerald-600" />
               <span>{dateLabel}</span>
-              <span className="rounded-full bg-slate-200 text-slate-800 px-2 py-0.2 text-[10px] font-bold">
-                {dateSlots.length} slot
+              <span className="rounded-full bg-slate-200 text-slate-700 px-2.5 py-0.5 text-[10px] font-bold">
+                {dateSlots.length} ca rảnh
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {dateSlots.map((slot) => (
-                <div
-                  key={slot.id}
-                  className={`rounded-2xl border p-4 shadow-xs transition-all flex flex-col justify-between ${slot.isBooked
-                      ? 'border-blue-200 bg-gradient-to-br from-blue-50/60 to-white'
-                      : slot.isEmergencyCancelled
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {dateSlots.map((slot) => {
+                const durationText = calculateDuration(slot.startTime, slot.endTime);
+
+                return (
+                  <div
+                    key={slot.id}
+                    className={`rounded-2xl border p-4 shadow-xs transition-all flex flex-col justify-between ${
+                      slot.isBooked
+                        ? 'border-blue-200 bg-gradient-to-br from-blue-50/60 to-white'
+                        : slot.isEmergencyCancelled
                         ? 'border-rose-200 bg-rose-50/40'
-                        : 'border-slate-200/90 bg-white hover:border-emerald-300'
+                        : 'border-slate-200/90 bg-white hover:border-emerald-300 hover:shadow-sm'
                     }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 text-sm font-extrabold text-slate-900">
-                        <Clock className="h-4 w-4 text-slate-800" />
-                        <span>
-                          {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
-                        </span>
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5 text-base font-black text-slate-900 tracking-tight">
+                            <Clock className="h-4 w-4 text-emerald-600" />
+                            <span>
+                              {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
+                            </span>
+                          </div>
+                          <p className="text-xs font-medium text-slate-500">
+                            Thời lượng: <span className="font-bold text-slate-700">{durationText}</span>
+                          </p>
+                        </div>
+
+                        {slot.isBooked ? (
+                          <span className="flex items-center gap-1 rounded-full bg-blue-100 text-blue-800 px-2.5 py-1 text-[10px] font-extrabold shrink-0">
+                            <CheckCircle2 className="h-3 w-3" />
+                            Đã có người đặt
+                          </span>
+                        ) : slot.isEmergencyCancelled ? (
+                          <span className="flex items-center gap-1 rounded-full bg-rose-100 text-rose-800 px-2.5 py-1 text-[10px] font-extrabold shrink-0">
+                            <AlertCircle className="h-3 w-3" />
+                            Đã hủy
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-800 px-2.5 py-1 text-[10px] font-extrabold shrink-0">
+                            <CheckCircle2 className="h-3 w-3" />
+                            Còn trống
+                          </span>
+                        )}
                       </div>
-                      <p className="text-[14px] text-slate-800">Thời lượng 60 phút</p>
                     </div>
 
-                    {slot.isBooked ? (
-                      <span className="flex items-center gap-1 rounded-full bg-blue-100 text-blue-800 px-2.5 py-0.5 text-[10px] font-extrabold">
-                        <CheckCircle2 className="h-3 w-3" />
-                        Đã có người đặt
-                      </span>
-                    ) : slot.isEmergencyCancelled ? (
-                      <span className="flex items-center gap-1 rounded-full bg-rose-100 text-rose-800 px-2.5 py-0.5 text-[10px] font-extrabold">
-                        <AlertCircle className="h-3 w-3" />
-                        Đã hủy khẩn cấp
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-800 px-2.5 py-0.5 text-[10px] font-extrabold">
-                        <CheckCircle2 className="h-3 w-3" />
-                        Còn trống
-                      </span>
-                    )}
-                  </div>
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                      {slot.isBooked ? (
+                        <span className="text-[11px] font-semibold text-blue-700">
+                          Buổi kèm 1-1 với hội viên
+                        </span>
+                      ) : slot.isEmergencyCancelled ? (
+                        <span className="text-[11px] font-semibold text-rose-600">
+                          Ca đã hủy
+                        </span>
+                      ) : (
+                        <span className="text-[11px] font-medium text-slate-400">
+                          Khung giờ sẵn sàng đón học viên
+                        </span>
+                      )}
 
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                    <span className="text-[11px] text-slate-800">
-                      ID: {slot.id.slice(0, 8)}...
-                    </span>
-
-                    {!slot.isBooked && !slot.isEmergencyCancelled && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          if (window.confirm('Bạn có chắc chắn muốn xóa slot rảnh này không?')) {
-                            deleteMutation.mutate(slot.id);
-                          }
-                        }}
-                        disabled={deleteMutation.isPending}
-                        className="text-rose-600 hover:bg-rose-50 hover:text-rose-700 h-7 text-xs font-semibold gap-1 px-2"
-                      >
-                        {deleteMutation.isPending ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-3 w-3" />
-                        )}
-                        <span>Xóa slot</span>
-                      </Button>
-                    )}
+                      {!slot.isBooked && !slot.isEmergencyCancelled && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (window.confirm('Bạn có chắc chắn muốn xóa khung giờ rảnh này không?')) {
+                              deleteMutation.mutate(slot.id);
+                            }
+                          }}
+                          disabled={deleteMutation.isPending}
+                          className="text-rose-600 hover:bg-rose-50 hover:text-rose-700 h-7 text-xs font-semibold gap-1 px-2.5 cursor-pointer ml-auto"
+                        >
+                          {deleteMutation.isPending ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3 w-3" />
+                          )}
+                          <span>Xóa slot</span>
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ))}
