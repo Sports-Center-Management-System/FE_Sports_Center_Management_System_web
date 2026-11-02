@@ -103,9 +103,10 @@ export const formatBookingSlotRange = (startAt: string): string => {
  */
 export const calculateEventPosition = (
   startAt: string,
+  endAt?: string,
 ): { top: number; height: number } => {
   const start = new Date(startAt)
-  const end = new Date(getBookingSlotEndAt(startAt))
+  const end = endAt ? new Date(endAt) : new Date(getBookingSlotEndAt(startAt))
 
   const startHour = start.getHours() + start.getMinutes() / 60
   const endHour = end.getHours() + end.getMinutes() / 60

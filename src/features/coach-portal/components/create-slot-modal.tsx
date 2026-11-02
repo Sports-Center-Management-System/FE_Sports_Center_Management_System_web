@@ -19,6 +19,7 @@ import { coachPortalApi } from '../api/coach-portal-api';
 interface CreateSlotModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialDate?: string;
 }
 
 interface DutyShiftPreset {
@@ -105,19 +106,40 @@ const DUTY_PRESETS: DutyShiftPreset[] = [
 export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
   isOpen,
   onClose,
+  initialDate,
 }) => {
   const queryClient = useQueryClient();
 
-  // Tomorrow by default
+  // Time calculations to prevent past slot creation
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+  // Tomorrow by default if no valid initial date
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const defaultDateStr = tomorrow.toISOString().slice(0, 10);
 
-  const [date, setDate] = useState<string>(defaultDateStr);
+  const [date, setDate] = useState<string>(
+    initialDate && initialDate >= todayStr ? initialDate : defaultDateStr
+  );
   const [startTime, setStartTime] = useState<string>('07:00');
   const [endTime, setEndTime] = useState<string>('08:00');
   const [selectedPeriod, setSelectedPeriod] = useState<'ALL' | 'MORNING' | 'LUNCH' | 'EVENING'>('ALL');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Sync date when initialDate changes
+  React.useEffect(() => {
+    if (initialDate && initialDate >= todayStr) {
+      setDate(initialDate);
+    }
+  }, [initialDate, todayStr]);
+
+  const isPastDate = date < todayStr;
+  const isToday = date === todayStr;
+  const [sh, sm] = startTime.split(':').map(Number);
+  const isStartTimePast = isToday && (sh * 60 + sm <= currentMinutes);
+  const isSlotInPast = isPastDate || isStartTimePast;
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -190,6 +212,18 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
             <div className="flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-800">
               <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
               <span>{errorMessage}</span>
+            </div>
+          )}
+
+          {isSlotInPast && (
+            <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
+              <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+              <div>
+                <span className="font-bold">Khung giờ không hợp lệ: </span>
+                {isPastDate
+                  ? 'Ngày được chọn đã nằm trong quá khứ.'
+                  : `Khung giờ bắt đầu (${startTime}) đã qua thời điểm hiện tại. Vui lòng chọn khung giờ ở tương lai.`}
+              </div>
             </div>
           )}
 
@@ -272,29 +306,43 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
               {filteredPresets.map((preset) => {
                 const isSelected = startTime === preset.start && endTime === preset.end;
+                const [psh, psm] = preset.start.split(':').map(Number);
+                const isPresetPast = isPastDate || (isToday && (psh * 60 + psm <= currentMinutes));
+
                 return (
                   <button
                     key={preset.label}
                     type="button"
+                    disabled={isPresetPast}
                     onClick={() => {
-                      setStartTime(preset.start);
-                      setEndTime(preset.end);
+                      if (!isPresetPast) {
+                        setStartTime(preset.start);
+                        setEndTime(preset.end);
+                      }
                     }}
                     className={`rounded-xl border p-2.5 text-left transition-all flex flex-col justify-between ${
-                      isSelected
+                      isPresetPast
+                        ? 'border-slate-200 bg-slate-50 text-slate-400 opacity-50 cursor-not-allowed'
+                        : isSelected
                         ? 'border-emerald-600 bg-emerald-50/80 ring-2 ring-emerald-500/20 text-emerald-950'
                         : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-black">{preset.label}</span>
-                      {preset.isPeak && (
+                      {isPresetPast ? (
+                        <span className="rounded-md bg-slate-200 text-slate-500 text-[9px] font-bold px-1.5 py-0.5">
+                          Đã qua giờ
+                        </span>
+                      ) : preset.isPeak ? (
                         <span className="rounded-md bg-amber-100 text-amber-900 text-[9px] font-black uppercase px-1.5 py-0.2">
                           Giờ vàng ★
                         </span>
-                      )}
+                      ) : null}
                     </div>
-                    <p className="text-[10px] text-slate-500 mt-1 line-clamp-1">{preset.desc}</p>
+                    <p className="text-[10px] text-slate-500 mt-1 line-clamp-1">
+                      {isPresetPast ? 'Đã quá thời điểm hiện tại' : preset.desc}
+                    </p>
                   </button>
                 );
               })}
@@ -366,15 +414,19 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
             <Button
               type="button"
               onClick={() => mutation.mutate()}
-              disabled={mutation.isPending}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold gap-1.5 shadow-sm shadow-emerald-600/20"
+              disabled={mutation.isPending || isSlotInPast}
+              className={`text-xs font-bold gap-1.5 shadow-sm transition-all ${
+                isSlotInPast
+                  ? 'bg-slate-300 text-slate-500 cursor-not-allowed hover:bg-slate-300 shadow-none'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+              }`}
             >
               {mutation.isPending ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
                 <Plus className="h-3.5 w-3.5" />
               )}
-              <span>Mở slot rảnh</span>
+              <span>{isSlotInPast ? 'Giờ trong quá khứ' : 'Mở slot rảnh'}</span>
             </Button>
           </div>
         </div>

@@ -9,6 +9,7 @@ import {
   RotateCcw,
   Loader2,
   AlertCircle,
+  Info,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { coachPortalApi } from '../api/coach-portal-api';

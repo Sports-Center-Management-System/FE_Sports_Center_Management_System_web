@@ -19,6 +19,10 @@ import {
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import logo3tc from '@/assets/images/logo-3tc.png';
+import gymFacility from '@/assets/images/plan-gym-facility.jpg';
+
+const logoutButtonClassName =
+  'w-full border-slate-200 bg-white text-xs font-semibold text-slate-600 shadow-none hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 focus-visible:ring-rose-500';
 
 const coachNavLinks = [
   { label: 'Lịch giảng dạy & Huấn luyện', path: '/portal/coach/schedule', icon: CalendarCheck },
@@ -58,6 +62,8 @@ export const CoachLayout: React.FC = () => {
     }
 
     socket.on('cancellation.reviewed', invalidateRequests)
+    socket.on('cancellation.cancelled', invalidateRequests)
+    socket.on('cancellation.requested', invalidateRequests)
     socket.on('schedule.updated', invalidateSchedule)
     socket.on('attendance.updated', invalidateSchedule)
     socket.on('booking.updated', invalidateSchedule)
@@ -66,6 +72,8 @@ export const CoachLayout: React.FC = () => {
 
     return () => {
       socket.off('cancellation.reviewed', invalidateRequests)
+      socket.off('cancellation.cancelled', invalidateRequests)
+      socket.off('cancellation.requested', invalidateRequests)
       socket.off('schedule.updated', invalidateSchedule)
       socket.off('attendance.updated', invalidateSchedule)
       socket.off('booking.updated', invalidateSchedule)

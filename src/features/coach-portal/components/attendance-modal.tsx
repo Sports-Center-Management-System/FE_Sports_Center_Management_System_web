@@ -61,13 +61,13 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
       }
       if (currentAttendance?.id) {
         return coachPortalApi.updateCheckin(currentAttendance.id, {
-          status: backendStatus,
+          status,
           notes: notes.trim() || undefined,
         });
       }
       return coachPortalApi.classCheckin({
         bookingId: booking.id,
-        status: backendStatus,
+        status,
         notes: notes.trim() || undefined,
       });
     },

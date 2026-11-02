@@ -85,7 +85,7 @@ export const CoachAvailabilityPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-white">
+          <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
             Khung Giờ Rảnh PT 1-1
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -171,7 +171,7 @@ export const CoachAvailabilityPage: React.FC = () => {
       <div className="space-y-6">
         {Object.entries(groupedSlots).map(([dateLabel, dateSlots]) => (
           <div key={dateLabel} className="space-y-3">
-            <div className="flex items-center gap-2 text-xs font-extrabold text-white uppercase tracking-wide">
+            <div className="flex items-center gap-2 text-xs font-extrabold text-slate-800 dark:text-slate-100 uppercase tracking-wide">
               <Calendar className="h-4 w-4 text-emerald-600" />
               <span>{dateLabel}</span>
               <span className="rounded-full bg-slate-200 text-slate-700 px-2.5 py-0.5 text-[10px] font-bold">
@@ -182,6 +182,7 @@ export const CoachAvailabilityPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
               {dateSlots.map((slot) => {
                 const durationText = calculateDuration(slot.startTime, slot.endTime);
+                const isPast = new Date(slot.startTime).getTime() <= Date.now();
 
                 return (
                   <div
@@ -191,6 +192,8 @@ export const CoachAvailabilityPage: React.FC = () => {
                         ? 'border-blue-200 bg-gradient-to-br from-blue-50/60 to-white'
                         : slot.isEmergencyCancelled
                         ? 'border-rose-200 bg-rose-50/40'
+                        : isPast
+                        ? 'border-slate-200 bg-slate-50/60 opacity-60'
                         : 'border-slate-200/90 bg-white hover:border-emerald-300 hover:shadow-sm'
                     }`}
                   >
@@ -217,6 +220,11 @@ export const CoachAvailabilityPage: React.FC = () => {
                           <span className="flex items-center gap-1 rounded-full bg-rose-100 text-rose-800 px-2.5 py-1 text-[10px] font-extrabold shrink-0">
                             <AlertCircle className="h-3 w-3" />
                             Đã hủy
+                          </span>
+                        ) : isPast ? (
+                          <span className="flex items-center gap-1 rounded-full bg-slate-200 text-slate-600 px-2.5 py-1 text-[10px] font-extrabold shrink-0">
+                            <Clock className="h-3 w-3 text-slate-500" />
+                            Đã qua giờ
                           </span>
                         ) : (
                           <span className="flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-800 px-2.5 py-1 text-[10px] font-extrabold shrink-0">

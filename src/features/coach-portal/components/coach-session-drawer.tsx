@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   X,
   Clock,
@@ -13,8 +14,11 @@ import {
   UserCheck,
   CalendarClock,
   Sparkles,
+  Dumbbell,
+  RotateCcw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { coachPortalApi } from '../api/coach-portal-api';
 import type { CoachScheduleSession } from '../types/coach-schedule.types';
 import type { StudentBookingItem } from '../types/coach-portal.types';
 
@@ -22,7 +26,8 @@ interface CoachSessionDrawerProps {
   session: CoachScheduleSession | null;
   isOpen: boolean;
   onClose: () => void;
-  onCheckInStudent: (booking: StudentBookingItem, sessionStartTime: string) => void;
+  onCheckInStudent: (booking: StudentBookingItem, sessionStartTime: string, sessionEndTime?: string) => void;
+  onOpenWorkoutPlan?: (booking: StudentBookingItem, sessionTitle: string) => void;
   onEmergencyCancel: (data: {
     scheduleId?: string;
     bookingId?: string;
@@ -37,11 +42,19 @@ export const CoachSessionDrawer: React.FC<CoachSessionDrawerProps> = ({
   isOpen,
   onClose,
   onCheckInStudent,
+  onOpenWorkoutPlan,
   onEmergencyCancel,
   onSaveNotes,
 }) => {
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [notesContent, setNotesContent] = useState('');
+
+  // Check if there is an active pending cancellation request for this session
+  const { data: cancellationRequests = [] } = useQuery({
+    queryKey: ['coach', 'cancellation-requests'],
+    queryFn: () => coachPortalApi.getMyCancellationRequests(),
+    enabled: isOpen && Boolean(session),
+  });
 
   // Synchronize notes when session opens
   React.useEffect(() => {
@@ -90,6 +103,13 @@ export const CoachSessionDrawer: React.FC<CoachSessionDrawerProps> = ({
   // Find primary booking for PT
   const primaryBooking = session.bookings?.[0];
 
+  const sessionPendingRequest = cancellationRequests.find((r) => {
+    if (r.status !== 'PENDING') return false;
+    if (session.scheduleId && r.scheduleId === session.scheduleId) return true;
+    if (primaryBooking?.id && r.bookingId === primaryBooking.id) return true;
+    return false;
+  });
+
   const handleSaveNotes = () => {
     if (onSaveNotes) {
       onSaveNotes(session.id, notesContent);
@@ -127,7 +147,12 @@ export const CoachSessionDrawer: React.FC<CoachSessionDrawerProps> = ({
               </span>
             )}
 
-            {isCompleted ? (
+            {sessionPendingRequest ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
+                <Clock className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" />
+                Đang xin nghỉ (Chờ duyệt)
+              </span>
+            ) : isCompleted ? (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 Đã hoàn thành
@@ -160,6 +185,24 @@ export const CoachSessionDrawer: React.FC<CoachSessionDrawerProps> = ({
               {timeInfo.dateStr}
             </p>
           </div>
+
+          {/* Ô BÁO: Hiện bạn đang xin nghỉ ca này (Nếu có pending request) */}
+          {sessionPendingRequest && (
+            <div className="rounded-2xl border-2 border-amber-300 bg-amber-50/90 dark:bg-amber-950/40 dark:border-amber-700/80 p-3.5 text-xs text-amber-900 dark:text-amber-200 space-y-1.5 shadow-xs">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 font-bold text-amber-950 dark:text-amber-100">
+                  <Clock className="h-4 w-4 text-amber-600 shrink-0" />
+                  <span>Hiện bạn đang xin nghỉ ca này</span>
+                </div>
+                <span className="text-[10px] font-bold bg-amber-200/80 dark:bg-amber-900 text-amber-900 dark:text-amber-200 px-2 py-0.5 rounded-md">
+                  Chờ duyệt
+                </span>
+              </div>
+              <p className="text-[11px] text-amber-800 dark:text-amber-300 italic leading-relaxed">
+                "{sessionPendingRequest.reasonMessage}"
+              </p>
+            </div>
+          )}
 
           {/* Time & Room Details Card */}
           <div className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 p-4 space-y-3">
@@ -279,7 +322,7 @@ export const CoachSessionDrawer: React.FC<CoachSessionDrawerProps> = ({
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => onCheckInStudent(b, session.startTime)}
+                          onClick={() => onCheckInStudent(b, session.startTime, session.endTime)}
                           className="h-7 px-2.5 text-[11px] font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-950/50"
                         >
                           <UserCheck className="w-3.5 h-3.5 mr-1" />
@@ -390,7 +433,7 @@ export const CoachSessionDrawer: React.FC<CoachSessionDrawerProps> = ({
                 {isPt && primaryBooking && (
                   <Button
                     onClick={() => {
-                      onCheckInStudent(primaryBooking, session.startTime);
+                      onCheckInStudent(primaryBooking, session.startTime, session.endTime);
                     }}
                     className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs"
                   >
@@ -399,37 +442,72 @@ export const CoachSessionDrawer: React.FC<CoachSessionDrawerProps> = ({
                   </Button>
                 )}
 
-                {/* Đổi lịch */}
+                {/* Giáo án PT (M14.1) */}
+                {isPt && primaryBooking && onOpenWorkoutPlan && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      onOpenWorkoutPlan(primaryBooking, primaryTitle);
+                    }}
+                    className="text-xs font-bold border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 shadow-2xs"
+                  >
+                    <Dumbbell className="w-3.5 h-3.5 mr-1.5 text-amber-600" />
+                    Giáo án PT
+                  </Button>
+                )}
+
+                {/* Đổi lịch (hoặc hiển thị nếu không có primaryBooking) */}
+                {(!isPt || !primaryBooking || !onOpenWorkoutPlan) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      alert('Chức năng đổi lịch sẽ gửi yêu cầu xác nhận tới học viên.');
+                    }}
+                    className="text-xs font-semibold border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  >
+                    <CalendarClock className="w-3.5 h-3.5 mr-1.5 text-slate-500" />
+                    Đổi lịch
+                  </Button>
+                )}
+              </div>
+
+              {/* Hủy ca khẩn cấp hoặc Xem/Hủy yêu cầu xin nghỉ */}
+              {sessionPendingRequest ? (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    alert('Chức năng đổi lịch sẽ gửi yêu cầu xác nhận tới học viên.');
+                    onEmergencyCancel({
+                      scheduleId: session.scheduleId,
+                      bookingId: primaryBooking?.id,
+                      sessionTitle: primaryTitle,
+                      sessionTime: timeInfo.label,
+                    });
                   }}
-                  className="text-xs font-semibold border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className="w-full text-xs border-amber-400 bg-amber-50 hover:bg-amber-100 text-amber-950 dark:bg-amber-950/50 dark:text-amber-200 font-bold gap-1.5 shadow-xs cursor-pointer"
                 >
-                  <CalendarClock className="w-3.5 h-3.5 mr-1.5 text-slate-500" />
-                  Đổi lịch
+                  <RotateCcw className="w-3.5 h-3.5 text-amber-700" />
+                  <span>Đang xin nghỉ • Bấm để xem / hủy yêu cầu</span>
                 </Button>
-              </div>
-
-              {/* Hủy ca khẩn cấp */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  onEmergencyCancel({
-                    scheduleId: session.scheduleId,
-                    bookingId: primaryBooking?.id,
-                    sessionTitle: primaryTitle,
-                    sessionTime: timeInfo.label,
-                  });
-                }}
-                className="w-full text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-700"
-              >
-                <AlertTriangle className="w-3.5 h-3.5 mr-1.5 text-rose-500" />
-                Hủy ca dạy (Báo bận đột xuất)
-              </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    onEmergencyCancel({
+                      scheduleId: session.scheduleId,
+                      bookingId: primaryBooking?.id,
+                      sessionTitle: primaryTitle,
+                      sessionTime: timeInfo.label,
+                    });
+                  }}
+                  className="w-full text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-700 cursor-pointer"
+                >
+                  <AlertTriangle className="w-3.5 h-3.5 mr-1.5 text-rose-500" />
+                  Hủy ca dạy (Báo bận đột xuất)
+                </Button>
+              )}
             </div>
           )}
         </div>

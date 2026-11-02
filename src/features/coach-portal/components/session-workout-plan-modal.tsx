@@ -15,6 +15,7 @@ import type {
   BookingWorkoutExercise,
   StudentBookingItem,
 } from '../types/coach-portal.types';
+import { parseExerciseInstructions } from '../utils/exercise-metadata.utils';
 
 interface SessionWorkoutPlanModalProps {
   booking: StudentBookingItem;
@@ -208,27 +209,47 @@ export const SessionWorkoutPlanModal: React.FC<SessionWorkoutPlanModalProps> = (
                 </div>
 
                 <div className="space-y-3">
-                  {exercises.map((item, idx) => (
-                    <div
-                      key={item.id || idx}
-                      className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs space-y-3 transition-all hover:border-slate-300"
-                    >
-                      {/* Exercise Header */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
-                        <div className="flex items-center gap-2">
-                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-white font-mono text-xs font-black">
-                            {idx + 1}
-                          </span>
-                          <span className="text-sm font-black text-slate-900">
-                            {item.exercise?.title || `Bài tập #${idx + 1}`}
-                          </span>
+                  {exercises.map((item, idx) => {
+                    const meta = parseExerciseInstructions(item.exercise?.instructions);
+                    return (
+                      <div
+                        key={item.id || idx}
+                        className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs space-y-3 transition-all hover:border-slate-300"
+                      >
+                        {/* Exercise Header */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-white font-mono text-xs font-black">
+                              {idx + 1}
+                            </span>
+                            <span className="text-sm font-black text-slate-900">
+                              {item.exercise?.title || `Bài tập #${idx + 1}`}
+                            </span>
+                            {meta.code && (
+                              <span className="rounded bg-slate-100 text-slate-500 font-mono text-[10px] px-1.5 py-0.5">
+                                {meta.code}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {meta.muscleVi && (
+                              <span className="rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold">
+                                {meta.muscleVi}
+                              </span>
+                            )}
+                            {item.exercise?.category && (
+                              <span className="rounded-md bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 text-[10px] font-bold uppercase self-start sm:self-auto">
+                                {item.exercise.category}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        {item.exercise?.category && (
-                          <span className="rounded-md bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 text-[10px] font-bold uppercase self-start sm:self-auto">
-                            {item.exercise.category}
-                          </span>
+
+                        {meta.instructionsText && (
+                          <p className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 italic">
+                            <strong className="text-slate-700 not-italic">Kỹ thuật chuẩn:</strong> {meta.instructionsText}
+                          </p>
                         )}
-                      </div>
 
                       {/* Reps, Sets, Weight, Rest Inputs */}
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
@@ -320,7 +341,8 @@ export const SessionWorkoutPlanModal: React.FC<SessionWorkoutPlanModalProps> = (
                         />
                       </div>
                     </div>
-                  ))}
+                  );
+                })}
                 </div>
               </div>
             </>

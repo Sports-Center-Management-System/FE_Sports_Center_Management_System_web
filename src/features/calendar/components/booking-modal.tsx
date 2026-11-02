@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import type {
   CalendarSchedule,
   CalendarPtSlot,
@@ -22,18 +22,55 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const getErrorMessage = (error: unknown, fallback: string) => {
+const BACKEND_ERROR_MESSAGES: Record<string, string> = {
+  NO_VALID_SUBSCRIPTION_OR_QUOTA:
+    'Bạn không có gói tập hợp lệ hoặc đã hết lượt tập cho bộ môn/HLV này. Vui lòng kiểm tra lại thời hạn và số buổi còn lại.',
+  QUOTA_EXHAUSTED: 'Gói tập của bạn đã hết số lượt tập. Vui lòng gia hạn hoặc đăng ký gói mới.',
+  COACH_DISCIPLINE_MISMATCH:
+    'Huấn luyện viên không đảm nhiệm bộ môn này. Vui lòng chọn bộ môn khác phù hợp với chuyên môn của HLV.',
+  CLASS_FULL_OR_CLOSED: 'Lớp học đã đủ số lượng học viên hoặc đã đóng đăng ký.',
+  SESSION_UNAVAILABLE: 'Lớp học hoặc ca tập hiện không khả dụng. Vui lòng liên hệ trung tâm.',
+  SESSION_ALREADY_STARTED: 'Buổi tập hoặc ca dạy đã bắt đầu hoặc đã qua thời gian đăng ký.',
+  PT_SLOT_UNAVAILABLE: 'Ca rảnh của HLV đã được người khác đặt trước hoặc không còn khả dụng.',
+  MEMBER_SCHEDULE_OVERLAP: 'Bạn đã có một lịch tập khác trùng vào khung giờ này.',
+  OVERLAPPING_BOOKING: 'Khung giờ này bị trùng với lịch tập khác của bạn.',
+  SAME_DAY_ACTIVE_PT_BOOKING_EXISTS:
+    'Mỗi ngày bạn chỉ được đặt tối đa 1 ca tập PT còn hiệu lực cho bộ môn này.',
+  SAME_DAY_PT_LATE_CANCELLATION_LIMIT:
+    'Hôm nay bạn đã hủy muộn 1 ca PT cho bộ môn này, hệ thống không cho phép đặt thêm ca mới trong cùng ngày.',
+  SAME_DAY_PT_LIMIT: 'Hạn mức đặt lịch PT trong ngày của bạn đã đạt tối đa.',
+  SUBSCRIPTION_NOT_ACTIVE_ON_DAY: 'Gói tập chưa có hiệu lực hoặc đã hết hạn vào ngày diễn ra buổi tập.',
+  GROUP_QUOTA_EXHAUSTED: 'Gói tập của bạn đã hết số lượt tham gia lớp học nhóm.',
+  PT_QUOTA_EXHAUSTED: 'Gói tập của bạn đã hết số lượt tập kèm HLV 1-1.',
+  INVALID_EQUIPMENT: 'Thiết bị tập không khả dụng hoặc phòng tập tạm ngưng phục vụ.',
+  CANCELLATION_WINDOW_EXPIRED: 'Đã quá thời hạn cho phép hủy lịch tập.',
+}
+
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  let rawMsg = ''
   if (typeof error === 'object' && error !== null && 'response' in error) {
-    const response = error.response
+    const response = (error as any).response
     if (typeof response === 'object' && response !== null && 'data' in response) {
       const data = response.data
       if (typeof data === 'object' && data !== null && 'message' in data) {
         const message = data.message
-        return Array.isArray(message) ? message.join(', ') : String(message)
+        rawMsg = Array.isArray(message) ? message.join(', ') : String(message)
       }
     }
+  } else if (error instanceof Error) {
+    rawMsg = error.message
   }
-  return error instanceof Error ? error.message : fallback
+
+  if (rawMsg) {
+    for (const [key, translated] of Object.entries(BACKEND_ERROR_MESSAGES)) {
+      if (rawMsg.includes(key)) {
+        return translated
+      }
+    }
+    return rawMsg
+  }
+
+  return fallback
 }
 
 interface BookingModalProps {
@@ -108,14 +145,84 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const isStarted = diffHours <= 0
   const isRefundable = diffHours >= 2
 
-  // Selected discipline for PT booking (default to first matching active subscription or slot discipline)
-  const defaultDisciplineId =
-    ptData?.discipline?.id ||
-    (ptData?.eligibleDisciplines && ptData.eligibleDisciplines.length > 0
-      ? ptData.eligibleDisciplines[0]
-      : subscriptions.find((s) => s.remainingPtSessions > 0)?.disciplineId ||
-        disciplines[0]?.id ||
-        '')
+  // Date strings for quota and subscription validity check
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const sessionDateStr = startAt ? new Date(startAt).toISOString().slice(0, 10) : todayStr
+
+  // Pre-flight check for Group Class
+  const matchingGroupSub = useMemo(() => {
+    if (event.type !== 'SCHEDULE' || !scheduleData) return null
+    return (
+      subscriptions.find((sub) => {
+        if (sub.status !== 'ACTIVE') return false
+        if ((sub.remainingGroupSessions ?? 0) <= 0) return false
+        if (scheduleData.disciplineId && sub.disciplineId !== scheduleData.disciplineId) {
+          return false
+        }
+        const subStart = sub.startDate ? sub.startDate.slice(0, 10) : ''
+        const subEnd = sub.endDate ? sub.endDate.slice(0, 10) : ''
+        if (subStart && subStart > todayStr) return false
+        const compareDate = sessionDateStr > todayStr ? sessionDateStr : todayStr
+        if (subEnd && subEnd < compareDate) return false
+        return true
+      }) || null
+    )
+  }, [event.type, scheduleData, subscriptions, todayStr, sessionDateStr])
+
+  // Pre-flight check for PT Slot
+  const eligiblePtSubscriptions = useMemo(() => {
+    if (event.type !== 'PT_SLOT' || !ptData) return []
+    return subscriptions.filter((sub) => {
+      if (sub.status !== 'ACTIVE') return false
+      if ((sub.remainingPtSessions ?? 0) <= 0) return false
+      const subStart = sub.startDate ? sub.startDate.slice(0, 10) : ''
+      const subEnd = sub.endDate ? sub.endDate.slice(0, 10) : ''
+      if (subStart && subStart > todayStr) return false
+      const compareDate = sessionDateStr > todayStr ? sessionDateStr : todayStr
+      if (subEnd && subEnd < compareDate) return false
+
+      // Check assigned coach match if coach is explicitly assigned
+      if (sub.assignedCoach?.id && ptData.coach?.id && sub.assignedCoach.id !== ptData.coach.id) {
+        return false
+      }
+
+      // Check slot eligible disciplines if provided
+      if (
+        ptData.eligibleDisciplines &&
+        ptData.eligibleDisciplines.length > 0 &&
+        !ptData.eligibleDisciplines.includes(sub.disciplineId)
+      ) {
+        return false
+      }
+
+      return true
+    })
+  }, [event.type, ptData, subscriptions, todayStr, sessionDateStr])
+
+  // Available PT disciplines mapped from eligible subscriptions
+  const availablePtDisciplines = useMemo(() => {
+    if (eligiblePtSubscriptions.length === 0) return []
+    const discMap = new Map<string, { discipline: Discipline; sub: CalendarSubscription }>()
+    for (const sub of eligiblePtSubscriptions) {
+      const disc =
+        disciplines.find((d) => d.id === sub.disciplineId) ||
+        sub.discipline ||
+        ({ id: sub.disciplineId, name: sub.planName, code: 'PT' } as Discipline)
+      if (!discMap.has(disc.id)) {
+        discMap.set(disc.id, { discipline: disc, sub })
+      }
+    }
+    return Array.from(discMap.values())
+  }, [eligiblePtSubscriptions, disciplines])
+
+  const activePtDisciplineId =
+    selectedPtDisciplineId && availablePtDisciplines.some((item) => item.discipline.id === selectedPtDisciplineId)
+      ? selectedPtDisciplineId
+      : availablePtDisciplines[0]?.discipline.id || ''
+
+  const currentSelectedPtSub = eligiblePtSubscriptions.find(
+    (s) => s.disciplineId === activePtDisciplineId,
+  )
 
   // Handlers
   const handleConfirmBookGroup = async () => {
@@ -126,7 +233,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       await onBookGroup(scheduleData.id)
       onClose()
     } catch (err: unknown) {
-      setErrorMsg(getErrorMessage(err, 'Không thể đặt lớp. Vui lòng kiểm tra lại hạn mức gói tập.'))
+      setErrorMsg(
+        getErrorMessage(
+          err,
+          'Không thể đặt lớp. Vui lòng kiểm tra lại hạn mức và thời hạn gói tập.',
+        ),
+      )
     } finally {
       setIsSubmitting(false)
     }
@@ -134,7 +246,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   const handleConfirmBookPt = async () => {
     if (!ptData) return
-    const disciplineId = selectedPtDisciplineId || defaultDisciplineId
+    const disciplineId = activePtDisciplineId
     if (!disciplineId) {
       setErrorMsg('Vui lòng chọn bộ môn cho buổi tập PT')
       return
@@ -203,7 +315,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer"
             aria-label="Đóng chi tiết buổi tập"
           >
             <X className="h-5 w-5" />
@@ -299,27 +411,99 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             )}
           </div>
 
-          {/* PT Discipline Selector if booking PT */}
-          {event.type === 'PT_SLOT' && !existingBooking && (
-            <div className="p-4 rounded-xl bg-purple-50/60 border border-purple-200 text-xs space-y-2">
-              <label className="block font-bold text-purple-900">
-                Chọn bộ môn đăng ký tập kèm PT:
-              </label>
-              <select
-                value={selectedPtDisciplineId || defaultDisciplineId}
-                onChange={(e) => setSelectedPtDisciplineId(e.target.value)}
-                className="w-full p-2 bg-white border border-purple-300 rounded-lg text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-purple-400"
-              >
-                {disciplines.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name} ({d.code})
-                  </option>
-                ))}
-              </select>
-              <p className="text-[11px] text-purple-700 leading-relaxed flex items-start gap-1">
-                <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-purple-600" />
-                Mỗi hội viên được đặt tối đa 1 ca PT còn hiệu lực cho mỗi bộ môn trong một ngày.
-              </p>
+          {/* Past Event Warning if trying to book an event in the past */}
+          {!existingBooking && isStarted && (
+            <div className="p-3.5 rounded-xl bg-slate-100 border border-slate-300 text-slate-700 text-xs flex items-start gap-2.5">
+              <Clock className="h-4 w-4 text-slate-500 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <span className="font-bold text-slate-800">Buổi tập đã qua giờ diễn ra</span>
+                <p className="text-[11px] text-slate-600 leading-relaxed">
+                  Khung giờ này đã kết thúc hoặc đang diễn ra trong quá khứ. Hệ thống không cho phép đăng ký mới.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Group Class Quota Status or Alert */}
+          {event.type === 'SCHEDULE' && !existingBooking && !isStarted && (
+            <div>
+              {matchingGroupSub ? (
+                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-800">Gói tập áp dụng:</span>
+                    <span className="font-extrabold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md">
+                      Còn {matchingGroupSub.remainingGroupSessions} buổi
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-600">
+                    {matchingGroupSub.planName} • Hạn đến {new Date(matchingGroupSub.endDate).toLocaleDateString('vi-VN')}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-1.5">
+                  <div className="flex items-center gap-1.5 font-bold text-amber-800">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                    <span>Chưa có gói tập lớp nhóm</span>
+                  </div>
+                  <p className="text-[11px] text-amber-700 leading-relaxed">
+                    Bạn chưa có gói tập đang hoạt động hoặc đã hết lượt tham gia lớp nhóm cho bộ môn <strong>{disciplineName || 'này'}</strong>. Vui lòng đăng ký hoặc gia hạn gói tập tại quầy tiếp tân.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* PT Discipline Selector & Quota Status if booking PT */}
+          {event.type === 'PT_SLOT' && !existingBooking && !isStarted && (
+            <div className="space-y-3">
+              {availablePtDisciplines.length === 0 ? (
+                <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-1.5">
+                  <div className="flex items-center gap-1.5 font-bold text-amber-800">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                    <span>Không có gói tập PT khả dụng</span>
+                  </div>
+                  <p className="text-[11px] text-amber-700 leading-relaxed">
+                    Bạn cần có gói tập kèm HLV còn lượt (và được phân công cho HLV <strong>{coachName}</strong>) để đặt ca tập này. Vui lòng kiểm tra lại thời hạn gói tập hoặc liên hệ quầy tiếp tân để đăng ký.
+                  </p>
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl bg-purple-50/60 border border-purple-200 text-xs space-y-3">
+                  <label className="block font-bold text-purple-900">
+                    Chọn bộ môn đăng ký tập kèm PT:
+                  </label>
+                  <select
+                    value={activePtDisciplineId}
+                    onChange={(e) => setSelectedPtDisciplineId(e.target.value)}
+                    className="w-full p-2 bg-white border border-purple-300 rounded-lg text-slate-800 font-semibold focus:outline-hidden focus:ring-2 focus:ring-purple-400 text-xs"
+                  >
+                    {availablePtDisciplines.map(({ discipline: d, sub }) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name} ({d.code}) — {sub.planName}
+                      </option>
+                    ))}
+                  </select>
+
+                  {currentSelectedPtSub && (
+                    <div className="flex items-center justify-between p-2.5 rounded-lg bg-white border border-purple-200 text-purple-950 text-xs">
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">Gói tập áp dụng</span>
+                        <span className="font-bold">{currentSelectedPtSub.planName}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-slate-500 block text-[10px]">Số buổi còn lại</span>
+                        <span className="font-extrabold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-md">
+                          {currentSelectedPtSub.remainingPtSessions} buổi PT
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="text-[11px] text-purple-700 leading-relaxed flex items-start gap-1">
+                    <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-purple-600" />
+                    Mỗi hội viên được đặt tối đa 1 ca PT còn hiệu lực cho mỗi bộ môn trong một ngày.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -358,21 +542,21 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     value={cancelReason}
                     onChange={(e) => setCancelReason(e.target.value)}
                     placeholder="Nhập lý do bận, ốm,..."
-                    className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                    className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
                   />
                   <div className="flex items-center gap-2 pt-1">
                     <button
                       type="button"
                       disabled={isSubmitting || isStarted}
                       onClick={handleConfirmCancel}
-                      className="flex-1 py-2 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition disabled:opacity-50"
+                      className="flex-1 py-2 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition disabled:opacity-50 cursor-pointer"
                     >
                       {isSubmitting ? 'Đang xử lý...' : 'Xác nhận hủy lịch'}
                     </button>
                     <button
                       type="button"
                       onClick={() => setShowCancelConfirm(false)}
-                      className="py-2 px-3 rounded-lg border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-100 transition"
+                      className="py-2 px-3 rounded-lg border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-100 transition cursor-pointer"
                     >
                       Quay lại
                     </button>
@@ -383,7 +567,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   type="button"
                   disabled={isStarted}
                   onClick={() => setShowCancelConfirm(true)}
-                  className="w-full py-2 px-4 rounded-lg border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-bold transition disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+                  className="w-full py-2 px-4 rounded-lg border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-bold transition disabled:opacity-40 disabled:cursor-not-allowed shadow-xs cursor-pointer"
                 >
                   Yêu cầu hủy đặt chỗ
                 </button>
@@ -398,7 +582,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="py-2 px-4 rounded-xl border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-100 transition"
+              className="py-2 px-4 rounded-xl border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-100 transition cursor-pointer"
             >
               Đóng
             </button>
@@ -406,19 +590,28 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             {event.type === 'SCHEDULE' && scheduleData && (
               <button
                 type="button"
-                disabled={isSubmitting || scheduleData.currentEnrolled >= scheduleData.capacity}
+                disabled={
+                  isSubmitting ||
+                  isStarted ||
+                  scheduleData.currentEnrolled >= scheduleData.capacity ||
+                  !matchingGroupSub
+                }
                 onClick={handleConfirmBookGroup}
                 className={cn(
-                  'py-2 px-5 rounded-xl text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm',
-                  scheduleData.currentEnrolled >= scheduleData.capacity
+                  'py-2 px-5 rounded-xl text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer',
+                  isStarted || scheduleData.currentEnrolled >= scheduleData.capacity || !matchingGroupSub
                     ? 'bg-slate-400 cursor-not-allowed'
                     : 'bg-[#008b74] hover:bg-[#00735f] active:bg-[#005f4f]',
                 )}
               >
                 {isSubmitting
                   ? 'Đang đặt...'
-                  : scheduleData.currentEnrolled >= scheduleData.capacity
+                  : isStarted
+                    ? 'Buổi tập đã qua giờ'
+                    : scheduleData.currentEnrolled >= scheduleData.capacity
                     ? 'Lớp đã đủ người'
+                    : !matchingGroupSub
+                    ? 'Chưa có gói tập phù hợp'
                     : 'Xác nhận đặt lớp nhóm'}
               </button>
             )}
@@ -426,11 +619,22 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             {event.type === 'PT_SLOT' && ptData && (
               <button
                 type="button"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isStarted || availablePtDisciplines.length === 0}
                 onClick={handleConfirmBookPt}
-                className="py-2 px-5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                className={cn(
+                  'py-2 px-5 rounded-xl text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer',
+                  isStarted || availablePtDisciplines.length === 0
+                    ? 'bg-slate-400 cursor-not-allowed'
+                    : 'bg-purple-600 hover:bg-purple-700 active:bg-purple-800',
+                )}
               >
-                {isSubmitting ? 'Đang đặt...' : 'Xác nhận đặt lịch PT'}
+                {isSubmitting
+                  ? 'Đang đặt...'
+                  : isStarted
+                    ? 'Khung giờ đã qua'
+                    : availablePtDisciplines.length === 0
+                  ? 'Chưa có gói PT phù hợp'
+                  : 'Xác nhận đặt lịch PT'}
               </button>
             )}
           </div>

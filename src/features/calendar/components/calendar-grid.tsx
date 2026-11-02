@@ -11,7 +11,7 @@ import {
   HOUR_HEIGHT_PX,
   calculateEventPosition,
   getCurrentTimeTop,
-  formatBookingSlotRange,
+  formatTimeHHmm,
   formatDateToYMD,
 } from '../utils/calendar-date.utils'
 import { Users, UserCheck, CheckCircle2, Clock } from 'lucide-react'
@@ -103,6 +103,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
         const booking = getBookingForSchedule(schedule.id)
         const isBooked = !!booking
         const isFull = schedule.currentEnrolled >= schedule.capacity && !isBooked
+        const isPast = new Date(schedule.startAt).getTime() <= Date.now()
 
         const durationMin = Math.round(
           (new Date(schedule.endAt).getTime() - new Date(schedule.startAt).getTime()) / 60000,
@@ -134,6 +135,8 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
             }}
             className={cn(
               'absolute rounded-[10px] p-2 text-xs transition-all duration-150 cursor-pointer overflow-hidden shadow-2xs select-none group hover:shadow-md hover:scale-[1.01] hover:z-20 focus:outline-hidden focus:ring-2 z-10',
+              // Past State dimming (if not booked)
+              !isBooked && isPast && 'opacity-60 saturate-50',
               // Booked State (Green emerald theme)
               isBooked &&
                 'bg-emerald-50/95 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 border border-emerald-300/90 dark:border-emerald-800 hover:bg-emerald-100/95 dark:hover:bg-emerald-950/60 focus:ring-emerald-400',
@@ -163,6 +166,10 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                     <CheckCircle2 className="w-3 h-3 mr-0.5 text-emerald-600" />
                     Đã đặt
                   </span>
+                ) : isPast ? (
+                  <span className="px-1.5 py-0.2 rounded text-[9.5px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 shrink-0">
+                    Đã qua
+                  </span>
                 ) : isFull ? (
                   <span className="px-1.5 py-0.2 rounded text-[9.5px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
                     Hết chỗ
@@ -184,6 +191,10 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                       <span className="inline-flex items-center text-[10.5px] font-bold text-emerald-700 dark:text-emerald-300">
                         <CheckCircle2 className="w-3.5 h-3.5 mr-0.5 text-emerald-600 dark:text-emerald-400" />
                         Đã đặt
+                      </span>
+                    ) : isPast ? (
+                      <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-slate-200/90 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                        Đã qua giờ
                       </span>
                     ) : isFull ? (
                       <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-slate-200/90 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
@@ -232,6 +243,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
           (new Date(ptSlot.endAt).getTime() - new Date(ptSlot.startAt).getTime()) / 60000,
         )
         const isShort = durationMin <= 45 || height <= 52
+        const isPast = new Date(ptSlot.startAt).getTime() <= Date.now()
 
         const timeRangeStr = formatTimeRange(ptSlot.startAt, ptSlot.endAt)
         const coachName = ptSlot.coach?.fullName || 'HLV'
@@ -258,6 +270,8 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
             }}
             className={cn(
               'absolute rounded-[10px] p-2 text-xs transition-all duration-150 cursor-pointer overflow-hidden shadow-2xs select-none group hover:shadow-md hover:scale-[1.01] hover:z-20 focus:outline-hidden focus:ring-2 z-10',
+              // Past State dimming (if not booked)
+              !isBookedByMe && isPast && 'opacity-60 saturate-50',
               // Booked State (Green emerald theme)
               isBookedByMe &&
                 'bg-emerald-50/95 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 border border-emerald-300/90 dark:border-emerald-800 hover:bg-emerald-100/95 dark:hover:bg-emerald-950/60 focus:ring-emerald-400',
@@ -279,6 +293,10 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                     <CheckCircle2 className="w-3 h-3 mr-0.5 text-emerald-600" />
                     Đã đặt
                   </span>
+                ) : isPast ? (
+                  <span className="px-1.5 py-0.2 rounded text-[9.5px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 shrink-0">
+                    Đã qua
+                  </span>
                 ) : (
                   <span className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 shrink-0">
                     PT 1-1
@@ -296,6 +314,10 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                       <span className="inline-flex items-center text-[10.5px] font-bold text-emerald-700 dark:text-emerald-300">
                         <CheckCircle2 className="w-3.5 h-3.5 mr-0.5 text-emerald-600 dark:text-emerald-400" />
                         Đã đặt
+                      </span>
+                    ) : isPast ? (
+                      <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-slate-200/90 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                        Đã qua giờ
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-bold bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200">

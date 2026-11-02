@@ -102,29 +102,7 @@ export const router = createBrowserRouter([
         ],
       },
 
-      // 3. DESK PORTAL
-      {
-        path: "portal/desk",
-        children: [
-          {
-            element: <StaffGuard roles={["RECEPTIONIST", "CENTER_MANAGER"]} />,
-            children: [
-              { index: true, element: <PortalPlaceholder title="Quầy lễ tân" /> },
-              { path: "gate-checkin", element: <PortalPlaceholder title="Check-in cổng" /> },
-              { path: "pos", element: <PortalPlaceholder title="Bán gói tập" /> },
-              { path: "subscriptions", element: <PortalPlaceholder title="Gia hạn gói tập" /> },
-              { path: "members", element: <PortalPlaceholder title="Hội viên" /> },
-              { path: "members/:memberId", element: <PortalPlaceholder title="Hội viên" /> },
-            ],
-          },
-          {
-            element: <StaffGuard roles={["RECEPTIONIST", "COACH"]} />,
-            children: [{ path: "inbody", element: <PortalPlaceholder title="Đo InBody" /> }],
-          },
-        ],
-      },
-
-      // 4. COACH PORTAL (/portal/coach and /coach)
+      // 3. COACH PORTAL (/portal/coach and /coach)
       {
         path: "portal/coach",
         element: <StaffGuard roles={["COACH"]} />,
@@ -165,6 +143,30 @@ export const router = createBrowserRouter([
       },
     ],
   },
+
+  // Front-desk pages render their own full-screen layout, so they sit outside PublicLayout.
+  {
+    path: "/portal/desk",
+    element: <ReceptionistLayout />,
+    children: [
+      {
+        element: <StaffGuard roles={["RECEPTIONIST", "CENTER_MANAGER"]} />,
+        children: [
+          { index: true, element: <FrontDeskPage /> },
+          { path: "gate-checkin", element: <GateCheckinPage /> },
+          { path: "pos", element: <PosPage key="sale" /> },
+          { path: "subscriptions", element: <PosPage key="subscriptions" initialMode="RENEW" /> },
+          { path: "members", element: <MembersPage /> },
+          { path: "members/:memberId", element: <MembersPage /> },
+        ],
+      },
+      {
+        element: <StaffGuard roles={["RECEPTIONIST", "COACH"]} />,
+        children: [{ path: "inbody", element: <InbodyPage /> }],
+      },
+    ],
+  },
+  { path: "/desk", element: <Navigate to="/portal/desk" replace /> },
 
   // 5. 404 Catch-all
   { path: "404", element: <NotFoundPage /> },
