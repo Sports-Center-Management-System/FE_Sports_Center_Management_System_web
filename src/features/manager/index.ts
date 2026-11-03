@@ -1,0 +1,10 @@
+export { ManagerDashboardPage } from "./pages/dashboard-page";
+export { ManagerStaffPage } from "./pages/staff-page";
+export { ManagerStaffShiftsPage } from "./pages/staff-shifts-page";
+export { ManagerCoachesPage } from "./pages/coaches-page";
+export { ManagerPenaltiesPage } from "./pages/penalties-page";
+export { ManagerPlansPage } from "./pages/plans-page";
+export { ManagerClassesPage } from "./pages/classes-page";
+export { ManagerFacilitiesPage } from "./pages/facilities-page";
+export { ManagerMembersPage } from "./pages/members-page";
+export { ManagerReportsPage } from "./pages/reports-page";
