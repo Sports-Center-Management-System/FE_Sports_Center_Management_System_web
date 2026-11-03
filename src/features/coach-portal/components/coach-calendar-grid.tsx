@@ -45,7 +45,14 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
   // Calculate event positioning within 06:00 - 23:00
   const calculatePosition = (startIso: string, endIso: string) => {
     const start = new Date(startIso);
-    const end = new Date(endIso);
+    let end = new Date(endIso);
+
+    // Guard against "lỗi dài ca làm": if duration is invalid or exceeds 2.5 hours, clamp to 1 hour
+    const durationMs = end.getTime() - start.getTime();
+    if (isNaN(durationMs) || durationMs <= 0 || durationMs > 2.5 * 60 * 60 * 1000) {
+      end = new Date(start.getTime() + 60 * 60 * 1000);
+    }
+
     const startHour = start.getHours() + start.getMinutes() / 60;
     const endHour = end.getHours() + end.getMinutes() / 60;
 
@@ -155,6 +162,12 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
 
       const timeRangeStr = formatTimeRangeLabel(session.startTime, session.endTime);
 
+      // Split overlapping sessions (e.g. 2 sessions sharing the same startTime) into side-by-side lanes
+      const matchingSessions = daySessions.filter((s) => s.startTime === session.startTime);
+      const laneIndex = matchingSessions.findIndex((s) => s.id === session.id);
+      const totalLanes = Math.max(matchingSessions.length, 1);
+      const laneWidthPercent = 100 / totalLanes;
+
       return (
         <div
           key={`session-${session.id}`}
@@ -170,8 +183,8 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
           style={{
             top: `${top}px`,
             height: `${height}px`,
-            left: '6px',
-            right: '6px',
+            left: totalLanes > 1 ? `calc(${laneIndex * laneWidthPercent}% + 3px)` : '6px',
+            width: totalLanes > 1 ? `calc(${laneWidthPercent}% - 6px)` : 'calc(100% - 12px)',
           }}
           className={cn(
             'absolute rounded-[10px] p-2 text-xs transition-all duration-150 cursor-pointer overflow-hidden shadow-2xs select-none group hover:shadow-md hover:scale-[1.01] hover:z-20 focus:outline-hidden focus:ring-2 z-10',

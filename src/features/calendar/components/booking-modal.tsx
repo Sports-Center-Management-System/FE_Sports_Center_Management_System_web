@@ -4,6 +4,7 @@ import type {
   CalendarPtSlot,
   CalendarBooking,
   CalendarSubscription,
+  CalendarDay,
   Discipline,
 } from '../types/calendar.types'
 import { formatBookingSlotRange } from '../utils/calendar-date.utils'
@@ -23,6 +24,10 @@ import {
 import { cn } from '@/lib/utils'
 
 const BACKEND_ERROR_MESSAGES: Record<string, string> = {
+  PT_REBOOK_SAME_CANCELLED_DAY:
+    'Hôm nay bạn đã hủy muộn 1 ca PT cho bộ môn này. Theo quy định của trung tâm, bạn không thể đặt lại ca tập khác trong cùng ngày.',
+  PT_ALREADY_BOOKED_FOR_DISCIPLINE_DAY:
+    'Bạn đã có 1 ca tập PT trong ngày cho bộ môn này. Mỗi ngày chỉ được đặt tối đa 1 buổi PT cho cùng một môn.',
   NO_VALID_SUBSCRIPTION_OR_QUOTA:
     'Bạn không có gói tập hợp lệ hoặc đã hết lượt tập cho bộ môn/HLV này. Vui lòng kiểm tra lại thời hạn và số buổi còn lại.',
   QUOTA_EXHAUSTED: 'Gói tập của bạn đã hết số lượt tập. Vui lòng gia hạn hoặc đăng ký gói mới.',
@@ -81,6 +86,7 @@ interface BookingModalProps {
   onCancelBooking: (bookingId: string, reason?: string) => Promise<void>
   subscriptions: CalendarSubscription[]
   disciplines: Discipline[]
+  days?: CalendarDay[]
 }
 
 export const BookingModal: React.FC<BookingModalProps> = ({
@@ -91,6 +97,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   onCancelBooking,
   subscriptions,
   disciplines,
+  days,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
@@ -224,9 +231,31 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     (s) => s.disciplineId === activePtDisciplineId,
   )
 
+  // Check day eligibility for the selected slot day and discipline
+  const slotDateStr = startAt ? new Date(startAt).toISOString().slice(0, 10) : ''
+  const currentDayInfo = useMemo(() => {
+    if (!days || !slotDateStr) return null
+    return days.find((d) => d.date === slotDateStr) || null
+  }, [days, slotDateStr])
+
+  const ptDayEligibility = useMemo(() => {
+    if (!currentDayInfo || !activePtDisciplineId) return null
+    return (
+      currentDayInfo.eligibility?.find(
+        (e) =>
+          (currentSelectedPtSub && e.subscriptionId === currentSelectedPtSub.id) ||
+          e.disciplineId === activePtDisciplineId,
+      ) || null
+    )
+  }, [currentDayInfo, activePtDisciplineId, currentSelectedPtSub])
+
   // Handlers
   const handleConfirmBookGroup = async () => {
     if (!scheduleData) return
+    if (isStarted) {
+      setErrorMsg('Buổi tập này đã bắt đầu hoặc diễn ra trong quá khứ, không thể đặt chỗ.')
+      return
+    }
     setIsSubmitting(true)
     setErrorMsg(null)
     try {
@@ -246,6 +275,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   const handleConfirmBookPt = async () => {
     if (!ptData) return
+    if (isStarted) {
+      setErrorMsg('Khung giờ tập này đã qua thời gian bắt đầu, không thể đăng ký ca tập trong quá khứ.')
+      return
+    }
     const disciplineId = activePtDisciplineId
     if (!disciplineId) {
       setErrorMsg('Vui lòng chọn bộ môn cho buổi tập PT')
@@ -270,6 +303,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   const handleConfirmCancel = async () => {
     if (!existingBooking) return
+    if (isStarted) {
+      setErrorMsg('Buổi tập này đã bắt đầu hoặc diễn ra trong quá khứ. Hệ thống không cho phép hủy lịch.')
+      return
+    }
     setIsSubmitting(true)
     setErrorMsg(null)
     try {
@@ -498,6 +535,19 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     </div>
                   )}
 
+                  {ptDayEligibility && !ptDayEligibility.pt.allowed && !existingBooking && !isStarted && (
+                    <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-1">
+                      <div className="flex items-center gap-1.5 font-bold text-amber-800">
+                        <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                        <span>Không thể đặt ca PT trong ngày này</span>
+                      </div>
+                      <p className="text-[11px] text-amber-700 leading-relaxed">
+                        {BACKEND_ERROR_MESSAGES[ptDayEligibility.pt.reason || ''] ||
+                          'Bạn không đủ điều kiện đặt thêm ca PT cho bộ môn này trong ngày.'}
+                      </p>
+                    </div>
+                  )}
+
                   <p className="text-[11px] text-purple-700 leading-relaxed flex items-start gap-1">
                     <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-purple-600" />
                     Mỗi hội viên được đặt tối đa 1 ca PT còn hiệu lực cho mỗi bộ môn trong một ngày.
@@ -525,10 +575,19 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   lại 01 lượt tập vào gói đăng ký.
                 </div>
               ) : (
-                <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs">
-                  <span className="font-bold">Hủy muộn (dưới 2 tiếng):</span> Buổi tập vẫn được giải
-                  phóng cho hội viên khác, nhưng{' '}
-                  <span className="font-bold underline">không được hoàn lại lượt tập</span>.
+                <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs space-y-1">
+                  <div>
+                    <span className="font-bold">Hủy muộn (dưới 2 tiếng):</span> Buổi tập vẫn được giải
+                    phóng cho hội viên khác, nhưng{' '}
+                    <span className="font-bold underline">không được hoàn lại lượt tập</span>.
+                  </div>
+                  {(event.type === 'PT_SLOT' ||
+                    existingBooking?.type === 'PERSONAL_TRAINING' ||
+                    existingBooking?.bookingType === 'PERSONAL_TRAINING') && (
+                    <div className="text-[11px] text-amber-900 font-semibold pt-1 border-t border-amber-200/60">
+                      ⚠️ Lưu ý: Theo quy định trung tâm, nếu hủy muộn, bạn sẽ không thể đặt lại ca PT khác của bộ môn này trong cùng ngày.
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -619,11 +678,18 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             {event.type === 'PT_SLOT' && ptData && (
               <button
                 type="button"
-                disabled={isSubmitting || isStarted || availablePtDisciplines.length === 0}
+                disabled={
+                  isSubmitting ||
+                  isStarted ||
+                  availablePtDisciplines.length === 0 ||
+                  Boolean(ptDayEligibility && !ptDayEligibility.pt.allowed)
+                }
                 onClick={handleConfirmBookPt}
                 className={cn(
                   'py-2 px-5 rounded-xl text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer',
-                  isStarted || availablePtDisciplines.length === 0
+                  isStarted ||
+                    availablePtDisciplines.length === 0 ||
+                    (ptDayEligibility && !ptDayEligibility.pt.allowed)
                     ? 'bg-slate-400 cursor-not-allowed'
                     : 'bg-purple-600 hover:bg-purple-700 active:bg-purple-800',
                 )}
@@ -633,8 +699,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   : isStarted
                     ? 'Khung giờ đã qua'
                     : availablePtDisciplines.length === 0
-                  ? 'Chưa có gói PT phù hợp'
-                  : 'Xác nhận đặt lịch PT'}
+                    ? 'Chưa có gói PT phù hợp'
+                    : ptDayEligibility && !ptDayEligibility.pt.allowed
+                    ? ptDayEligibility.pt.reason === 'PT_REBOOK_SAME_CANCELLED_DAY'
+                      ? 'Đã hủy muộn trong ngày'
+                      : ptDayEligibility.pt.reason === 'PT_ALREADY_BOOKED_FOR_DISCIPLINE_DAY'
+                      ? 'Đã có ca PT trong ngày'
+                      : 'Không đủ điều kiện đặt'
+                    : 'Xác nhận đặt lịch PT'}
               </button>
             )}
           </div>

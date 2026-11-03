@@ -226,60 +226,70 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
         )
       })
 
-    // 2. PT 1-1 Slots
-    ptSlots
-      .filter((pt) => formatDateToYMD(new Date(pt.startAt)) === dateString)
-      .forEach((ptSlot) => {
-        const { top, height } = calculateEventPosition(ptSlot.startAt, ptSlot.endAt)
-        const booking = getBookingForPtSlot(ptSlot.id)
-        const isBookedByMe = !!booking
+    // 2. PT 1-1 Slots from different coaches can share one time. Give every coach a lane
+    // instead of stacking their cards on top of one another (split side-by-side).
+    const visiblePtSlots = ptSlots.filter((pt) => {
+      if (formatDateToYMD(new Date(pt.startAt)) !== dateString) return false
+      const booking = getBookingForPtSlot(pt.id)
+      const isBookedByMe = !!booking
+      if (pt.isBooked && !isBookedByMe) return false
+      return true
+    })
 
-        // Hide slots booked by other members
-        if (ptSlot.isBooked && !isBookedByMe) {
-          return
-        }
+    visiblePtSlots.forEach((ptSlot) => {
+      const { top, height } = calculateEventPosition(ptSlot.startAt, ptSlot.endAt)
+      const booking = getBookingForPtSlot(ptSlot.id)
+      const isBookedByMe = !!booking
 
-        const durationMin = Math.round(
-          (new Date(ptSlot.endAt).getTime() - new Date(ptSlot.startAt).getTime()) / 60000,
-        )
-        const isShort = durationMin <= 45 || height <= 52
-        const isPast = new Date(ptSlot.startAt).getTime() <= Date.now()
+      // Split overlapping PT slots at the same time into side-by-side lanes
+      const matchingSlots = visiblePtSlots.filter(
+        (slot) => slot.startAt === ptSlot.startAt,
+      )
+      const laneIndex = matchingSlots.findIndex((slot) => slot.id === ptSlot.id)
+      const totalLanes = Math.max(matchingSlots.length, 1)
+      const laneWidthPercent = 100 / totalLanes
 
-        const timeRangeStr = formatTimeRange(ptSlot.startAt, ptSlot.endAt)
-        const coachName = ptSlot.coach?.fullName || 'HLV'
-        const primaryTitle = `PT với HLV ${coachName}`
-        const roomName = 'Khu vực PT'
+      const durationMin = Math.round(
+        (new Date(ptSlot.endAt).getTime() - new Date(ptSlot.startAt).getTime()) / 60000,
+      )
+      const isShort = durationMin <= 45 || height <= 52
+      const isPast = new Date(ptSlot.startAt).getTime() <= Date.now()
 
-        events.push(
-          <div
-            key={`pt-${ptSlot.id}`}
-            onClick={() => onSelectEvent({ type: 'PT_SLOT', data: ptSlot, booking })}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                onSelectEvent({ type: 'PT_SLOT', data: ptSlot, booking })
-              }
-            }}
-            style={{
-              top: `${top}px`,
-              height: `${height}px`,
-              left: '6px',
-              right: '6px',
-            }}
-            className={cn(
-              'absolute rounded-[10px] p-2 text-xs transition-all duration-150 cursor-pointer overflow-hidden shadow-2xs select-none group hover:shadow-md hover:scale-[1.01] hover:z-20 focus:outline-hidden focus:ring-2 z-10',
-              // Past State dimming (if not booked)
-              !isBookedByMe && isPast && 'opacity-60 saturate-50',
-              // Booked State (Green emerald theme)
-              isBookedByMe &&
-                'bg-emerald-50/95 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 border border-emerald-300/90 dark:border-emerald-800 hover:bg-emerald-100/95 dark:hover:bg-emerald-950/60 focus:ring-emerald-400',
-              // Available PT State (Purple theme)
-              !isBookedByMe &&
-                'bg-purple-50/95 dark:bg-purple-950/40 text-purple-950 dark:text-purple-100 border border-purple-200/90 dark:border-purple-800/60 hover:bg-purple-100/95 dark:hover:bg-purple-950/60 focus:ring-purple-400',
-            )}
-          >
+      const timeRangeStr = formatTimeRange(ptSlot.startAt, ptSlot.endAt)
+      const coachName = ptSlot.coach?.fullName || 'HLV'
+      const primaryTitle = `PT với HLV ${coachName}`
+      const roomName = 'Khu vực PT'
+
+      events.push(
+        <div
+          key={`pt-${ptSlot.id}`}
+          onClick={() => onSelectEvent({ type: 'PT_SLOT', data: ptSlot, booking })}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              onSelectEvent({ type: 'PT_SLOT', data: ptSlot, booking })
+            }
+          }}
+          style={{
+            top: `${top}px`,
+            height: `${height}px`,
+            left: totalLanes > 1 ? `calc(${laneIndex * laneWidthPercent}% + 3px)` : '6px',
+            width: totalLanes > 1 ? `calc(${laneWidthPercent}% - 6px)` : 'calc(100% - 12px)',
+          }}
+          className={cn(
+            'absolute rounded-[10px] p-2 text-xs transition-all duration-150 cursor-pointer overflow-hidden shadow-2xs select-none group hover:shadow-md hover:scale-[1.01] hover:z-20 focus:outline-hidden focus:ring-2 z-10',
+            // Past State dimming (if not booked)
+            !isBookedByMe && isPast && 'opacity-60 saturate-50',
+            // Booked State (Green emerald theme)
+            isBookedByMe &&
+              'bg-emerald-50/95 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 border border-emerald-300/90 dark:border-emerald-800 hover:bg-emerald-100/95 dark:hover:bg-emerald-950/60 focus:ring-emerald-400',
+            // Available PT State (Purple theme)
+            !isBookedByMe &&
+              'bg-purple-50/95 dark:bg-purple-950/40 text-purple-950 dark:text-purple-100 border border-purple-200/90 dark:border-purple-800/60 hover:bg-purple-100/95 dark:hover:bg-purple-950/60 focus:ring-purple-400',
+          )}
+        >
             {isShort ? (
               <div className="flex items-center justify-between h-full gap-1">
                 <div className="flex items-center gap-1.5 truncate">
@@ -351,44 +361,50 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
       return bDate === dateString && ACTIVE_BOOKING_STATUSES.has(b.status)
     })
 
-    dayBookings
-      .filter(
-        (booking) =>
-          !schedules.some((schedule) => schedule.id === booking.scheduleId) &&
-          !ptSlots.some((slot) => slot.id === booking.coachAvailabilityId),
+    const standaloneBookings = dayBookings.filter(
+      (booking) =>
+        !schedules.some((schedule) => schedule.id === booking.scheduleId) &&
+        !ptSlots.some((slot) => slot.id === booking.coachAvailabilityId),
+    )
+
+    standaloneBookings.forEach((b) => {
+      const { top, height } = calculateEventPosition(b.startAt, b.endAt)
+      const durationMin = Math.round(
+        (new Date(b.endAt).getTime() - new Date(b.startAt).getTime()) / 60000,
       )
-      .forEach((b) => {
-        const { top, height } = calculateEventPosition(b.startAt, b.endAt)
-        const durationMin = Math.round(
-          (new Date(b.endAt).getTime() - new Date(b.startAt).getTime()) / 60000,
-        )
-        const isShort = durationMin <= 45 || height <= 52
+      const isShort = durationMin <= 45 || height <= 52
 
-        const timeRangeStr = formatTimeRange(b.startAt, b.endAt)
-        const primaryTitle =
-          b.schedule?.class?.name ||
-          b.discipline?.name ||
-          (b.type === 'PERSONAL_TRAINING' ? 'Buổi tập PT 1-1' : 'Lớp tập nhóm')
-        const coachName = b.coach?.fullName ? `HLV: ${b.coach.fullName}` : 'Đã xác nhận'
+      // Split overlapping standalone bookings side-by-side
+      const matchingStandalone = standaloneBookings.filter((s) => s.startAt === b.startAt)
+      const laneIndex = matchingStandalone.findIndex((s) => s.id === b.id)
+      const totalLanes = Math.max(matchingStandalone.length, 1)
+      const laneWidthPercent = 100 / totalLanes
 
-        events.push(
-          <div
-            key={`mine-${b.id}`}
-            onClick={() => onSelectEvent({ type: 'BOOKING_STANDALONE', data: b })}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                onSelectEvent({ type: 'BOOKING_STANDALONE', data: b })
-              }
-            }}
-            style={{
-              top: `${top}px`,
-              height: `${height}px`,
-              left: '6px',
-              right: '6px',
-            }}
+      const timeRangeStr = formatTimeRange(b.startAt, b.endAt)
+      const primaryTitle =
+        b.schedule?.class?.name ||
+        b.discipline?.name ||
+        (b.type === 'PERSONAL_TRAINING' ? 'Buổi tập PT 1-1' : 'Lớp tập nhóm')
+      const coachName = b.coach?.fullName ? `HLV: ${b.coach.fullName}` : 'Đã xác nhận'
+
+      events.push(
+        <div
+          key={`mine-${b.id}`}
+          onClick={() => onSelectEvent({ type: 'BOOKING_STANDALONE', data: b })}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              onSelectEvent({ type: 'BOOKING_STANDALONE', data: b })
+            }
+          }}
+          style={{
+            top: `${top}px`,
+            height: `${height}px`,
+            left: totalLanes > 1 ? `calc(${laneIndex * laneWidthPercent}% + 3px)` : '6px',
+            width: totalLanes > 1 ? `calc(${laneWidthPercent}% - 6px)` : 'calc(100% - 12px)',
+          }}
             className="absolute rounded-[10px] p-2 text-xs transition-all duration-150 cursor-pointer overflow-hidden shadow-2xs select-none group hover:shadow-md hover:scale-[1.01] hover:z-20 focus:outline-hidden focus:ring-2 z-10 bg-emerald-50/95 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 border border-emerald-300/90 dark:border-emerald-800 hover:bg-emerald-100/95 dark:hover:bg-emerald-950/60 focus:ring-emerald-400"
           >
             {isShort ? (

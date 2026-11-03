@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   X,
   Clock,
@@ -15,11 +15,17 @@ import {
   Check,
   FileText,
   Calendar,
+  AlertTriangle,
+  Loader2,
+  ExternalLink,
 } from "lucide-react";
 import { money } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/auth-context";
 import type { Coach, CoachAvailabilitySlot } from "../types/coach.types";
 import { coachApiService } from "../services/coach-api.service";
+import { bookPtSessionApi } from "@/features/calendar/services/calendar-api.service";
+import { getMondayOfWeek } from "@/features/calendar/utils/calendar-date.utils";
 import { DisciplineIcon } from "./discipline-icon";
 import { getDisciplineColor, getInitials } from "../utils/coach.utils";
 
@@ -30,6 +36,24 @@ export interface CoachDetailModalProps {
   onSelectSlot?: (coach: Coach, slot: CoachAvailabilitySlot) => void;
 }
 
+const VIETNAMESE_DAY_SHORT = ["CN", "Th 2", "Th 3", "Th 4", "Th 5", "Th 6", "Th 7"];
+
+const BACKEND_ERROR_MESSAGES: Record<string, string> = {
+  PT_REBOOK_SAME_CANCELLED_DAY:
+    "Hôm nay bạn đã hủy muộn 1 ca PT cho bộ môn này. Theo quy định của trung tâm, bạn không thể đặt lại ca tập khác trong cùng ngày.",
+  PT_ALREADY_BOOKED_FOR_DISCIPLINE_DAY:
+    "Bạn đã có 1 ca tập PT trong ngày cho bộ môn này. Mỗi ngày chỉ được đặt tối đa 1 buổi PT cho cùng một môn.",
+  NO_VALID_SUBSCRIPTION_OR_QUOTA:
+    "Bạn không có gói tập hợp lệ hoặc đã hết lượt tập PT. Vui lòng đăng ký gói VIP hoặc mua thêm buổi PT.",
+  QUOTA_EXHAUSTED:
+    "Gói tập của bạn đã hết số lượt tập kèm HLV 1-1. Vui lòng gia hạn hoặc đăng ký gói mới.",
+  SAME_DAY_ACTIVE_PT_BOOKING_EXISTS:
+    "Mỗi ngày bạn chỉ được đặt tối đa 1 ca tập PT còn hiệu lực cho bộ môn này.",
+  SAME_DAY_PT_LATE_CANCELLATION_LIMIT:
+    "Hôm nay bạn đã hủy muộn 1 ca PT cho bộ môn này, hệ thống không cho phép đặt thêm ca mới trong cùng ngày.",
+  CANCELLATION_WINDOW_EXPIRED: "Đã quá thời hạn cho phép hủy lịch tập.",
+};
+
 export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
   coach,
   isOpen,
@@ -37,8 +61,18 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
   onSelectSlot,
 }) => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { isAuthenticated } = useAuth();
+
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
-  const [bookSuccess, setBookSuccess] = useState(false);
+  const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
+  const [bookedSuccessInfo, setBookedSuccessInfo] = useState<{
+    coachName: string;
+    slot: CoachAvailabilitySlot;
+    dateLabel: string;
+    timeLabel: string;
+  } | null>(null);
 
   // 1. Fetch full coach detail
   const coachDetailQuery = useQuery({
@@ -57,10 +91,25 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
     enabled: Boolean(isOpen && coach?.id),
   });
 
-  const slots =
+  const rawSlots =
     availabilityQuery.data && availabilityQuery.data.length > 0
       ? availabilityQuery.data
       : activeCoach?.coachAvailabilities || [];
+
+  // Sort slots chronologically
+  const slots = [...rawSlots].sort((a, b) => {
+    return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+  });
+
+  // Reset modal state on open/coach change
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedSlotId(null);
+      setBookingError(null);
+      setBookedSuccessInfo(null);
+      setIsSubmittingBooking(false);
+    }
+  }, [isOpen, coach?.id]);
 
   // Handle ESC key
   useEffect(() => {
@@ -93,16 +142,117 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
   const hasAvatar = Boolean(activeCoach.avatarUrl && activeCoach.avatarUrl.trim());
   const bio = activeCoach.bio || activeCoach.coachProfile?.bio;
 
-  const handleConfirmBooking = () => {
+  const formatSlotDisplay = (startTime: string, endTime: string, timeRange?: string) => {
+    const s = new Date(startTime);
+    if (isNaN(s.getTime())) {
+      return {
+        dateLabel: "",
+        timeLabel: timeRange || `${startTime.slice(0, 5)} - ${endTime.slice(0, 5)}`,
+        isPast: false,
+      };
+    }
+
+    const isPast = s.getTime() <= Date.now();
+    const dayName = VIETNAMESE_DAY_SHORT[s.getDay()];
+    const dateStr = `${String(s.getDate()).padStart(2, "0")}/${String(s.getMonth() + 1).padStart(2, "0")}`;
+
+    const sTime = s.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+    let eTime = "";
+    if (endTime) {
+      const e = new Date(endTime);
+      if (!isNaN(e.getTime())) {
+        eTime = e.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+      }
+    }
+
+    return {
+      dateLabel: `${dayName}, ${dateStr}`,
+      timeLabel: timeRange || (eTime ? `${sTime} - ${eTime}` : sTime),
+      isPast,
+    };
+  };
+
+  const handleConfirmBooking = async () => {
+    setBookingError(null);
+
+    // If no slot chosen, allow navigating to the full weekly calendar for this coach
+    if (!selectedSlotId) {
+      navigate(`/portal/member/bookings?week=${getMondayOfWeek()}&coachId=${activeCoach.id}`);
+      onClose();
+      return;
+    }
+
     const chosenSlot = slots.find((s) => s.id === selectedSlotId);
-    if (onSelectSlot && chosenSlot) {
+    if (!chosenSlot) return;
+
+    // Check if slot is in the past
+    const isPast = new Date(chosenSlot.startTime).getTime() <= Date.now();
+    if (isPast) {
+      setBookingError("Khung giờ tập này đã bắt đầu hoặc diễn ra trong quá khứ, không thể đặt lịch.");
+      return;
+    }
+
+    // Custom parent callback if provided
+    if (onSelectSlot) {
       onSelectSlot(activeCoach, chosenSlot);
-    } else {
-      setBookSuccess(true);
-      setTimeout(() => {
-        navigate(`/portal/member/bookings?coachId=${activeCoach.id}`);
-        onClose();
-      }, 1000);
+      return;
+    }
+
+    // Check authentication
+    if (!isAuthenticated) {
+      navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+      return;
+    }
+
+    // Determine disciplineId
+    const disciplineId =
+      activeCoach.disciplineIds?.[0] ||
+      activeCoach.coachRates?.[0]?.disciplineId ||
+      "";
+
+    if (!disciplineId) {
+      // Fallback redirect with slotId
+      const weekMonday = getMondayOfWeek(chosenSlot.startTime);
+      navigate(`/portal/member/bookings?week=${weekMonday}&slotId=${chosenSlot.id}&coachId=${activeCoach.id}`);
+      onClose();
+      return;
+    }
+
+    try {
+      setIsSubmittingBooking(true);
+      await bookPtSessionApi({
+        coachAvailabilityId: chosenSlot.id,
+        disciplineId,
+      });
+
+      // Refetch availability
+      queryClient.invalidateQueries({ queryKey: ["coach-availability", activeCoach.id] });
+      queryClient.invalidateQueries({ queryKey: ["member-calendar"] });
+
+      const slotInfo = formatSlotDisplay(chosenSlot.startTime, chosenSlot.endTime, chosenSlot.timeRange);
+      setBookedSuccessInfo({
+        coachName: activeCoach.fullName,
+        slot: chosenSlot,
+        dateLabel: slotInfo.dateLabel,
+        timeLabel: slotInfo.timeLabel,
+      });
+    } catch (err: unknown) {
+      let rawMsg = "Không thể đặt lịch tập với HLV. Vui lòng thử lại.";
+      if (typeof err === "object" && err !== null && "response" in err) {
+        const response = (err as any).response;
+        if (response?.data?.message) {
+          rawMsg = Array.isArray(response.data.message)
+            ? response.data.message.join(", ")
+            : String(response.data.message);
+        }
+      } else if (err instanceof Error) {
+        rawMsg = err.message;
+      }
+
+      const vietnameseMsg = BACKEND_ERROR_MESSAGES[rawMsg] || rawMsg;
+      setBookingError(vietnameseMsg);
+    } finally {
+      setIsSubmittingBooking(false);
     }
   };
 
@@ -224,6 +374,64 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
         {/* RIGHT COLUMN: PRICING RATE, SPECIALTIES, BIO, AVAILABILITY SLOTS & ACTIONS */}
         <div className="lg:w-7/12 p-6 sm:p-8 flex flex-col justify-between space-y-6 bg-slate-50/50">
           <div className="space-y-6">
+            {/* SUCCESS BANNER DIALOG IF JUST BOOKED */}
+            {bookedSuccessInfo ? (
+              <div className="p-6 rounded-2xl bg-emerald-50 border-2 border-emerald-400 space-y-4 animate-in fade-in duration-200">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                    <CheckCircle2 className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-base font-black text-emerald-950">
+                      Đặt lịch kèm 1-1 thành công!
+                    </h3>
+                    <p className="text-xs text-emerald-800 leading-relaxed">
+                      Buổi tập PT với HLV <span className="font-bold">{bookedSuccessInfo.coachName}</span> đã được ghi nhận vào hệ thống.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-white border border-emerald-200 space-y-2 text-xs">
+                  <div className="flex items-center justify-between text-slate-700">
+                    <span className="font-medium text-slate-500">Thời gian buổi tập:</span>
+                    <span className="font-bold text-slate-900">
+                      {bookedSuccessInfo.dateLabel} · {bookedSuccessInfo.timeLabel}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-700">
+                    <span className="font-medium text-slate-500">Bộ môn:</span>
+                    <span className="font-bold text-emerald-700">{targetCode}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-700">
+                    <span className="font-medium text-slate-500">Địa điểm:</span>
+                    <span className="font-medium text-slate-800">Khu vực Huấn luyện cá nhân</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const weekMonday = getMondayOfWeek(bookedSuccessInfo.slot.startTime);
+                      navigate(`/portal/member/bookings?week=${weekMonday}&slotId=${bookedSuccessInfo.slot.id}`);
+                      onClose();
+                    }}
+                    className="w-full sm:flex-1 py-2.5 px-4 rounded-xl text-xs font-extrabold bg-[#008b74] hover:bg-[#007360] text-white flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                  >
+                    <Calendar className="w-4 h-4" />
+                    <span>Xem trên Lịch tập của tôi</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="w-full sm:w-auto py-2.5 px-5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                  >
+                    Đóng
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
             {/* 1. PRICING RATE BOX */}
             {activeRate ? (
               <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50/80 border border-emerald-200/80 space-y-3 shadow-xs">
@@ -325,50 +533,60 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
                 {slots.length > 0 ? (
                   slots.map((slot) => {
                     const isSelected = selectedSlotId === slot.id;
-                    const formatSlotTime = (t: string) => {
-                      if (!t) return "";
-                      if (t.includes("T")) {
-                        const d = new Date(t);
-                        if (!isNaN(d.getTime())) {
-                          return d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
-                        }
-                      }
-                      return t.slice(0, 5);
-                    };
-                    const displayTime =
-                      slot.timeRange ||
-                      `${formatSlotTime(slot.startTime)} - ${formatSlotTime(slot.endTime)}`;
+                    const info = formatSlotDisplay(slot.startTime, slot.endTime, slot.timeRange);
+                    const isDisabled = slot.isBooked || info.isPast;
 
                     return (
                       <button
                         key={slot.id}
                         type="button"
-                        disabled={slot.isBooked}
+                        disabled={isDisabled}
                         onClick={() => setSelectedSlotId(slot.id)}
                         className={cn(
-                          "p-2.5 rounded-xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[58px]",
-                          slot.isBooked
-                            ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-60"
-                            : isSelected
-                              ? "!bg-emerald-600 !border-emerald-600 !text-white shadow-md scale-[1.02]"
-                              : "bg-white border-slate-200 text-slate-800 hover:border-emerald-400 hover:bg-emerald-50/30"
+                          "p-2.5 rounded-xl border text-left transition-all duration-200 flex flex-col justify-between min-h-[64px]",
+                          info.isPast
+                            ? "bg-slate-100/80 border-slate-200 text-slate-400 cursor-not-allowed opacity-60"
+                            : slot.isBooked
+                              ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-60"
+                              : isSelected
+                                ? "!bg-emerald-600 !border-emerald-600 !text-white shadow-md scale-[1.02] cursor-pointer"
+                                : "bg-white border-slate-200 text-slate-800 hover:border-emerald-400 hover:bg-emerald-50/30 cursor-pointer"
                         )}
                       >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-extrabold">{displayTime}</span>
-                          {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
+                        <div className="flex items-start justify-between gap-1">
+                          <div>
+                            {info.dateLabel && (
+                              <span
+                                className={cn(
+                                  "text-[10px] font-bold block uppercase tracking-wide",
+                                  isSelected ? "text-emerald-100" : "text-slate-500"
+                                )}
+                              >
+                                {info.dateLabel}
+                              </span>
+                            )}
+                            <span className="text-xs font-extrabold">{info.timeLabel}</span>
+                          </div>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-white shrink-0 mt-0.5" />}
                         </div>
+
                         <span
                           className={cn(
-                            "text-[10px] font-semibold",
-                            slot.isBooked
-                              ? "text-slate-400"
-                              : isSelected
-                                ? "text-emerald-100"
-                                : "text-emerald-600"
+                            "text-[10px] font-semibold mt-1",
+                            info.isPast
+                              ? "text-slate-400 italic"
+                              : slot.isBooked
+                                ? "text-slate-400"
+                                : isSelected
+                                  ? "text-emerald-100"
+                                  : "text-emerald-600"
                           )}
                         >
-                          {slot.isBooked ? "Đã được đặt" : "Trống (Có thể đặt)"}
+                          {info.isPast
+                            ? "Đã qua giờ"
+                            : slot.isBooked
+                              ? "Đã được đặt"
+                              : "Trống (Có thể đặt)"}
                         </span>
                       </button>
                     );
@@ -383,11 +601,32 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
           </div>
 
           {/* BOTTOM ACTIONS BAR */}
-          <div className="pt-4 border-t border-slate-200 space-y-2">
-            {bookSuccess && (
-              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-in fade-in">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Đã ghi nhận khung giờ! Đang chuyển đến giao diện xếp lịch...</span>
+          <div className="pt-4 border-t border-slate-200 space-y-3">
+            {/* Error Message if booking fails */}
+            {bookingError && (
+              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs space-y-1 animate-in fade-in">
+                <div className="flex items-center gap-1.5 font-bold text-rose-700">
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                  <span>Không thể đặt lịch:</span>
+                </div>
+                <p className="text-[11.5px] leading-relaxed text-rose-700 pl-5">
+                  {bookingError}
+                </p>
+                {bookingError.includes("gói") && (
+                  <div className="pt-1 pl-5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigate("/portal/member/plans");
+                        onClose();
+                      }}
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-[#008b74] hover:underline"
+                    >
+                      <span>Xem và đăng ký gói tập PT</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -402,16 +641,26 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
 
               <button
                 type="button"
+                disabled={isSubmittingBooking}
                 onClick={handleConfirmBooking}
-                className="flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-2xl text-xs font-extrabold bg-[#008b74] hover:bg-[#007360] text-white shadow-md transition-all active:scale-[0.98] cursor-pointer"
+                className="flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-2xl text-xs font-extrabold bg-[#008b74] hover:bg-[#007360] text-white shadow-md transition-all active:scale-[0.98] cursor-pointer disabled:opacity-60"
               >
-                <Calendar className="w-4 h-4" />
-                <span>
-                  {selectedSlotId
-                    ? "Xác nhận đặt khung giờ này"
-                    : "Đặt lịch học kèm với HLV này"}
-                </span>
-                <ChevronRight className="w-4 h-4" />
+                {isSubmittingBooking ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Đang đặt lịch...</span>
+                  </>
+                ) : (
+                  <>
+                    <Calendar className="w-4 h-4" />
+                    <span>
+                      {selectedSlotId
+                        ? "Xác nhận đặt khung giờ này"
+                        : "Xem lịch của HLV trên Thời khóa biểu"}
+                    </span>
+                    <ChevronRight className="w-4 h-4" />
+                  </>
+                )}
               </button>
             </div>
           </div>

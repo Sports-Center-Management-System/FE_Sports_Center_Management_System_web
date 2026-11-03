@@ -35,6 +35,7 @@ export const CalendarPage: React.FC = () => {
   // URL Query Parameters
   const weekParam = searchParams.get('week')
   const disciplineParam = searchParams.get('disciplineId') || 'all'
+  const slotIdParam = searchParams.get('slotId')
 
   // State
   const [currentWeek, setCurrentWeek] = useState<string>(() => {
@@ -116,6 +117,20 @@ export const CalendarPage: React.FC = () => {
     }, 0)
     return () => window.clearTimeout(requestId)
   }, [loadCalendar])
+
+  // Auto-open modal if slotId is provided in URL params (e.g. redirected from Coaches screen)
+  useEffect(() => {
+    if (!slotIdParam || !calendarData?.ptSlots) return
+    const foundSlot = calendarData.ptSlots.find((s) => s.id === slotIdParam)
+    if (foundSlot) {
+      const booking = calendarData.bookings?.find(
+        (b) =>
+          b.coachAvailabilityId === foundSlot.id &&
+          ['CONFIRMED', 'PENDING'].includes(b.status),
+      )
+      setSelectedEvent({ type: 'PT_SLOT', data: foundSlot, booking })
+    }
+  }, [slotIdParam, calendarData])
 
   // Handlers for Header Navigation & Filters
   const handleWeekChange = (direction: 'prev' | 'next') => {
@@ -248,6 +263,7 @@ export const CalendarPage: React.FC = () => {
           onCancelBooking={handleCancelBooking}
           subscriptions={calendarData?.subscriptions || []}
           disciplines={disciplines}
+          days={calendarData?.days || []}
         />
       )}
     </div>

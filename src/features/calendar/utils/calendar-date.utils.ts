@@ -106,7 +106,15 @@ export const calculateEventPosition = (
   endAt?: string,
 ): { top: number; height: number } => {
   const start = new Date(startAt)
-  const end = endAt ? new Date(endAt) : new Date(getBookingSlotEndAt(startAt))
+  let end = endAt ? new Date(endAt) : new Date(getBookingSlotEndAt(startAt))
+
+  // Guard against "lỗi dài ca làm":
+  // If duration exceeds 2.5 hours (e.g., coach shift availability window of 8-10 hours),
+  // clamp it to standard 1 hour (BOOKING_SLOT_DURATION_MS)
+  const durationMs = end.getTime() - start.getTime()
+  if (isNaN(durationMs) || durationMs <= 0 || durationMs > 2.5 * 60 * 60 * 1000) {
+    end = new Date(start.getTime() + BOOKING_SLOT_DURATION_MS)
+  }
 
   const startHour = start.getHours() + start.getMinutes() / 60
   const endHour = end.getHours() + end.getMinutes() / 60
