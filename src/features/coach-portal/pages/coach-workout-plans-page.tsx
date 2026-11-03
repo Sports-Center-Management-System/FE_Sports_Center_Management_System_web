@@ -18,12 +18,14 @@ import {
   Timer,
   Copy,
   Check,
+  Pencil,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { coachPortalApi } from '../api/coach-portal-api';
 import type {
   WorkoutExerciseDto,
   WorkoutTemplateItem,
+  WorkoutPlanItem,
 } from '../types/coach-portal.types';
 import {
   parseExerciseInstructions,
@@ -69,7 +71,8 @@ export const CoachWorkoutPlansPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [selectedExerciseDiscipline, setSelectedExerciseDiscipline] = useState<'ALL' | 'BOXING' | 'YOGA' | 'GYM'>('ALL');
 
-  // --- Modal Form States for Creating Custom Plan ---
+  // --- Modal Form States for Creating/Editing Custom Plan ---
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [targetMemberId, setTargetMemberId] = useState<string>('');
   const [planTitle, setPlanTitle] = useState<string>('');
   const [planNotes, setPlanNotes] = useState<string>('');
@@ -186,6 +189,36 @@ export const CoachWorkoutPlansPage: React.FC = () => {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingPlanId) throw new Error('Không tìm thấy giáo án cần cập nhật.');
+      if (!planTitle.trim()) throw new Error('Vui lòng nhập tiêu đề giáo án.');
+      if (exercisesList.length === 0) throw new Error('Vui lòng thêm ít nhất một bài tập vào giáo án.');
+
+      return coachPortalApi.updateWorkoutPlan(editingPlanId, {
+        title: planTitle.trim(),
+        notes: planNotes.trim() || undefined,
+        exercises: exercisesList.map(({ exerciseId, sets, reps, weightKg, restSeconds, coachFeedback }) => ({
+          exerciseId,
+          sets: sets || 3,
+          reps: reps || 10,
+          weightKg: weightKg || 0,
+          restSeconds: restSeconds || 60,
+          coachFeedback: coachFeedback || undefined,
+        })),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['coach', 'workout-plans'] });
+      setIsCreateOpen(false);
+      resetForm();
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.message || err.message || 'Lỗi khi cập nhật giáo án';
+      setFormError(typeof msg === 'string' ? msg : JSON.stringify(msg));
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => coachPortalApi.deleteWorkoutPlan(id),
     onSuccess: () => {
@@ -194,6 +227,7 @@ export const CoachWorkoutPlansPage: React.FC = () => {
   });
 
   const resetForm = () => {
+    setEditingPlanId(null);
     setTargetMemberId('');
     setPlanTitle('');
     setPlanNotes('');
@@ -202,6 +236,34 @@ export const CoachWorkoutPlansPage: React.FC = () => {
     setFormDisciplineFilter('ALL');
     setFormCategoryFilter('ALL');
     setFormError(null);
+  };
+
+  const handleOpenEditPlan = (plan: WorkoutPlanItem) => {
+    setEditingPlanId(plan.id);
+    setTargetMemberId(plan.memberId);
+    setPlanTitle(plan.title);
+    setPlanNotes(plan.notes || '');
+
+    const mapped = (plan.exercises || []).map((ex) => {
+      const kItem = exerciseKnowledgeMap.get(ex.exerciseId);
+      return {
+        exerciseId: ex.exerciseId,
+        title: ex.exercise?.title || kItem?.title || 'Bài tập',
+        category: ex.exercise?.category || kItem?.category || 'Chung',
+        sets: ex.sets || 3,
+        reps: ex.reps || 10,
+        weightKg: ex.weightKg !== null && ex.weightKg !== undefined ? Number(ex.weightKg) : 0,
+        restSeconds: ex.restSeconds || 60,
+        coachFeedback: ex.coachFeedback || '',
+      };
+    });
+
+    setExercisesList(mapped);
+    setFormExerciseSearch('');
+    setFormDisciplineFilter('ALL');
+    setFormCategoryFilter('ALL');
+    setFormError(null);
+    setIsCreateOpen(true);
   };
 
   const handleAddExerciseToForm = (item: {
@@ -249,6 +311,7 @@ export const CoachWorkoutPlansPage: React.FC = () => {
 
   // Helper to clone a template into the custom plan modal
   const handleCloneTemplateToPlan = (tpl: WorkoutTemplateItem) => {
+    setEditingPlanId(null);
     setPlanTitle(`Giáo án: ${tpl.title}`);
     setPlanNotes(tpl.description || `Lộ trình ${tpl.disciplineCode} - Tuần ${tpl.weekNumber} · Buổi ${tpl.sessionOrder}`);
     const mappedExercises = (tpl.exercises || []).map((ex) => ({
@@ -933,20 +996,33 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                         </div>
                       </div>
 
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          if (window.confirm('Bạn có chắc chắn muốn xóa giáo án này không?')) {
-                            deleteMutation.mutate(plan.id);
-                          }
-                        }}
-                        disabled={deleteMutation.isPending}
-                        className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 h-8 w-8 p-0 cursor-pointer rounded-xl transition-colors shrink-0"
-                        title="Xóa giáo án này"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleOpenEditPlan(plan)}
+                          className="text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-emerald-400 h-8 px-2.5 gap-1.5 cursor-pointer rounded-xl transition-colors font-bold text-xs"
+                          title="Chỉnh sửa giáo án này"
+                        >
+                          <Pencil className="h-3.5 w-3.5 text-emerald-600" />
+                          <span>Chỉnh sửa</span>
+                        </Button>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (window.confirm('Bạn có chắc chắn muốn xóa giáo án này không?')) {
+                              deleteMutation.mutate(plan.id);
+                            }
+                          }}
+                          disabled={deleteMutation.isPending}
+                          className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 h-8 w-8 p-0 cursor-pointer rounded-xl transition-colors"
+                          title="Xóa giáo án này"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
 
                     {/* Plan Title & Volume Summary */}
@@ -1040,6 +1116,22 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                           );
                         })}
                       </div>
+                    </div>
+
+                    {/* Card Footer Actions */}
+                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                      <span className="text-[11px] font-mono text-slate-400">
+                        Mã giáo án: #{plan.id.slice(0, 8)}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditPlan(plan)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-emerald-600 text-white text-xs font-bold transition-all duration-150 shadow-2xs active:scale-[0.98] cursor-pointer"
+                      >
+                        <Pencil className="h-3.5 w-3.5 text-emerald-400" />
+                        <span>Chỉnh sửa giáo án</span>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1324,21 +1416,37 @@ export const CoachWorkoutPlansPage: React.FC = () => {
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-6 py-4 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md shrink-0">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
-                  <Dumbbell className="h-5 w-5" />
+                <div
+                  className={`h-10 w-10 rounded-2xl text-white flex items-center justify-center shadow-xs ${
+                    editingPlanId ? 'bg-amber-600' : 'bg-emerald-600'
+                  }`}
+                >
+                  {editingPlanId ? <Pencil className="h-5 w-5" /> : <Dumbbell className="h-5 w-5" />}
                 </div>
                 <div>
-                  <h3 className="text-base font-extrabold text-slate-900 dark:text-slate-100">
-                    Soạn Giáo Án Huấn Luyện Mới
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-extrabold text-slate-900 dark:text-slate-100">
+                      {editingPlanId ? 'Chỉnh Sửa Giáo Án Học Viên' : 'Soạn Giáo Án Huấn Luyện Mới'}
+                    </h3>
+                    {editingPlanId && (
+                      <span className="px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold text-[10px] border border-amber-300 dark:border-amber-700">
+                        Đang chỉnh sửa
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Chọn động tác từ kho bài tập chuẩn và cá nhân hóa khối lượng tập luyện cho học viên
+                    {editingPlanId
+                      ? 'Cập nhật lại danh sách bài tập, số hiệp, khối lượng tạ và dặn dò HLV cho học viên'
+                      : 'Chọn động tác từ kho bài tập chuẩn và cá nhân hóa khối lượng tập luyện cho học viên'}
                   </p>
                 </div>
               </div>
 
               <button
-                onClick={() => setIsCreateOpen(false)}
+                onClick={() => {
+                  setIsCreateOpen(false);
+                  resetForm();
+                }}
                 className="rounded-xl p-2 text-slate-400 hover:bg-slate-200/70 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
               >
                 <X className="h-5 w-5" />
@@ -1576,13 +1684,21 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                   {/* Target Member & Title */}
                   <div className="p-4 rounded-3xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-800 space-y-3">
                     <div className="space-y-1">
-                      <label className="text-xs font-extrabold text-slate-900 dark:text-slate-100">
-                        Học viên thụ hưởng <span className="text-rose-500">*</span>
-                      </label>
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-extrabold text-slate-900 dark:text-slate-100">
+                          Học viên thụ hưởng <span className="text-rose-500">*</span>
+                        </label>
+                        {editingPlanId && (
+                          <span className="text-[10px] font-semibold text-slate-400 italic">
+                            (Cố định khi sửa)
+                          </span>
+                        )}
+                      </div>
                       <select
                         value={targetMemberId}
                         onChange={(e) => setTargetMemberId(e.target.value)}
-                        className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 focus:border-emerald-500 focus:outline-hidden"
+                        disabled={!!editingPlanId}
+                        className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 focus:border-emerald-500 focus:outline-hidden disabled:opacity-75 disabled:cursor-not-allowed"
                       >
                         <option value="">-- Chọn học viên nhận giáo án --</option>
                         {members.map((m) => (
@@ -1784,20 +1900,33 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setIsCreateOpen(false)}
-                  disabled={createMutation.isPending}
+                  onClick={() => {
+                    setIsCreateOpen(false);
+                    resetForm();
+                  }}
+                  disabled={createMutation.isPending || updateMutation.isPending}
                   className="text-xs font-semibold cursor-pointer"
                 >
                   Hủy
                 </Button>
                 <Button
                   type="button"
-                  onClick={() => createMutation.mutate()}
-                  disabled={createMutation.isPending || exercisesList.length === 0}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold gap-1.5 disabled:opacity-50 cursor-pointer shadow-xs active:scale-[0.98]"
+                  onClick={() => (editingPlanId ? updateMutation.mutate() : createMutation.mutate())}
+                  disabled={createMutation.isPending || updateMutation.isPending || exercisesList.length === 0}
+                  className={`${
+                    editingPlanId
+                      ? 'bg-amber-600 hover:bg-amber-700'
+                      : 'bg-emerald-600 hover:bg-emerald-700'
+                  } text-white text-xs font-bold gap-1.5 disabled:opacity-50 cursor-pointer shadow-xs active:scale-[0.98]`}
                 >
-                  {createMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  <span>Lưu &amp; Ban hành giáo án ({exercisesList.length})</span>
+                  {(createMutation.isPending || updateMutation.isPending) && (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  )}
+                  <span>
+                    {editingPlanId
+                      ? `Lưu cập nhật giáo án (${exercisesList.length})`
+                      : `Lưu & Ban hành giáo án (${exercisesList.length})`}
+                  </span>
                 </Button>
               </div>
             </div>
