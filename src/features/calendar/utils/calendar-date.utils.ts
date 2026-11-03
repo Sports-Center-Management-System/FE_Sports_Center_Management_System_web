@@ -108,11 +108,9 @@ export const calculateEventPosition = (
   const start = new Date(startAt)
   let end = endAt ? new Date(endAt) : new Date(getBookingSlotEndAt(startAt))
 
-  // Guard against "lỗi dài ca làm":
-  // If duration exceeds 2.5 hours (e.g., coach shift availability window of 8-10 hours),
-  // clamp it to standard 1 hour (BOOKING_SLOT_DURATION_MS)
+  // Guard against invalid or non-positive duration; preserve multi-hour shifts (e.g. 06:00 - 10:00)
   const durationMs = end.getTime() - start.getTime()
-  if (isNaN(durationMs) || durationMs <= 0 || durationMs > 2.5 * 60 * 60 * 1000) {
+  if (isNaN(durationMs) || durationMs <= 0) {
     end = new Date(start.getTime() + BOOKING_SLOT_DURATION_MS)
   }
 

@@ -241,10 +241,14 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
       const booking = getBookingForPtSlot(ptSlot.id)
       const isBookedByMe = !!booking
 
-      // Split overlapping PT slots at the same time into side-by-side lanes
-      const matchingSlots = visiblePtSlots.filter(
-        (slot) => slot.startAt === ptSlot.startAt,
-      )
+      // Split overlapping PT slots (any slots intersecting in time) into side-by-side lanes
+      const curStart = new Date(ptSlot.startAt).getTime()
+      const curEnd = ptSlot.endAt ? new Date(ptSlot.endAt).getTime() : curStart + 3600000
+      const matchingSlots = visiblePtSlots.filter((slot) => {
+        const sStart = new Date(slot.startAt).getTime()
+        const sEnd = slot.endAt ? new Date(slot.endAt).getTime() : sStart + 3600000
+        return sStart < curEnd && sEnd > curStart
+      })
       const laneIndex = matchingSlots.findIndex((slot) => slot.id === ptSlot.id)
       const totalLanes = Math.max(matchingSlots.length, 1)
       const laneWidthPercent = 100 / totalLanes

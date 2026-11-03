@@ -7,7 +7,7 @@ import type {
   CalendarDay,
   Discipline,
 } from '../types/calendar.types'
-import { formatBookingSlotRange } from '../utils/calendar-date.utils'
+import { formatBookingSlotRange, formatDateToYMD } from '../utils/calendar-date.utils'
 import type { CalendarEventItem } from './calendar-grid'
 import {
   X,
@@ -49,6 +49,8 @@ const BACKEND_ERROR_MESSAGES: Record<string, string> = {
   PT_QUOTA_EXHAUSTED: 'Gói tập của bạn đã hết số lượt tập kèm HLV 1-1.',
   INVALID_EQUIPMENT: 'Thiết bị tập không khả dụng hoặc phòng tập tạm ngưng phục vụ.',
   CANCELLATION_WINDOW_EXPIRED: 'Đã quá thời hạn cho phép hủy lịch tập.',
+  SCHEDULE_OR_DATA_CONFLICT:
+    'Khung giờ này bị xung đột hoặc trùng lặp với lịch tập/ca dạy khác. Hệ thống không cho phép xếp trùng giờ.',
 }
 
 const getErrorMessage = (error: unknown, fallback: string): string => {
@@ -87,6 +89,8 @@ interface BookingModalProps {
   subscriptions: CalendarSubscription[]
   disciplines: Discipline[]
   days?: CalendarDay[]
+  bookings?: CalendarBooking[]
+  onSelectEvent?: (event: CalendarEventItem) => void
 }
 
 export const BookingModal: React.FC<BookingModalProps> = ({
@@ -98,6 +102,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   subscriptions,
   disciplines,
   days,
+  bookings,
+  onSelectEvent,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
@@ -153,8 +159,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const isRefundable = diffHours >= 2
 
   // Date strings for quota and subscription validity check
-  const todayStr = new Date().toISOString().slice(0, 10)
-  const sessionDateStr = startAt ? new Date(startAt).toISOString().slice(0, 10) : todayStr
+  const todayStr = formatDateToYMD(new Date())
+  const sessionDateStr = startAt ? formatDateToYMD(new Date(startAt)) : todayStr
 
   // Pre-flight check for Group Class
   const matchingGroupSub = useMemo(() => {
@@ -232,7 +238,16 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   )
 
   // Check day eligibility for the selected slot day and discipline
-  const slotDateStr = startAt ? new Date(startAt).toISOString().slice(0, 10) : ''
+  // Use Vietnam timezone / local date so UTC timestamps don't shift by -1 day for morning slots
+  const slotDateStr = useMemo(() => {
+    if (!startAt) return ''
+    try {
+      return formatDateToYMD(new Date(startAt))
+    } catch {
+      return ''
+    }
+  }, [startAt])
+
   const currentDayInfo = useMemo(() => {
     if (!days || !slotDateStr) return null
     return days.find((d) => d.date === slotDateStr) || null
@@ -240,14 +255,43 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   const ptDayEligibility = useMemo(() => {
     if (!currentDayInfo || !activePtDisciplineId) return null
-    return (
-      currentDayInfo.eligibility?.find(
-        (e) =>
-          (currentSelectedPtSub && e.subscriptionId === currentSelectedPtSub.id) ||
-          e.disciplineId === activePtDisciplineId,
-      ) || null
-    )
+
+    // 1. If we have an active matching subscription, match strictly by subscriptionId
+    // to prevent falling back to an older expired subscription of the same discipline
+    if (currentSelectedPtSub) {
+      const matchBySub = currentDayInfo.eligibility?.find(
+        (e) => e.subscriptionId === currentSelectedPtSub.id,
+      )
+      if (matchBySub) return matchBySub
+    }
+
+    // 2. Otherwise find all entries for this discipline and prefer an allowed one
+    const matchingEntries =
+      currentDayInfo.eligibility?.filter(
+        (e) => e.disciplineId === activePtDisciplineId,
+      ) || []
+
+    const allowedEntry = matchingEntries.find((e) => e.pt.allowed)
+    if (allowedEntry) return allowedEntry
+
+    return matchingEntries[0] || null
   }, [currentDayInfo, activePtDisciplineId, currentSelectedPtSub])
+
+  // Check if member already has an active PT booking for this day and discipline
+  const existingDayBooking = useMemo(() => {
+    if (!bookings || !slotDateStr || !activePtDisciplineId) return null
+    return (
+      bookings.find((b) => {
+        if (b.status === 'CANCELLED') return false
+        const bDate = formatDateToYMD(new Date(b.startAt))
+        return (
+          bDate === slotDateStr &&
+          (b.type === 'PERSONAL_TRAINING' || b.bookingType === 'PERSONAL_TRAINING') &&
+          (b.disciplineId === activePtDisciplineId || b.discipline?.id === activePtDisciplineId)
+        )
+      }) || null
+    )
+  }, [bookings, slotDateStr, activePtDisciplineId])
 
   // Handlers
   const handleConfirmBookGroup = async () => {
@@ -536,15 +580,46 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   )}
 
                   {ptDayEligibility && !ptDayEligibility.pt.allowed && !existingBooking && !isStarted && (
-                    <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-1">
+                    <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-2">
                       <div className="flex items-center gap-1.5 font-bold text-amber-800">
                         <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
                         <span>Không thể đặt ca PT trong ngày này</span>
                       </div>
-                      <p className="text-[11px] text-amber-700 leading-relaxed">
-                        {BACKEND_ERROR_MESSAGES[ptDayEligibility.pt.reason || ''] ||
-                          'Bạn không đủ điều kiện đặt thêm ca PT cho bộ môn này trong ngày.'}
-                      </p>
+                      {existingDayBooking ? (
+                        <div className="space-y-2">
+                          <p className="text-[11.5px] text-amber-800 leading-relaxed">
+                            Bạn hiện đã có 1 ca tập PT bộ môn này vào lúc{' '}
+                            <span className="font-bold text-amber-950">
+                              {formatBookingSlotRange(existingDayBooking.startAt)}
+                            </span>
+                            {existingDayBooking.coach?.fullName ? (
+                              <>
+                                {' '}với HLV{' '}
+                                <span className="font-bold text-amber-950">
+                                  {existingDayBooking.coach.fullName}
+                                </span>
+                              </>
+                            ) : null}
+                            . Theo quy định của trung tâm, mỗi ngày chỉ được đặt tối đa 1 buổi PT cho cùng một môn.
+                          </p>
+                          {onSelectEvent && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onSelectEvent({ type: 'BOOKING_STANDALONE', data: existingDayBooking })
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition cursor-pointer"
+                            >
+                              <span>Xem / Hủy ca tập này để đổi sang giờ khác</span>
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-amber-700 leading-relaxed">
+                          {BACKEND_ERROR_MESSAGES[ptDayEligibility.pt.reason || ''] ||
+                            'Bạn không đủ điều kiện đặt thêm ca PT cho bộ môn này trong ngày.'}
+                        </p>
+                      )}
                     </div>
                   )}
 

@@ -32,7 +32,15 @@ interface DutyShiftPreset {
 }
 
 const DUTY_PRESETS: DutyShiftPreset[] = [
-  // Morning Prime
+  // Morning Shifts
+  {
+    period: 'MORNING',
+    label: '06:00 - 10:00 (4h)',
+    start: '06:00',
+    end: '10:00',
+    isPeak: true,
+    desc: 'Ca trực sáng dài 4 tiếng (06h - 10h)',
+  },
   {
     period: 'MORNING',
     label: '06:00 - 07:00',
@@ -55,7 +63,14 @@ const DUTY_PRESETS: DutyShiftPreset[] = [
     end: '09:00',
     desc: 'Ca sáng năng lượng',
   },
-  // Lunch Express
+  {
+    period: 'MORNING',
+    label: '09:00 - 10:00',
+    start: '09:00',
+    end: '10:00',
+    desc: 'Ca giữa buổi sáng',
+  },
+  // Lunch Shifts
   {
     period: 'LUNCH',
     label: '11:30 - 12:30',
@@ -70,7 +85,22 @@ const DUTY_PRESETS: DutyShiftPreset[] = [
     end: '13:30',
     desc: 'Duy trì vóc dáng đầu giờ chiều',
   },
-  // Evening Peak
+  // Afternoon & Evening Shifts
+  {
+    period: 'EVENING',
+    label: '14:00 - 18:00 (4h)',
+    start: '14:00',
+    end: '18:00',
+    desc: 'Ca trực chiều dài 4 tiếng (14h - 18h)',
+  },
+  {
+    period: 'EVENING',
+    label: '17:00 - 21:00 (4h)',
+    start: '17:00',
+    end: '21:00',
+    isPeak: true,
+    desc: 'Ca trực tối dài 4 tiếng (17h - 21h)',
+  },
   {
     period: 'EVENING',
     label: '17:00 - 18:00',
@@ -101,7 +131,41 @@ const DUTY_PRESETS: DutyShiftPreset[] = [
     end: '21:00',
     desc: 'Ca muộn xả stress cuối ngày',
   },
+  {
+    period: 'EVENING',
+    label: '21:00 - 22:00',
+    start: '21:00',
+    end: '22:00',
+    desc: 'Ca đêm dành cho hội viên tập muộn',
+  },
 ];
+
+// 24-hour time options from 05:00 to 23:00 (30-minute intervals)
+const TIME_OPTIONS_24H: string[] = [];
+for (let h = 5; h <= 23; h++) {
+  const hh = String(h).padStart(2, '0');
+  TIME_OPTIONS_24H.push(`${hh}:00`);
+  if (h < 23) {
+    TIME_OPTIONS_24H.push(`${hh}:30`);
+  }
+}
+
+const format24hInput = (val: string): string => {
+  const trimmed = val.trim();
+  if (/^\d{1,2}$/.test(trimmed)) {
+    const h = parseInt(trimmed, 10);
+    if (h >= 0 && h <= 23) return `${String(h).padStart(2, '0')}:00`;
+  }
+  const match = trimmed.match(/^(\d{1,2}):(\d{1,2})$/);
+  if (match) {
+    const h = parseInt(match[1], 10);
+    const m = parseInt(match[2], 10);
+    if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+  }
+  return trimmed;
+};
 
 export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
   isOpen,
@@ -137,14 +201,21 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
 
   const isPastDate = date < todayStr;
   const isToday = date === todayStr;
-  const [sh, sm] = startTime.split(':').map(Number);
-  const isStartTimePast = isToday && (sh * 60 + sm <= currentMinutes);
+  const [sh, sm] = (startTime || '').split(':').map(Number);
+  const isStartTimePast = isToday && (!isNaN(sh) && !isNaN(sm) ? sh * 60 + sm <= currentMinutes : false);
   const isSlotInPast = isPastDate || isStartTimePast;
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const startDateTime = new Date(`${date}T${startTime}:00`);
-      const endDateTime = new Date(`${date}T${endTime}:00`);
+      const normStart = format24hInput(startTime);
+      const normEnd = format24hInput(endTime);
+      const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+      if (!timeRegex.test(normStart) || !timeRegex.test(normEnd)) {
+        throw new Error('Vui lòng nhập định dạng giờ 24h hợp lệ (HH:mm, ví dụ 06:00, 14:00, 22:00).');
+      }
+
+      const startDateTime = new Date(`${date}T${normStart}:00`);
+      const endDateTime = new Date(`${date}T${normEnd}:00`);
 
       if (startDateTime <= new Date()) {
         throw new Error('Khung giờ rảnh mở mới bắt buộc phải nằm ở tương lai.');
@@ -166,8 +237,18 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
       onClose();
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message || err.message || 'Lỗi khi mở khung giờ rảnh';
-      setErrorMessage(typeof msg === 'string' ? msg : JSON.stringify(msg));
+      let msg = err.response?.data?.message || err.message || 'Lỗi khi mở khung giờ rảnh';
+      if (typeof msg !== 'string') msg = JSON.stringify(msg);
+
+      if (msg.includes('SCHEDULE_OR_DATA_CONFLICT') || msg.includes('23P01')) {
+        msg =
+          'Trùng lịch dạy: Khung giờ này bị trùng lặp hoặc giao thoa với ca rảnh/lịch dạy lớp khác của bạn. Hệ thống cơ sở dữ liệu không cho phép 1 HLV mở 2 ca trùng/chồng chéo thời gian.';
+      } else if (msg.includes('SLOT_MUST_BE_FUTURE')) {
+        msg = 'Khung giờ mở slot rảnh bắt buộc phải ở thời điểm tương lai.';
+      } else if (msg.includes('SLOT_ALREADY_BOOKED')) {
+        msg = 'Slot đã có học viên đặt lịch, không thể thay đổi.';
+      }
+      setErrorMessage(msg);
     },
   });
 
@@ -349,34 +430,84 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
             </div>
           </div>
 
-          {/* Custom Time Selection (Fine-tune) */}
+          {/* Custom Time Selection (24-Hour Format) */}
           <div className="pt-2 border-t border-slate-100">
-            <span className="text-[11px] font-bold text-slate-500 block mb-2">
-              Hoặc tùy chỉnh giờ cụ thể:
-            </span>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 text-emerald-600" />
+                Tùy chỉnh giờ (Định dạng 24h: 00:00 – 23:59):
+              </span>
+              <span className="text-[10px] text-slate-400 font-medium">Nhập hoặc chọn giờ</span>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                  Giờ bắt đầu
+                  Giờ bắt đầu (24h)
                 </label>
-                <input
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-800 focus:border-emerald-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="VD: 06:00"
+                    list="times-24h-list"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    onBlur={() => setStartTime((prev) => format24hInput(prev))}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-800 focus:border-emerald-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 tabular-nums"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                  Giờ kết thúc
+                  Giờ kết thúc (24h)
                 </label>
-                <input
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-800 focus:border-emerald-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="VD: 10:00"
+                    list="times-24h-list"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    onBlur={() => setEndTime((prev) => format24hInput(prev))}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-800 focus:border-emerald-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 tabular-nums"
+                  />
+                </div>
               </div>
+            </div>
+
+            {/* Datalist for 24h suggestion dropdown */}
+            <datalist id="times-24h-list">
+              {TIME_OPTIONS_24H.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </datalist>
+
+            {/* Quick Duration Buttons */}
+            <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] font-semibold text-slate-500 mr-1">Tự động cộng giờ:</span>
+              {[1, 2, 3, 4, 5].map((hours) => (
+                <button
+                  key={`add-${hours}`}
+                  type="button"
+                  onClick={() => {
+                    const normStart = format24hInput(startTime);
+                    const [shVal, smVal] = normStart.split(':').map(Number);
+                    if (!isNaN(shVal) && !isNaN(smVal)) {
+                      const totalMin = shVal * 60 + smVal + hours * 60;
+                      const eh = Math.min(Math.floor(totalMin / 60), 23);
+                      const em = totalMin % 60;
+                      setEndTime(`${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}`);
+                    }
+                  }}
+                  className="px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 border border-slate-200 hover:border-emerald-300 transition-colors"
+                >
+                  +{hours} tiếng
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -386,14 +517,18 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
           <div className="text-xs font-semibold text-slate-600">
             Ca tập: <span className="text-emerald-700 font-bold">{startTime} - {endTime}</span>
             {(() => {
-              const [sh, sm] = startTime.split(':').map(Number);
-              const [eh, em] = endTime.split(':').map(Number);
-              const diff = (eh * 60 + em) - (sh * 60 + sm);
-              if (diff > 0) {
-                const h = Math.floor(diff / 60);
-                const m = diff % 60;
-                const durStr = h > 0 && m > 0 ? `${h} giờ ${m} phút` : h > 0 ? `${h} giờ` : `${m} phút`;
-                return <span className="text-slate-500 font-medium"> ({durStr})</span>;
+              const normStart = format24hInput(startTime);
+              const normEnd = format24hInput(endTime);
+              const [sh, sm] = normStart.split(':').map(Number);
+              const [eh, em] = normEnd.split(':').map(Number);
+              if (!isNaN(sh) && !isNaN(sm) && !isNaN(eh) && !isNaN(em)) {
+                const diff = eh * 60 + em - (sh * 60 + sm);
+                if (diff > 0) {
+                  const h = Math.floor(diff / 60);
+                  const m = diff % 60;
+                  const durStr = h > 0 && m > 0 ? `${h} giờ ${m} phút` : h > 0 ? `${h} giờ` : `${m} phút`;
+                  return <span className="text-slate-500 font-medium"> ({durStr})</span>;
+                }
               }
               return null;
             })()}

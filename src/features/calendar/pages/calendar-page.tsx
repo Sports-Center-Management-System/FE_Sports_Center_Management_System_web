@@ -264,6 +264,8 @@ export const CalendarPage: React.FC = () => {
           subscriptions={calendarData?.subscriptions || []}
           disciplines={disciplines}
           days={calendarData?.days || []}
+          bookings={calendarData?.bookings || []}
+          onSelectEvent={(event) => setSelectedEvent(event)}
         />
       )}
     </div>

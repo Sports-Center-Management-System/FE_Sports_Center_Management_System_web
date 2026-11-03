@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -19,7 +19,7 @@ import {
   Loader2,
   ExternalLink,
 } from "lucide-react";
-import { money } from "@/lib/api";
+import { money, get } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/auth-context";
 import type { Coach, CoachAvailabilitySlot } from "../types/coach.types";
@@ -52,6 +52,8 @@ const BACKEND_ERROR_MESSAGES: Record<string, string> = {
   SAME_DAY_PT_LATE_CANCELLATION_LIMIT:
     "Hôm nay bạn đã hủy muộn 1 ca PT cho bộ môn này, hệ thống không cho phép đặt thêm ca mới trong cùng ngày.",
   CANCELLATION_WINDOW_EXPIRED: "Đã quá thời hạn cho phép hủy lịch tập.",
+  SUBSCRIPTION_NOT_ACTIVE_ON_DAY:
+    "Gói tập chưa có hiệu lực hoặc đã hết hạn vào ngày diễn ra buổi tập. Vui lòng gia hạn hoặc chọn gói tập còn hiệu lực.",
 };
 
 export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
@@ -62,9 +64,10 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
 }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
+  const [selectedDisciplineId, setSelectedDisciplineId] = useState<string>('');
   const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [bookedSuccessInfo, setBookedSuccessInfo] = useState<{
@@ -72,6 +75,7 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
     slot: CoachAvailabilitySlot;
     dateLabel: string;
     timeLabel: string;
+    disciplineName?: string;
   } | null>(null);
 
   // 1. Fetch full coach detail
@@ -83,6 +87,42 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
   });
 
   const activeCoach = coachDetailQuery.data || coach;
+
+  // Fetch member's subscriptions to match the best active PT package
+  const memberSubscriptionsQuery = useQuery({
+    queryKey: ['member-subscriptions', user?.id],
+    queryFn: () => get<any[]>('/memberships/subscriptions'),
+    enabled: Boolean(isOpen && isAuthenticated),
+    staleTime: 30000,
+  });
+
+  // Find member's active PT subscriptions matching this coach
+  const matchingSubscriptions = useMemo(() => {
+    const list = memberSubscriptionsQuery.data || [];
+    return list.filter((s: any) => {
+      if (s.status !== 'ACTIVE') return false;
+      if ((s.remainingPtSessions ?? 0) <= 0) return false;
+      if (s.assignedCoachId && s.assignedCoachId !== activeCoach?.id) return false;
+      if (
+        activeCoach?.disciplineIds?.length &&
+        !activeCoach.disciplineIds.includes(s.disciplineId)
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [memberSubscriptionsQuery.data, activeCoach]);
+
+  const activeSubscription = useMemo(() => {
+    if (matchingSubscriptions.length === 0) return null;
+    if (selectedDisciplineId) {
+      return (
+        matchingSubscriptions.find((s: any) => s.disciplineId === selectedDisciplineId) ||
+        matchingSubscriptions[0]
+      );
+    }
+    return matchingSubscriptions[0];
+  }, [matchingSubscriptions, selectedDisciplineId]);
 
   // 2. Fetch real availability slots from API
   const availabilityQuery = useQuery({
@@ -204,8 +244,10 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
       return;
     }
 
-    // Determine disciplineId
+    // Determine disciplineId - prioritize member's active PT subscription for this coach
     const disciplineId =
+      activeSubscription?.disciplineId ||
+      selectedDisciplineId ||
       activeCoach.disciplineIds?.[0] ||
       activeCoach.coachRates?.[0]?.disciplineId ||
       "";
@@ -225,9 +267,10 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
         disciplineId,
       });
 
-      // Refetch availability
+      // Refetch availability and subscriptions
       queryClient.invalidateQueries({ queryKey: ["coach-availability", activeCoach.id] });
       queryClient.invalidateQueries({ queryKey: ["member-calendar"] });
+      queryClient.invalidateQueries({ queryKey: ["member-subscriptions"] });
 
       const slotInfo = formatSlotDisplay(chosenSlot.startTime, chosenSlot.endTime, chosenSlot.timeRange);
       setBookedSuccessInfo({
@@ -235,6 +278,10 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
         slot: chosenSlot,
         dateLabel: slotInfo.dateLabel,
         timeLabel: slotInfo.timeLabel,
+        disciplineName:
+          activeSubscription?.discipline?.name ||
+          activeSubscription?.plan?.name ||
+          targetCode,
       });
     } catch (err: unknown) {
       let rawMsg = "Không thể đặt lịch tập với HLV. Vui lòng thử lại.";
@@ -516,6 +563,52 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
                 )}
               </div>
             </div>
+
+            {/* ACTIVE PACKAGE STATUS FOR LOGGED-IN MEMBERS */}
+            {isAuthenticated && (
+              <div className="space-y-2">
+                {matchingSubscriptions.length > 1 ? (
+                  <div className="p-3 rounded-2xl bg-purple-50 border border-purple-200 text-xs space-y-1.5 shadow-2xs">
+                    <label className="text-[11px] font-bold text-purple-950 block">
+                      Chọn gói tập &amp; bộ môn áp dụng cho buổi học kèm này:
+                    </label>
+                    <select
+                      value={activeSubscription?.disciplineId || ''}
+                      onChange={(e) => setSelectedDisciplineId(e.target.value)}
+                      className="w-full p-2 bg-white border border-purple-300 rounded-xl text-slate-800 font-semibold focus:outline-hidden text-xs"
+                    >
+                      {matchingSubscriptions.map((sub: any) => (
+                        <option key={sub.id} value={sub.disciplineId}>
+                          {sub.plan?.name || sub.planName || 'Gói PT'} ({sub.discipline?.code || 'PT'}) — Còn {sub.remainingPtSessions} buổi PT
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : matchingSubscriptions.length === 1 && activeSubscription ? (
+                  <div className="p-3 rounded-2xl bg-emerald-50/90 border border-emerald-200 text-xs flex items-center justify-between shadow-2xs">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span className="font-semibold text-emerald-950">
+                        Gói tập áp dụng: <span className="font-bold">{activeSubscription.plan?.name || 'Gói PT'}</span> ({activeSubscription.discipline?.code || targetCode})
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-extrabold text-emerald-800 bg-emerald-100/90 px-2.5 py-0.5 rounded-lg border border-emerald-300/50">
+                      Còn {activeSubscription.remainingPtSessions} buổi PT
+                    </span>
+                  </div>
+                ) : matchingSubscriptions.length === 0 && !memberSubscriptionsQuery.isLoading ? (
+                  <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-xs space-y-1 shadow-2xs">
+                    <div className="flex items-center gap-1.5 font-bold text-amber-800">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span>Chưa có gói tập PT khả dụng cho HLV này</span>
+                    </div>
+                    <p className="text-[11px] text-amber-700 leading-relaxed">
+                      Bạn chưa có gói tập kèm HLV 1-1 còn hiệu lực hoặc đã dùng hết số buổi tập.
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            )}
 
             {/* 3. AVAILABILITY SLOTS */}
             <div className="space-y-2.5">

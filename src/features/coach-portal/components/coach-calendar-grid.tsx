@@ -42,14 +42,14 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
   const hours = Array.from({ length: totalHours }, (_, i) => GRID_START_HOUR + i);
   const totalGridHeight = totalHours * HOUR_HEIGHT_PX;
 
-  // Calculate event positioning within 06:00 - 23:00
+  // Calculate event positioning within 05:00 - 23:00
   const calculatePosition = (startIso: string, endIso: string) => {
     const start = new Date(startIso);
     let end = new Date(endIso);
 
-    // Guard against "lỗi dài ca làm": if duration is invalid or exceeds 2.5 hours, clamp to 1 hour
+    // Guard against invalid or non-positive duration; preserve multi-hour shifts (e.g. 06:00 - 10:00)
     const durationMs = end.getTime() - start.getTime();
-    if (isNaN(durationMs) || durationMs <= 0 || durationMs > 2.5 * 60 * 60 * 1000) {
+    if (isNaN(durationMs) || durationMs <= 0) {
       end = new Date(start.getTime() + 60 * 60 * 1000);
     }
 
@@ -162,8 +162,14 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
 
       const timeRangeStr = formatTimeRangeLabel(session.startTime, session.endTime);
 
-      // Split overlapping sessions (e.g. 2 sessions sharing the same startTime) into side-by-side lanes
-      const matchingSessions = daySessions.filter((s) => s.startTime === session.startTime);
+      // Split overlapping sessions (any sessions intersecting in time) into side-by-side lanes
+      const curStart = new Date(session.startTime).getTime();
+      const curEnd = new Date(session.endTime).getTime();
+      const matchingSessions = daySessions.filter((s) => {
+        const sStart = new Date(s.startTime).getTime();
+        const sEnd = new Date(s.endTime).getTime();
+        return sStart < curEnd && sEnd > curStart;
+      });
       const laneIndex = matchingSessions.findIndex((s) => s.id === session.id);
       const totalLanes = Math.max(matchingSessions.length, 1);
       const laneWidthPercent = 100 / totalLanes;
