@@ -101,7 +101,12 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
   const renderEventsForDay = (dateString: string) => {
     const daySessions = filteredSessions.filter((s) => {
       const sDate = formatDateToYMD(new Date(s.startTime));
-      return sDate === dateString;
+      if (sDate !== dateString) return false;
+      const isEmpty = s.type === 'EMPTY_SLOT' || s.isSlotEmpty;
+      const isTimeArrived = new Date() >= new Date(s.startTime);
+      // Nếu là slot trống không có học viên mà đã đến giờ diễn ra thì ẩn đi
+      if (isEmpty && isTimeArrived) return false;
+      return true;
     });
 
     if (daySessions.length === 0) {
@@ -135,7 +140,7 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
       const isGroup = session.type === 'GROUP_CLASS';
       const isEmpty = session.type === 'EMPTY_SLOT' || session.isSlotEmpty;
       const isCompleted = session.status === 'COMPLETED';
-      const isLive = session.status === 'LIVE';
+      const isLive = session.status === 'LIVE' && !isEmpty;
 
       // Primary Title: Student name for PT, Class name for Group, "Slot trống" for empty slot
       const primaryTitle = isEmpty

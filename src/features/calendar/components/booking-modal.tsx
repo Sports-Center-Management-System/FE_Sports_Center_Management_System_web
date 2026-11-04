@@ -1,4 +1,6 @@
 import React, { useState, useMemo } from 'react'
+import { createPortal } from 'react-dom'
+import { NavLink } from 'react-router'
 import type {
   CalendarSchedule,
   CalendarPtSlot,
@@ -20,6 +22,8 @@ import {
   Calendar as CalendarIcon,
   Sparkles,
   Info,
+  Dumbbell,
+  ArrowRight,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -55,26 +59,38 @@ const BACKEND_ERROR_MESSAGES: Record<string, string> = {
 
 const getErrorMessage = (error: unknown, fallback: string): string => {
   let rawMsg = ''
+  let errorCode = ''
+
   if (typeof error === 'object' && error !== null && 'response' in error) {
     const response = (error as any).response
     if (typeof response === 'object' && response !== null && 'data' in response) {
       const data = response.data
-      if (typeof data === 'object' && data !== null && 'message' in data) {
-        const message = data.message
-        rawMsg = Array.isArray(message) ? message.join(', ') : String(message)
+      if (typeof data === 'object' && data !== null) {
+        if ('errorCode' in data && data.errorCode) {
+          errorCode = String(data.errorCode)
+        } else if ('code' in data && data.code) {
+          errorCode = String(data.code)
+        }
+        if ('message' in data && data.message) {
+          const message = data.message
+          rawMsg = Array.isArray(message) ? message.join(', ') : String(message)
+        } else if ('error' in data && data.error) {
+          rawMsg = String(data.error)
+        }
       }
     }
   } else if (error instanceof Error) {
     rawMsg = error.message
   }
 
-  if (rawMsg) {
+  const code = errorCode || rawMsg
+  if (code) {
     for (const [key, translated] of Object.entries(BACKEND_ERROR_MESSAGES)) {
-      if (rawMsg.includes(key)) {
-        return translated
+      if (code.includes(key)) {
+        return `[Mã lỗi: ${key}] ${translated}`
       }
     }
-    return rawMsg
+    return `[Mã lỗi: ${code}]`
   }
 
   return fallback
@@ -141,14 +157,26 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     disciplineName = ptData.discipline?.name || ''
   } else if (event.type === 'BOOKING_STANDALONE') {
     existingBooking = event.data
-    title =
-      existingBooking.schedule?.class?.name ||
-      existingBooking.discipline?.name ||
-      (existingBooking.type === 'PERSONAL_TRAINING' ? 'Buổi tập PT 1-1' : 'Lớp học nhóm')
+    const isPt =
+      existingBooking.bookingType === 'PERSONAL_TRAINING' ||
+      existingBooking.type === 'PERSONAL_TRAINING' ||
+      !!existingBooking.coachAvailabilityId
+    title = isPt
+      ? `Buổi tập PT 1-1 (${existingBooking.discipline?.name || 'Kèm riêng'})`
+      : existingBooking.schedule?.class?.name ||
+        existingBooking.discipline?.name ||
+        'Lớp học nhóm'
     startAt = existingBooking.startAt
-    coachName = existingBooking.coach?.fullName || ''
-    roomName = existingBooking.room?.name || ''
-    disciplineName = existingBooking.discipline?.name || ''
+    coachName =
+      (existingBooking as any).coachAvailability?.coach?.fullName ||
+      existingBooking.schedule?.coach?.fullName ||
+      (existingBooking as any).coach?.fullName ||
+      (isPt ? 'Huấn luyện viên cá nhân' : 'Chưa phân công')
+    roomName = existingBooking.room?.name || (isPt ? 'Khu vực PT kèm riêng' : 'Phòng tập')
+    disciplineName =
+      existingBooking.discipline?.name ||
+      disciplines.find((d) => d.id === existingBooking?.disciplineId)?.name ||
+      ''
   }
 
   // Calculate cancellation window (>= 2 hours before start)
@@ -347,10 +375,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   const handleConfirmCancel = async () => {
     if (!existingBooking) return
-    if (isStarted) {
-      setErrorMsg('Buổi tập này đã bắt đầu hoặc diễn ra trong quá khứ. Hệ thống không cho phép hủy lịch.')
-      return
-    }
     setIsSubmitting(true)
     setErrorMsg(null)
     try {
@@ -372,11 +396,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     day: 'numeric',
   })
 
-  return (
-    <aside
-      aria-label="Chi tiết buổi tập"
-      className="fixed right-5 top-24 z-50 flex w-[calc(100vw-2.5rem)] max-w-sm flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl animate-in slide-in-from-right duration-200"
-    >
+  return typeof document !== 'undefined'
+    ? createPortal(
+        <aside
+          aria-label="Chi tiết buổi tập"
+          className="fixed right-5 top-24 z-[9999] flex w-[calc(100vw-2.5rem)] max-w-sm flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl animate-in slide-in-from-right duration-200"
+        >
       <div className="flex max-h-[calc(100vh-7rem)] min-h-0 flex-1 flex-col">
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-white">
@@ -632,6 +657,31 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             </div>
           )}
 
+          {/* Workout plan banner for PT 1-1 session */}
+          {existingBooking && (existingBooking.bookingType === 'PERSONAL_TRAINING' || existingBooking.type === 'PERSONAL_TRAINING' || !!existingBooking.coachAvailabilityId || !!ptData) && (
+            <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-50/90 via-teal-50/80 to-white border border-emerald-200/90 shadow-2xs space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-emerald-600 text-white">
+                    <Dumbbell className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900">Giáo án & Bài tập của ca tập</h4>
+                    <p className="text-[11px] text-slate-500">Xem danh mục bài tập, mức tạ và lời dặn HLV</p>
+                  </div>
+                </div>
+
+                <NavLink
+                  to="/portal/member/workout-plans"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition shrink-0"
+                >
+                  <span>Mở giáo án</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </NavLink>
+              </div>
+            </div>
+          )}
+
           {/* Cancellation section if already booked */}
           {existingBooking && (
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
@@ -787,6 +837,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           </div>
         )}
       </div>
-    </aside>
-  )
+    </aside>,
+    document.body
+  ) : null
 }

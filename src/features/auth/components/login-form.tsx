@@ -44,7 +44,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         beMessage = err.message;
       }
 
-      if (
+      if (err instanceof AxiosError && (err.code === "ECONNABORTED" || err.message?.includes("timeout"))) {
+        setErrorMessage("Máy chủ đang khởi động lại từ trạng thái nghỉ (Render free-tier cold start). Vui lòng đợi vài giây và bấm Đăng nhập lại.");
+      } else if (
         beMessage === "INVALID_CREDENTIALS" ||
         (typeof beMessage === "string" && beMessage.includes("INVALID_CREDENTIALS"))
       ) {

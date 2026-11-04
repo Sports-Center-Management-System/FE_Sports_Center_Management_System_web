@@ -82,47 +82,60 @@ export const CoachSchedulePage: React.FC = () => {
 
   // Map real API sessions to CoachScheduleSession
   const sessionList: CoachScheduleSession[] = useMemo(() => {
-    return apiSessions.map((apiS) => {
-      const isPt = apiS.type === 'PERSONAL_TRAINING';
-      const firstStudent = apiS.bookings?.[0]?.member;
-      const isEnded = new Date() > new Date(apiS.endTime);
-      const isLive = new Date() >= new Date(apiS.startTime) && new Date() <= new Date(apiS.endTime);
+    return apiSessions
+      .filter((apiS) => {
+        const isPt = apiS.type === 'PERSONAL_TRAINING';
+        const isSlotEmpty = isPt && !apiS.isBooked;
+        const isTimeArrived = new Date() >= new Date(apiS.startTime);
+        // Khi slot trống không có học viên mà đã đến giờ diễn ra (hoặc quá giờ) thì ẩn đi
+        if (isSlotEmpty && isTimeArrived) {
+          return false;
+        }
+        return true;
+      })
+      .map((apiS) => {
+        const isPt = apiS.type === 'PERSONAL_TRAINING';
+        const firstStudent = apiS.bookings?.[0]?.member;
+        const isEnded = new Date() > new Date(apiS.endTime);
+        const isSlotEmpty = isPt && !apiS.isBooked;
+        // Tuyệt đối không đánh dấu slot trống là LIVE ("Đang dạy")
+        const isLive = !isSlotEmpty && new Date() >= new Date(apiS.startTime) && new Date() <= new Date(apiS.endTime);
 
-      return {
-        id: apiS.id,
-        type: isPt ? (apiS.isBooked === false ? 'EMPTY_SLOT' : 'PT') : 'GROUP_CLASS',
-        status: apiS.isEmergencyCancelled
-          ? 'CANCELLED'
-          : isLive
-          ? 'LIVE'
-          : isEnded
-          ? 'COMPLETED'
-          : 'UPCOMING',
-        title: apiS.title,
-        studentName: firstStudent?.fullName || (isPt && apiS.isBooked ? 'Học viên PT' : undefined),
-        studentPhone: firstStudent?.phone,
-        studentAvatar: firstStudent?.avatarUrl,
-        roomName: apiS.roomName || 'Khu vực tập luyện',
-        startTime: apiS.startTime,
-        endTime: apiS.endTime,
-        capacity: apiS.capacity,
-        enrolledCount: apiS.currentEnrolled,
-        checkedInCount:
-          apiS.bookings?.filter(
-            (b) =>
-              b.status === 'ATTENDED' ||
-              b.attendance?.status === 'PRESENT' ||
-              b.attendance?.status === 'ATTENDED' ||
-              b.attendance?.status === 'LATE'
-          ).length || 0,
-        isSlotEmpty: isPt && !apiS.isBooked,
-        bookings: apiS.bookings,
-        scheduleId: apiS.scheduleId || undefined,
-        coachAvailabilityId: apiS.coachAvailabilityId || undefined,
-        isEmergencyCancelled: apiS.isEmergencyCancelled,
-        notes: notesMap[apiS.id] || '',
-      };
-    });
+        return {
+          id: apiS.id,
+          type: isPt ? (apiS.isBooked === false ? 'EMPTY_SLOT' : 'PT') : 'GROUP_CLASS',
+          status: apiS.isEmergencyCancelled
+            ? 'CANCELLED'
+            : isLive
+            ? 'LIVE'
+            : isEnded
+            ? 'COMPLETED'
+            : 'UPCOMING',
+          title: apiS.title,
+          studentName: firstStudent?.fullName || (isPt && apiS.isBooked ? 'Học viên PT' : undefined),
+          studentPhone: firstStudent?.phone,
+          studentAvatar: firstStudent?.avatarUrl,
+          roomName: apiS.roomName || 'Khu vực tập luyện',
+          startTime: apiS.startTime,
+          endTime: apiS.endTime,
+          capacity: apiS.capacity,
+          enrolledCount: apiS.currentEnrolled,
+          checkedInCount:
+            apiS.bookings?.filter(
+              (b) =>
+                b.status === 'ATTENDED' ||
+                b.attendance?.status === 'PRESENT' ||
+                b.attendance?.status === 'ATTENDED' ||
+                b.attendance?.status === 'LATE'
+            ).length || 0,
+          isSlotEmpty,
+          bookings: apiS.bookings,
+          scheduleId: apiS.scheduleId || undefined,
+          coachAvailabilityId: apiS.coachAvailabilityId || undefined,
+          isEmergencyCancelled: apiS.isEmergencyCancelled,
+          notes: notesMap[apiS.id] || '',
+        };
+      });
   }, [apiSessions, notesMap]);
 
   // Handle saving notes on session

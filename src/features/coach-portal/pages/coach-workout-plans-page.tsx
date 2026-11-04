@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Dumbbell,
@@ -57,7 +58,7 @@ export const CoachWorkoutPlansPage: React.FC = () => {
   const [isCreateOpen, setIsCreateOpen] = useState<boolean>(false);
 
   // --- Tab 1: Templates ---
-  const [templateDiscipline, setTemplateDiscipline] = useState<'ALL' | 'BOXING' | 'YOGA'>('ALL');
+  const [templateDiscipline, setTemplateDiscipline] = useState<'BOXING' | 'YOGA'>('BOXING');
   const [templateWeekFilter, setTemplateWeekFilter] = useState<'ALL' | '1' | '2' | '3' | '4'>('ALL');
   const [templateSearch, setTemplateSearch] = useState<string>('');
   const [expandedTemplateId, setExpandedTemplateId] = useState<string | null>(null);
@@ -94,10 +95,7 @@ export const CoachWorkoutPlansPage: React.FC = () => {
     refetch: refetchTemplates,
   } = useQuery({
     queryKey: ['coach', 'workout-templates', templateDiscipline],
-    queryFn: () =>
-      coachPortalApi.getWorkoutTemplates(
-        templateDiscipline === 'ALL' ? undefined : templateDiscipline
-      ),
+    queryFn: () => coachPortalApi.getWorkoutTemplates(templateDiscipline),
   });
 
   const {
@@ -569,17 +567,6 @@ export const CoachWorkoutPlansPage: React.FC = () => {
             <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
               {/* Discipline Switcher */}
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-                <button
-                  type="button"
-                  onClick={() => setTemplateDiscipline('ALL')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
-                    templateDiscipline === 'ALL'
-                      ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
-                      : 'bg-white/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 border border-slate-200/70'
-                  }`}
-                >
-                  Tất cả môn ({templates.length})
-                </button>
                 <button
                   type="button"
                   onClick={() => setTemplateDiscipline('BOXING')}
@@ -1410,14 +1397,14 @@ export const CoachWorkoutPlansPage: React.FC = () => {
       {/* ========================================================= */}
       {/* MODAL: SOẠN GIÁO ÁN MỚI (VỚI SPLIT EXERCISE STUDIO)       */}
       {/* ========================================================= */}
-      {isCreateOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-3 sm:p-5 animate-in fade-in duration-150">
-          <div className="w-full max-w-6xl rounded-3xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200/90 dark:border-slate-800 overflow-hidden max-h-[94vh] flex flex-col">
+      {isCreateOpen && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] overflow-y-auto bg-slate-950/70 backdrop-blur-xs p-2 sm:p-4 flex flex-col items-center justify-start sm:justify-center">
+          <div className="w-full max-w-6xl my-auto rounded-3xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200/90 dark:border-slate-800 overflow-hidden max-h-[92vh] flex flex-col">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-6 py-4 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md shrink-0">
               <div className="flex items-center gap-3">
                 <div
-                  className={`h-10 w-10 rounded-2xl text-white flex items-center justify-center shadow-xs ${
+                  className={`h-10 w-10 rounded-2xl text-white flex items-center justify-center shadow-xs shrink-0 ${
                     editingPlanId ? 'bg-amber-600' : 'bg-emerald-600'
                   }`}
                 >
@@ -1443,18 +1430,19 @@ export const CoachWorkoutPlansPage: React.FC = () => {
               </div>
 
               <button
+                type="button"
                 onClick={() => {
                   setIsCreateOpen(false);
                   resetForm();
                 }}
-                className="rounded-xl p-2 text-slate-400 hover:bg-slate-200/70 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                className="rounded-xl p-2 text-slate-400 hover:bg-slate-200/70 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer shrink-0"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             {/* Modal Body: Split 2-Column Studio on Desktop */}
-            <div className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-6">
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0 space-y-5">
               {formError && (
                 <div className="flex items-center gap-2 rounded-2xl bg-rose-50 border border-rose-200 p-3.5 text-xs font-semibold text-rose-800">
                   <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
@@ -1462,11 +1450,11 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
                 {/* ========================================================= */}
                 {/* LEFT COLUMN: KHO BÀI TẬP (7 COLS)                        */}
                 {/* ========================================================= */}
-                <div className="lg:col-span-7 flex flex-col space-y-3.5 bg-slate-50/70 dark:bg-slate-800/40 p-4 rounded-3xl border border-slate-200/70 dark:border-slate-800">
+                <div className="lg:col-span-7 flex flex-col space-y-3 bg-slate-50/70 dark:bg-slate-800/40 p-4 rounded-3xl border border-slate-200/70 dark:border-slate-800">
                   {/* Header of Picker */}
                   <div className="flex items-center justify-between">
                     <div>
@@ -1478,91 +1466,90 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                       </p>
                     </div>
 
-                    <span className="text-xs font-bold px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200/70">
+                    <span className="text-xs font-bold px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200/70 shrink-0">
                       Đã chọn: <strong>{exercisesList.length}</strong> bài
                     </span>
                   </div>
 
                   {/* Filter controls */}
                   <div className="space-y-2.5">
-                    {/* Disciplines & Search */}
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
-                      <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
+                    {/* Full-width Search */}
+                    <div className="relative w-full">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                      <input
+                        type="text"
+                        value={formExerciseSearch}
+                        onChange={(e) => setFormExerciseSearch(e.target.value)}
+                        placeholder="Tìm theo tên động tác, nhóm cơ chính..."
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 pl-9 pr-8 py-2 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-hidden transition-all shadow-2xs"
+                      />
+                      {formExerciseSearch && (
                         <button
                           type="button"
-                          onClick={() => setFormDisciplineFilter('ALL')}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                            formDisciplineFilter === 'ALL'
-                              ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-2xs'
-                              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 border border-slate-200'
-                          }`}
+                          onClick={() => setFormExerciseSearch('')}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                         >
-                          Tất cả ({disciplineCounts.ALL})
+                          <X className="h-3.5 w-3.5" />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => setFormDisciplineFilter('BOXING')}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                            formDisciplineFilter === 'BOXING'
-                              ? 'bg-rose-600 text-white shadow-2xs'
-                              : 'bg-white dark:bg-slate-800 text-rose-700 hover:bg-rose-50 border border-rose-200'
-                          }`}
-                        >
-                          Boxing ({disciplineCounts.BOXING})
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setFormDisciplineFilter('YOGA')}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                            formDisciplineFilter === 'YOGA'
-                              ? 'bg-indigo-600 text-white shadow-2xs'
-                              : 'bg-white dark:bg-slate-800 text-indigo-700 hover:bg-indigo-50 border border-indigo-200'
-                          }`}
-                        >
-                          Yoga ({disciplineCounts.YOGA})
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setFormDisciplineFilter('GYM')}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                            formDisciplineFilter === 'GYM'
-                              ? 'bg-amber-600 text-white shadow-2xs'
-                              : 'bg-white dark:bg-slate-800 text-amber-800 hover:bg-amber-50 border border-amber-200'
-                          }`}
-                        >
-                          Gym ({disciplineCounts.GYM})
-                        </button>
-                      </div>
-
-                      <div className="relative max-w-xs w-full">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                        <input
-                          type="text"
-                          value={formExerciseSearch}
-                          onChange={(e) => setFormExerciseSearch(e.target.value)}
-                          placeholder="Tìm theo tên bài, cơ chính..."
-                          className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 pl-8.5 pr-7 py-1 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-hidden"
-                        />
-                        {formExerciseSearch && (
-                          <button
-                            type="button"
-                            onClick={() => setFormExerciseSearch('')}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        )}
-                      </div>
+                      )}
                     </div>
 
-                    {/* Categories */}
-                    <div className="flex items-center gap-1 overflow-x-auto pb-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+                    {/* Disciplines: Wrap neatly without scrollbar */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => setFormDisciplineFilter('ALL')}
+                        className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                          formDisciplineFilter === 'ALL'
+                            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-2xs'
+                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 border border-slate-200/80'
+                        }`}
+                      >
+                        Tất cả ({disciplineCounts.ALL})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormDisciplineFilter('BOXING')}
+                        className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                          formDisciplineFilter === 'BOXING'
+                            ? 'bg-rose-600 text-white shadow-2xs'
+                            : 'bg-white dark:bg-slate-800 text-rose-700 hover:bg-rose-50 border border-rose-200/80'
+                        }`}
+                      >
+                        Boxing ({disciplineCounts.BOXING})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormDisciplineFilter('YOGA')}
+                        className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                          formDisciplineFilter === 'YOGA'
+                            ? 'bg-indigo-600 text-white shadow-2xs'
+                            : 'bg-white dark:bg-slate-800 text-indigo-700 hover:bg-indigo-50 border border-indigo-200/80'
+                        }`}
+                      >
+                        Yoga ({disciplineCounts.YOGA})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormDisciplineFilter('GYM')}
+                        className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                          formDisciplineFilter === 'GYM'
+                            ? 'bg-amber-600 text-white shadow-2xs'
+                            : 'bg-white dark:bg-slate-800 text-amber-800 hover:bg-amber-50 border border-amber-200/80'
+                        }`}
+                      >
+                        Gym ({disciplineCounts.GYM})
+                      </button>
+                    </div>
+
+                    {/* Categories: Smooth horizontal scroll without ugly Windows arrows */}
+                    <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-1 pt-1.5 border-t border-slate-200/60 dark:border-slate-700/60">
                       <button
                         type="button"
                         onClick={() => setFormCategoryFilter('ALL')}
-                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition-all shrink-0 cursor-pointer ${
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all shrink-0 cursor-pointer ${
                           formCategoryFilter === 'ALL'
-                            ? 'bg-slate-800 text-white'
+                            ? 'bg-slate-800 text-white shadow-2xs'
                             : 'bg-white dark:bg-slate-800 text-slate-500 hover:bg-slate-100 border border-slate-200'
                         }`}
                       >
@@ -1573,9 +1560,9 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                           key={cat}
                           type="button"
                           onClick={() => setFormCategoryFilter(cat)}
-                          className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition-all shrink-0 cursor-pointer ${
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all shrink-0 cursor-pointer ${
                             formCategoryFilter.toLowerCase() === cat.toLowerCase()
-                              ? 'bg-emerald-600 text-white'
+                              ? 'bg-emerald-600 text-white shadow-2xs'
                               : 'bg-white dark:bg-slate-800 text-slate-500 hover:bg-slate-100 border border-slate-200'
                           }`}
                         >
@@ -1586,7 +1573,7 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                   </div>
 
                   {/* Exercise Picker Cards Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[500px] overflow-y-auto pr-1">
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5 max-h-[380px] sm:max-h-[430px] overflow-y-auto pr-1">
                     {modalFilteredExercises.length === 0 ? (
                       <div className="col-span-full py-12 text-center text-xs text-slate-400 space-y-2">
                         <Dumbbell className="h-7 w-7 text-slate-300 mx-auto" />
@@ -1603,18 +1590,18 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                         return (
                           <div
                             key={item.id}
-                            className={`p-3 rounded-2xl border transition-all flex flex-col justify-between gap-2.5 ${
+                            className={`p-3 rounded-2xl border transition-all flex flex-col justify-between gap-2.5 min-w-0 ${
                               isAdded
                                 ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50/60 dark:bg-emerald-950/20 shadow-2xs'
                                 : 'border-slate-200/90 dark:border-slate-700/80 bg-white dark:bg-slate-800/90 hover:border-emerald-300 hover:bg-slate-50/70 shadow-2xs'
                             }`}
                           >
-                            <div className="space-y-1.5">
-                              <div className="flex items-center justify-between gap-1.5">
-                                <div className="flex items-center gap-1">
+                            <div className="space-y-1.5 min-w-0">
+                              <div className="flex items-center justify-between gap-2 min-w-0">
+                                <div className="flex items-center gap-1 min-w-0 flex-1 overflow-hidden">
                                   {meta.discipline && (
                                     <span
-                                      className={`rounded-md px-1.5 py-0.2 text-[9px] font-black uppercase border ${
+                                      className={`rounded-md px-1.5 py-0.5 text-[9px] font-black uppercase border shrink-0 ${
                                         isBoxing
                                           ? 'bg-rose-50 text-rose-700 border-rose-200/70'
                                           : isYoga
@@ -1625,7 +1612,7 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                                       {meta.discipline}
                                     </span>
                                   )}
-                                  <span className="rounded-md bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200/70 px-1.5 py-0.2 text-[9px] font-semibold">
+                                  <span className="rounded-md bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200/70 px-1.5 py-0.5 text-[9px] font-semibold truncate">
                                     {translateCategory(item.category)}
                                   </span>
                                 </div>
@@ -1654,7 +1641,7 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                                 )}
                               </div>
 
-                              <div>
+                              <div className="min-w-0">
                                 <h5 className="text-xs font-black text-slate-900 dark:text-slate-100 truncate leading-snug">
                                   {primary}
                                 </h5>
@@ -1666,9 +1653,9 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-700/60">
-                              <span className="truncate">🎯 {meta.muscleVi}</span>
-                              <span className="truncate">🏋️ {meta.equipmentVi}</span>
+                            <div className="flex items-center justify-between gap-2 text-[10px] text-slate-500 dark:text-slate-400 pt-1.5 border-t border-slate-100 dark:border-slate-700/60 min-w-0">
+                              <span className="truncate flex-1 min-w-0">🎯 {meta.muscleVi}</span>
+                              <span className="truncate flex-1 min-w-0 text-right">🏋️ {meta.equipmentVi}</span>
                             </div>
                           </div>
                         );
@@ -1931,7 +1918,8 @@ export const CoachWorkoutPlansPage: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

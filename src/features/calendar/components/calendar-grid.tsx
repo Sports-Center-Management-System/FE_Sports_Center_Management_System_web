@@ -91,143 +91,78 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
     return `${formatTimeHHmm(startIso)} - ${formatTimeHHmm(endIso)}`
   }
 
-  // Render events for a specific day column
+  // Render events for a specific day column with non-colliding cluster lanes and ultra-compact mode for 3+ overlapping events
   const renderEventsForDay = (dateString: string) => {
-    const events: React.ReactNode[] = []
-
-    // 1. Group classes
-    schedules
+    // 1. Collect group classes
+    const dayScheduleItems = schedules
       .filter((s) => formatDateToYMD(new Date(s.startAt)) === dateString)
-      .forEach((schedule) => {
+      .map((schedule) => {
         const { top, height } = calculateEventPosition(schedule.startAt, schedule.endAt)
         const booking = getBookingForSchedule(schedule.id)
         const isBooked = !!booking
         const isFull = schedule.currentEnrolled >= schedule.capacity && !isBooked
         const isPast = new Date(schedule.startAt).getTime() <= Date.now()
-
-        const durationMin = Math.round(
-          (new Date(schedule.endAt).getTime() - new Date(schedule.startAt).getTime()) / 60000,
-        )
+        const startMs = new Date(schedule.startAt).getTime()
+        const endMs = schedule.endAt ? new Date(schedule.endAt).getTime() : startMs + 3600000
+        const durationMin = Math.round((endMs - startMs) / 60000)
         const isShort = durationMin <= 45 || height <= 52
 
-        const timeRangeStr = formatTimeRange(schedule.startAt, schedule.endAt)
         const primaryTitle = schedule.class?.name || schedule.discipline?.name || 'Lớp tập nhóm'
+        const compactTitle = schedule.discipline?.name || schedule.class?.name || 'Lớp tập'
         const coachName = schedule.coach?.fullName ? `HLV: ${schedule.coach.fullName}` : 'HLV Trung tâm'
         const roomName = schedule.room?.name ? schedule.room.name.split('·')[0].trim() : ''
+        const badgeText = isBooked
+          ? 'Đã đặt'
+          : isPast
+          ? 'Đã qua'
+          : isFull
+          ? 'Hết chỗ'
+          : `${schedule.currentEnrolled}/${schedule.capacity}`
+        const dotColorClass = isBooked
+          ? 'bg-emerald-500'
+          : isPast
+          ? 'bg-slate-400'
+          : isFull
+          ? 'bg-rose-500'
+          : 'bg-sky-500'
 
-        events.push(
-          <div
-            key={`sched-${schedule.id}`}
-            onClick={() => onSelectEvent({ type: 'SCHEDULE', data: schedule, booking })}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                onSelectEvent({ type: 'SCHEDULE', data: schedule, booking })
-              }
-            }}
-            style={{
-              top: `${top}px`,
-              height: `${height}px`,
-              left: '6px',
-              right: '6px',
-            }}
-            className={cn(
-              'absolute rounded-[10px] p-2 text-xs transition-all duration-150 cursor-pointer overflow-hidden shadow-2xs select-none group hover:shadow-md hover:scale-[1.01] hover:z-20 focus:outline-hidden focus:ring-2 z-10',
-              // Past State dimming (if not booked)
-              !isBooked && isPast && 'opacity-60 saturate-50',
-              // Booked State (Green emerald theme)
-              isBooked &&
-                'bg-emerald-50/95 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 border border-emerald-300/90 dark:border-emerald-800 hover:bg-emerald-100/95 dark:hover:bg-emerald-950/60 focus:ring-emerald-400',
-              // Full State
-              !isBooked &&
-                isFull &&
-                'bg-slate-50/80 dark:bg-slate-900/40 text-slate-500 dark:text-slate-400 border border-slate-200/90 dark:border-slate-800 hover:bg-slate-100/90 focus:ring-slate-400',
-              // Available State (Themed by discipline)
-              !isBooked &&
-                !isFull &&
-                getDisciplineCardClasses(
-                  schedule.discipline?.code,
-                  schedule.discipline?.name || schedule.class?.name,
-                ),
-            )}
-          >
-            {isShort ? (
-              <div className="flex items-center justify-between h-full gap-1">
-                <div className="flex items-center gap-1.5 truncate">
-                  <span className="font-bold tabular-nums text-[11px] shrink-0">
-                    {timeRangeStr}
-                  </span>
-                  <span className="font-semibold truncate text-[11.5px]">{primaryTitle}</span>
-                </div>
-                {isBooked ? (
-                  <span className="inline-flex items-center text-[10px] font-bold text-emerald-700 dark:text-emerald-300 shrink-0">
-                    <CheckCircle2 className="w-3 h-3 mr-0.5 text-emerald-600" />
-                    Đã đặt
-                  </span>
-                ) : isPast ? (
-                  <span className="px-1.5 py-0.2 rounded text-[9.5px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 shrink-0">
-                    Đã qua
-                  </span>
-                ) : isFull ? (
-                  <span className="px-1.5 py-0.2 rounded text-[9.5px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
-                    Hết chỗ
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-medium shrink-0 opacity-80">
-                    {schedule.currentEnrolled}/{schedule.capacity}
-                  </span>
-                )}
-              </div>
-            ) : (
-              <div className="flex flex-col justify-between h-full space-y-1">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold tabular-nums text-[11.5px] tracking-tight">
-                      {timeRangeStr}
-                    </span>
-                    {isBooked ? (
-                      <span className="inline-flex items-center text-[10.5px] font-bold text-emerald-700 dark:text-emerald-300">
-                        <CheckCircle2 className="w-3.5 h-3.5 mr-0.5 text-emerald-600 dark:text-emerald-400" />
-                        Đã đặt
-                      </span>
-                    ) : isPast ? (
-                      <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-slate-200/90 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-                        Đã qua giờ
-                      </span>
-                    ) : isFull ? (
-                      <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-slate-200/90 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                        Hết chỗ
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-semibold bg-white/70 dark:bg-black/20 shadow-2xs text-slate-700 dark:text-slate-200">
-                        <Users className="w-3 h-3 text-slate-500" />
-                        {schedule.currentEnrolled}/{schedule.capacity}
-                      </span>
-                    )}
-                  </div>
-                  <div className="font-semibold text-[13px] leading-snug tracking-tight truncate mt-0.5">
-                    {primaryTitle}
-                  </div>
-                </div>
+        const cardClass = isBooked
+          ? 'bg-emerald-50/95 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 border border-emerald-300/90 dark:border-emerald-800 hover:bg-emerald-100/95 dark:hover:bg-emerald-950/60 focus:ring-emerald-400'
+          : isFull
+          ? 'bg-slate-50/80 dark:bg-slate-900/40 text-slate-500 dark:text-slate-400 border border-slate-200/90 dark:border-slate-800 hover:bg-slate-100/90 focus:ring-slate-400'
+          : getDisciplineCardClasses(
+              schedule.discipline?.code,
+              schedule.discipline?.name || schedule.class?.name,
+            )
 
-                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-black/5 dark:border-white/5">
-                  <span className="truncate opacity-85 font-medium">{coachName}</span>
-                  {roomName && (
-                    <span className="text-[10px] opacity-75 truncate max-w-[85px] ml-1">
-                      {roomName}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>,
-        )
+        return {
+          id: schedule.id,
+          keyId: `sched-${schedule.id}`,
+          kind: 'SCHEDULE' as const,
+          startAt: schedule.startAt,
+          endAt: schedule.endAt,
+          startMs,
+          endMs,
+          top,
+          height,
+          isShort,
+          isPast,
+          isBooked,
+          isFull,
+          timeRangeStr: formatTimeRange(schedule.startAt, schedule.endAt),
+          primaryTitle,
+          compactTitle,
+          coachName,
+          roomName,
+          badgeText,
+          dotColorClass,
+          cardClass,
+          data: schedule,
+          booking,
+        }
       })
 
-    // 2. PT 1-1 Slots from different coaches can share one time. Give every coach a lane
-    // instead of stacking their cards on top of one another (split side-by-side).
+    // 2. Collect visible PT slots
     const visiblePtSlots = ptSlots.filter((pt) => {
       if (formatDateToYMD(new Date(pt.startAt)) !== dateString) return false
       const booking = getBookingForPtSlot(pt.id)
@@ -236,130 +171,63 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
       return true
     })
 
-    visiblePtSlots.forEach((ptSlot) => {
+    const dayPtSlotItems = visiblePtSlots.map((ptSlot) => {
       const { top, height } = calculateEventPosition(ptSlot.startAt, ptSlot.endAt)
       const booking = getBookingForPtSlot(ptSlot.id)
       const isBookedByMe = !!booking
-
-      // Split overlapping PT slots (any slots intersecting in time) into side-by-side lanes
-      const curStart = new Date(ptSlot.startAt).getTime()
-      const curEnd = ptSlot.endAt ? new Date(ptSlot.endAt).getTime() : curStart + 3600000
-      const matchingSlots = visiblePtSlots.filter((slot) => {
-        const sStart = new Date(slot.startAt).getTime()
-        const sEnd = slot.endAt ? new Date(slot.endAt).getTime() : sStart + 3600000
-        return sStart < curEnd && sEnd > curStart
-      })
-      const laneIndex = matchingSlots.findIndex((slot) => slot.id === ptSlot.id)
-      const totalLanes = Math.max(matchingSlots.length, 1)
-      const laneWidthPercent = 100 / totalLanes
-
-      const durationMin = Math.round(
-        (new Date(ptSlot.endAt).getTime() - new Date(ptSlot.startAt).getTime()) / 60000,
-      )
-      const isShort = durationMin <= 45 || height <= 52
       const isPast = new Date(ptSlot.startAt).getTime() <= Date.now()
+      const startMs = new Date(ptSlot.startAt).getTime()
+      const endMs = ptSlot.endAt ? new Date(ptSlot.endAt).getTime() : startMs + 3600000
+      const durationMin = Math.round((endMs - startMs) / 60000)
+      const isShort = durationMin <= 45 || height <= 52
 
-      const timeRangeStr = formatTimeRange(ptSlot.startAt, ptSlot.endAt)
-      const coachName = ptSlot.coach?.fullName || 'HLV'
-      const primaryTitle = `PT với HLV ${coachName}`
+      const coachFullName = ptSlot.coach?.fullName || 'HLV'
+      const coachLastName = coachFullName.split(' ').pop() || ''
+      const primaryTitle = `PT với HLV ${coachFullName}`
+      const compactTitle = isBookedByMe
+        ? `PT ${coachLastName}`.trim()
+        : `PT ${coachLastName || '1-1'}`.trim()
+      const coachName = `HLV: ${coachFullName}`
       const roomName = 'Khu vực PT'
+      const badgeText = isBookedByMe ? 'Đã đặt' : isPast ? 'Đã qua' : 'PT 1-1'
+      const dotColorClass = isBookedByMe
+        ? 'bg-emerald-500'
+        : isPast
+        ? 'bg-slate-400'
+        : 'bg-purple-500'
 
-      events.push(
-        <div
-          key={`pt-${ptSlot.id}`}
-          onClick={() => onSelectEvent({ type: 'PT_SLOT', data: ptSlot, booking })}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault()
-              onSelectEvent({ type: 'PT_SLOT', data: ptSlot, booking })
-            }
-          }}
-          style={{
-            top: `${top}px`,
-            height: `${height}px`,
-            left: totalLanes > 1 ? `calc(${laneIndex * laneWidthPercent}% + 3px)` : '6px',
-            width: totalLanes > 1 ? `calc(${laneWidthPercent}% - 6px)` : 'calc(100% - 12px)',
-          }}
-          className={cn(
-            'absolute rounded-[10px] p-2 text-xs transition-all duration-150 cursor-pointer overflow-hidden shadow-2xs select-none group hover:shadow-md hover:scale-[1.01] hover:z-20 focus:outline-hidden focus:ring-2 z-10',
-            // Past State dimming (if not booked)
-            !isBookedByMe && isPast && 'opacity-60 saturate-50',
-            // Booked State (Green emerald theme)
-            isBookedByMe &&
-              'bg-emerald-50/95 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 border border-emerald-300/90 dark:border-emerald-800 hover:bg-emerald-100/95 dark:hover:bg-emerald-950/60 focus:ring-emerald-400',
-            // Available PT State (Purple theme)
-            !isBookedByMe &&
-              'bg-purple-50/95 dark:bg-purple-950/40 text-purple-950 dark:text-purple-100 border border-purple-200/90 dark:border-purple-800/60 hover:bg-purple-100/95 dark:hover:bg-purple-950/60 focus:ring-purple-400',
-          )}
-        >
-            {isShort ? (
-              <div className="flex items-center justify-between h-full gap-1">
-                <div className="flex items-center gap-1.5 truncate">
-                  <span className="font-bold tabular-nums text-[11px] shrink-0">
-                    {timeRangeStr}
-                  </span>
-                  <span className="font-semibold truncate text-[11.5px]">{primaryTitle}</span>
-                </div>
-                {isBookedByMe ? (
-                  <span className="inline-flex items-center text-[10px] font-bold text-emerald-700 dark:text-emerald-300 shrink-0">
-                    <CheckCircle2 className="w-3 h-3 mr-0.5 text-emerald-600" />
-                    Đã đặt
-                  </span>
-                ) : isPast ? (
-                  <span className="px-1.5 py-0.2 rounded text-[9.5px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 shrink-0">
-                    Đã qua
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 shrink-0">
-                    PT 1-1
-                  </span>
-                )}
-              </div>
-            ) : (
-              <div className="flex flex-col justify-between h-full space-y-1">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold tabular-nums text-[11.5px] tracking-tight">
-                      {timeRangeStr}
-                    </span>
-                    {isBookedByMe ? (
-                      <span className="inline-flex items-center text-[10.5px] font-bold text-emerald-700 dark:text-emerald-300">
-                        <CheckCircle2 className="w-3.5 h-3.5 mr-0.5 text-emerald-600 dark:text-emerald-400" />
-                        Đã đặt
-                      </span>
-                    ) : isPast ? (
-                      <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-slate-200/90 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-                        Đã qua giờ
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-bold bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200">
-                        <UserCheck className="w-3 h-3 text-purple-600 dark:text-purple-400" />
-                        PT 1-1
-                      </span>
-                    )}
-                  </div>
-                  <div className="font-semibold text-[13px] leading-snug tracking-tight truncate mt-0.5">
-                    {primaryTitle}
-                  </div>
-                </div>
+      const cardClass = isBookedByMe
+        ? 'bg-emerald-50/95 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 border border-emerald-300/90 dark:border-emerald-800 hover:bg-emerald-100/95 dark:hover:bg-emerald-950/60 focus:ring-emerald-400'
+        : 'bg-purple-50/95 dark:bg-purple-950/40 text-purple-950 dark:text-purple-100 border border-purple-200/90 dark:border-purple-800/60 hover:bg-purple-100/95 dark:hover:bg-purple-950/60 focus:ring-purple-400'
 
-                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-black/5 dark:border-white/5">
-                  <span className="truncate opacity-85 font-medium">Kèm riêng 1-1</span>
-                  {roomName && (
-                    <span className="text-[10px] opacity-75 truncate max-w-[85px] ml-1">
-                      {roomName}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>,
-        )
-      })
+      return {
+        id: ptSlot.id,
+        keyId: `pt-${ptSlot.id}`,
+        kind: 'PT_SLOT' as const,
+        startAt: ptSlot.startAt,
+        endAt: ptSlot.endAt,
+        startMs,
+        endMs,
+        top,
+        height,
+        isShort,
+        isPast,
+        isBooked: isBookedByMe,
+        isFull: false,
+        timeRangeStr: formatTimeRange(ptSlot.startAt, ptSlot.endAt),
+        primaryTitle,
+        compactTitle,
+        coachName,
+        roomName,
+        badgeText,
+        dotColorClass,
+        cardClass,
+        data: ptSlot,
+        booking,
+      }
+    })
 
-    // 3. Standalone Bookings (retained even if matching slot is not found)
+    // 3. Collect standalone bookings
     const dayBookings = bookings.filter((b) => {
       const bDate = formatDateToYMD(new Date(b.startAt))
       return bDate === dateString && ACTIVE_BOOKING_STATUSES.has(b.status)
@@ -371,84 +239,291 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
         !ptSlots.some((slot) => slot.id === booking.coachAvailabilityId),
     )
 
-    standaloneBookings.forEach((b) => {
+    const dayStandaloneItems = standaloneBookings.map((b) => {
       const { top, height } = calculateEventPosition(b.startAt, b.endAt)
-      const durationMin = Math.round(
-        (new Date(b.endAt).getTime() - new Date(b.startAt).getTime()) / 60000,
-      )
+      const isPast = new Date(b.startAt).getTime() <= Date.now()
+      const startMs = new Date(b.startAt).getTime()
+      const endMs = b.endAt ? new Date(b.endAt).getTime() : startMs + 3600000
+      const durationMin = Math.round((endMs - startMs) / 60000)
       const isShort = durationMin <= 45 || height <= 52
 
-      // Split overlapping standalone bookings side-by-side
-      const matchingStandalone = standaloneBookings.filter((s) => s.startAt === b.startAt)
-      const laneIndex = matchingStandalone.findIndex((s) => s.id === b.id)
-      const totalLanes = Math.max(matchingStandalone.length, 1)
+      const isPtBooking =
+        b.bookingType === 'PERSONAL_TRAINING' ||
+        b.type === 'PERSONAL_TRAINING' ||
+        !!b.coachAvailabilityId
+
+      const primaryTitle = isPtBooking
+        ? `Buổi tập PT 1-1 (${b.discipline?.name || 'Kèm riêng'})`
+        : b.schedule?.class?.name || b.discipline?.name || 'Lớp tập nhóm'
+      const compactTitle = isPtBooking ? 'PT 1-1' : b.discipline?.name || 'Buổi tập'
+      const coachName = (b as any).coachAvailability?.coach?.fullName
+        ? `HLV: ${(b as any).coachAvailability.coach.fullName}`
+        : b.schedule?.coach?.fullName
+        ? `HLV: ${b.schedule.coach.fullName}`
+        : (b as any).coach?.fullName
+        ? `HLV: ${(b as any).coach.fullName}`
+        : isPtBooking
+        ? 'HLV Cá nhân'
+        : 'Đã xác nhận'
+
+      return {
+        id: b.id,
+        keyId: `mine-${b.id}`,
+        kind: 'BOOKING_STANDALONE' as const,
+        startAt: b.startAt,
+        endAt: b.endAt,
+        startMs,
+        endMs,
+        top,
+        height,
+        isShort,
+        isPast,
+        isBooked: true,
+        isFull: false,
+        timeRangeStr: formatTimeRange(b.startAt, b.endAt),
+        primaryTitle,
+        compactTitle,
+        coachName,
+        roomName: '',
+        badgeText: 'Đã đặt',
+        dotColorClass: 'bg-emerald-500',
+        cardClass:
+          'bg-emerald-50/95 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 border border-emerald-300/90 dark:border-emerald-800 hover:bg-emerald-100/95 dark:hover:bg-emerald-950/60 focus:ring-emerald-400',
+        data: b,
+        booking: b,
+      }
+    })
+
+    // Combine all day items
+    const allDayItems = [
+      ...dayScheduleItems,
+      ...dayPtSlotItems,
+      ...dayStandaloneItems,
+    ]
+
+    // Sort by startMs asc, then endMs desc
+    allDayItems.sort((a, b) => a.startMs - b.startMs || b.endMs - a.endMs)
+
+    // Partition into overlapping time clusters
+    type ItemType = (typeof allDayItems)[number]
+    const clusters: ItemType[][] = []
+    let currentCluster: ItemType[] = []
+    let clusterEndMs = 0
+
+    for (const item of allDayItems) {
+      if (currentCluster.length === 0) {
+        currentCluster.push(item)
+        clusterEndMs = item.endMs
+      } else if (item.startMs < clusterEndMs) {
+        // Overlaps with current cluster
+        currentCluster.push(item)
+        clusterEndMs = Math.max(clusterEndMs, item.endMs)
+      } else {
+        clusters.push(currentCluster)
+        currentCluster = [item]
+        clusterEndMs = item.endMs
+      }
+    }
+    if (currentCluster.length > 0) {
+      clusters.push(currentCluster)
+    }
+
+    const events: React.ReactNode[] = []
+
+    // Allocate side-by-side lanes per cluster
+    clusters.forEach((cluster) => {
+      const laneEndTimes: number[] = []
+      const itemLaneMap = new Map<string, number>()
+
+      cluster.forEach((item) => {
+        let placedLane = -1
+        for (let i = 0; i < laneEndTimes.length; i++) {
+          if (laneEndTimes[i] <= item.startMs) {
+            placedLane = i
+            laneEndTimes[i] = item.endMs
+            break
+          }
+        }
+        if (placedLane === -1) {
+          placedLane = laneEndTimes.length
+          laneEndTimes.push(item.endMs)
+        }
+        itemLaneMap.set(item.id, placedLane)
+      })
+
+      const totalLanes = Math.max(laneEndTimes.length, 1)
       const laneWidthPercent = 100 / totalLanes
+      const isCompact = totalLanes >= 3 // When 3 or 4+ sessions share the same time slot
 
-      const timeRangeStr = formatTimeRange(b.startAt, b.endAt)
-      const primaryTitle =
-        b.schedule?.class?.name ||
-        b.discipline?.name ||
-        (b.type === 'PERSONAL_TRAINING' ? 'Buổi tập PT 1-1' : 'Lớp tập nhóm')
-      const coachName = b.coach?.fullName ? `HLV: ${b.coach.fullName}` : 'Đã xác nhận'
+      cluster.forEach((item) => {
+        const laneIndex = itemLaneMap.get(item.id) ?? 0
+        const tooltipText = [
+          item.timeRangeStr,
+          item.primaryTitle,
+          item.coachName,
+          item.roomName,
+          item.badgeText ? `[${item.badgeText}]` : '',
+        ]
+          .filter(Boolean)
+          .join(' • ')
 
-      events.push(
-        <div
-          key={`mine-${b.id}`}
-          onClick={() => onSelectEvent({ type: 'BOOKING_STANDALONE', data: b })}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault()
-              onSelectEvent({ type: 'BOOKING_STANDALONE', data: b })
-            }
-          }}
-          style={{
-            top: `${top}px`,
-            height: `${height}px`,
-            left: totalLanes > 1 ? `calc(${laneIndex * laneWidthPercent}% + 3px)` : '6px',
-            width: totalLanes > 1 ? `calc(${laneWidthPercent}% - 6px)` : 'calc(100% - 12px)',
-          }}
-            className="absolute rounded-[10px] p-2 text-xs transition-all duration-150 cursor-pointer overflow-hidden shadow-2xs select-none group hover:shadow-md hover:scale-[1.01] hover:z-20 focus:outline-hidden focus:ring-2 z-10 bg-emerald-50/95 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 border border-emerald-300/90 dark:border-emerald-800 hover:bg-emerald-100/95 dark:hover:bg-emerald-950/60 focus:ring-emerald-400"
+        const handleSelect = () => {
+          if (item.kind === 'SCHEDULE') {
+            onSelectEvent({ type: 'SCHEDULE', data: item.data, booking: item.booking })
+          } else if (item.kind === 'PT_SLOT') {
+            onSelectEvent({ type: 'PT_SLOT', data: item.data, booking: item.booking })
+          } else {
+            onSelectEvent({ type: 'BOOKING_STANDALONE', data: item.data })
+          }
+        }
+
+        events.push(
+          <div
+            key={item.keyId}
+            title={tooltipText}
+            onClick={handleSelect}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                handleSelect()
+              }
+            }}
+            style={{
+              top: `${item.top}px`,
+              height: `${item.height}px`,
+              left: totalLanes > 1 ? `calc(${laneIndex * laneWidthPercent}% + 2px)` : '6px',
+              width: totalLanes > 1 ? `calc(${laneWidthPercent}% - 4px)` : 'calc(100% - 12px)',
+            }}
+            className={cn(
+              'absolute rounded-lg transition-all duration-150 cursor-pointer overflow-hidden shadow-2xs select-none group hover:shadow-md hover:scale-[1.02] hover:z-30 focus:outline-hidden focus:ring-2 z-10',
+              isCompact ? 'p-1' : 'p-2',
+              !item.isBooked && item.isPast && 'opacity-60 saturate-50',
+              item.cardClass,
+            )}
           >
-            {isShort ? (
+            {isCompact ? (
+              /* ======================================================== */
+              /* ULTRA-COMPACT VIEW: Khi có 3-4 lịch cùng khung giờ       */
+              /* Hiển thị tối giản, không bị vỡ layout hoặc tràn chữ      */
+              /* ======================================================== */
+              <div className="flex flex-col justify-between h-full overflow-hidden select-none">
+                <div className="min-w-0">
+                  {/* Dòng 1: Giờ bắt đầu + Chấm trạng thái nhỏ gọn */}
+                  <div className="flex items-center justify-between gap-0.5 leading-none mb-0.5">
+                    <span className="font-extrabold tabular-nums text-[10px] sm:text-[10.5px] tracking-tight truncate opacity-90">
+                      {formatTimeHHmm(item.startAt)}
+                    </span>
+                    <span
+                      className={cn(
+                        'h-2 w-2 rounded-full shrink-0 ring-1 ring-white/70 dark:ring-black/40',
+                        item.dotColorClass,
+                      )}
+                    />
+                  </div>
+
+                  {/* Dòng 2: Tiêu đề rút gọn 1 dòng (PT Alex / Boxing / Yoga) */}
+                  <div className="font-bold text-[10px] sm:text-[10.5px] leading-tight truncate">
+                    {item.compactTitle}
+                  </div>
+                </div>
+
+                {/* Dòng 3: Tên HLV/Phòng nếu thẻ có chiều cao đủ (>= 48px) */}
+                {item.height >= 48 && (
+                  <div className="text-[9px] font-medium opacity-80 truncate leading-none pt-0.5 border-t border-black/5 dark:border-white/5">
+                    {item.coachName.replace(/^HLV:\s*/i, '') || item.roomName || (item.isBooked ? 'Đã đặt' : '')}
+                  </div>
+                )}
+              </div>
+            ) : item.isShort ? (
+              /* ======================================================== */
+              /* NORMAL SHORT VIEW: Khi 1-2 lịch và thời lượng ngắn <=45m */
+              /* ======================================================== */
               <div className="flex items-center justify-between h-full gap-1">
                 <div className="flex items-center gap-1.5 truncate">
                   <span className="font-bold tabular-nums text-[11px] shrink-0">
-                    {timeRangeStr}
+                    {item.timeRangeStr}
                   </span>
-                  <span className="font-semibold truncate text-[11.5px]">{primaryTitle}</span>
+                  <span className="font-semibold truncate text-[11.5px]">{item.primaryTitle}</span>
                 </div>
-                <span className="inline-flex items-center text-[10px] font-bold text-emerald-700 dark:text-emerald-300 shrink-0">
-                  <CheckCircle2 className="w-3 h-3 mr-0.5 text-emerald-600" />
-                  Đã đặt
-                </span>
+                {item.isBooked ? (
+                  <span className="inline-flex items-center text-[10px] font-bold text-emerald-700 dark:text-emerald-300 shrink-0">
+                    <CheckCircle2 className="w-3 h-3 mr-0.5 text-emerald-600" />
+                    Đã đặt
+                  </span>
+                ) : item.isPast ? (
+                  <span className="px-1.5 py-0.2 rounded text-[9.5px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 shrink-0">
+                    Đã qua
+                  </span>
+                ) : item.isFull ? (
+                  <span className="px-1.5 py-0.2 rounded text-[9.5px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
+                    Hết chỗ
+                  </span>
+                ) : item.kind === 'PT_SLOT' ? (
+                  <span className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 shrink-0">
+                    PT 1-1
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-medium shrink-0 opacity-80">
+                    {item.badgeText}
+                  </span>
+                )}
               </div>
             ) : (
+              /* ======================================================== */
+              /* NORMAL FULL VIEW: Đầy đủ thông tin (1-2 lịch/khung giờ)  */
+              /* ======================================================== */
               <div className="flex flex-col justify-between h-full space-y-1">
                 <div>
                   <div className="flex items-center justify-between">
                     <span className="font-bold tabular-nums text-[11.5px] tracking-tight">
-                      {timeRangeStr}
+                      {item.timeRangeStr}
                     </span>
-                    <span className="inline-flex items-center text-[10.5px] font-bold text-emerald-700 dark:text-emerald-300">
-                      <CheckCircle2 className="w-3.5 h-3.5 mr-0.5 text-emerald-600 dark:text-emerald-400" />
-                      Đã đặt
-                    </span>
+                    {item.isBooked ? (
+                      <span className="inline-flex items-center text-[10.5px] font-bold text-emerald-700 dark:text-emerald-300">
+                        <CheckCircle2 className="w-3.5 h-3.5 mr-0.5 text-emerald-600 dark:text-emerald-400" />
+                        Đã đặt
+                      </span>
+                    ) : item.isPast ? (
+                      <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-slate-200/90 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                        Đã qua giờ
+                      </span>
+                    ) : item.isFull ? (
+                      <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-slate-200/90 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                        Hết chỗ
+                      </span>
+                    ) : item.kind === 'PT_SLOT' ? (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-bold bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200">
+                        <UserCheck className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+                        PT 1-1
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-semibold bg-white/70 dark:bg-black/20 shadow-2xs text-slate-700 dark:text-slate-200">
+                        <Users className="w-3 h-3 text-slate-500" />
+                        {item.badgeText}
+                      </span>
+                    )}
                   </div>
                   <div className="font-semibold text-[13px] leading-snug tracking-tight truncate mt-0.5">
-                    {primaryTitle}
+                    {item.primaryTitle}
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] pt-1 border-t border-black/5 dark:border-white/5">
-                  <span className="truncate opacity-85 font-medium">{coachName}</span>
+                  <span className="truncate opacity-85 font-medium">{item.coachName}</span>
+                  {item.roomName && (
+                    <span className="text-[10px] opacity-75 truncate max-w-[85px] ml-1">
+                      {item.roomName}
+                    </span>
+                  )}
                 </div>
               </div>
             )}
           </div>,
         )
       })
+    })
 
     return events
   }

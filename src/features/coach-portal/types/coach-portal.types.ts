@@ -252,6 +252,7 @@ export interface BookingWorkoutPlan {
 }
 
 export interface UpdateSessionWorkoutPlanPayload {
+  title?: string;
   notes?: string;
   exercises: Array<{
     exerciseId: string;
@@ -277,15 +278,39 @@ export interface WorkoutPlanItem {
   id: string;
   memberId: string;
   coachId: string;
+  bookingId?: string | null;
+  templateId?: string | null;
+  sessionOrder?: number | null;
   title: string;
   notes?: string | null;
   createdAt: string;
   exercises: WorkoutExerciseItem[];
+  coach?: {
+    id: string;
+    fullName: string;
+    avatarUrl?: string | null;
+  };
+  member?: {
+    id: string;
+    fullName: string;
+    phone?: string;
+    avatarUrl?: string | null;
+  };
+  template?: {
+    id: string;
+    templateCode: string;
+    disciplineCode: string;
+    title: string;
+    weekNumber: number;
+    sessionOrder: number;
+    description?: string | null;
+  };
 }
 
 export interface CreateWorkoutPlanPayload {
   memberId: string;
   title: string;
+  bookingId?: string;
   notes?: string;
   exercises: WorkoutExerciseDto[];
 }
