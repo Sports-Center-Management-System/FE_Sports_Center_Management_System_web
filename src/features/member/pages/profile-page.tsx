@@ -391,11 +391,11 @@ const MemberStatusOverview: React.FC<MemberStatusOverviewProps> = ({ profile }) 
     : 0;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-      {/* 1. THẺ HỘI VIÊN & GÓI TẬP HIỆN HÀNH */}
-      <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
+    <div className="space-y-6 mb-6">
+      {/* 1. THẺ HỘI VIÊN & GÓI TẬP HIỆN HÀNH (TRỌN 1 LINE) */}
+      <div className="w-full bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all">
         <div>
-          <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
             <span className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-900">
               <span className="p-1.5 rounded-xl bg-emerald-50 text-[#008b74]">
                 <CreditCard className="w-4 h-4" />
@@ -417,62 +417,63 @@ const MemberStatusOverview: React.FC<MemberStatusOverviewProps> = ({ profile }) 
             {activeSub ? (
               <div className="space-y-4">
                 <div>
-                  <h4 className="text-lg font-black text-slate-950 tracking-tight">
+                  <h4 className="text-xl font-black text-slate-950 tracking-tight">
                     {activeSub.plan?.name || "Gói tập hội viên tiêu chuẩn"}
                   </h4>
-                  <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                  <p className="text-xs text-slate-500 mt-1 max-w-2xl">
                     {activeSub.plan?.description || "Toàn quyền sử dụng tiện ích gym, locker, và các lớp tiêu chuẩn."}
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="p-3.5 rounded-2xl bg-gradient-to-br from-emerald-50/70 to-teal-50/40 border border-emerald-100 space-y-1">
-                    <span className="text-[10px] font-extrabold text-emerald-700/80 block uppercase tracking-wider">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50/80 to-teal-50/40 border border-emerald-200/80 space-y-1">
+                    <span className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider block">
                       Buổi PT 1:1 còn lại
                     </span>
-                    <div className="flex items-baseline gap-1">
+                    <div className="flex items-baseline gap-1.5">
                       <span className="text-2xl font-black text-[#008b74]">
                         {remainingSessions}
                       </span>
-                      <span className="text-xs font-bold text-emerald-800">buổi</span>
+                      <span className="text-xs font-bold text-emerald-800">buổi tập</span>
                     </div>
                   </div>
 
-                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
-                    <span className="text-[10px] font-extrabold text-slate-400 block uppercase tracking-wider">
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
+                    <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
                       Hạn gói tập
                     </span>
-                    <div className="flex items-center gap-1.5 pt-0.5">
-                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                      <span className="text-xs font-extrabold text-slate-800">
+                    <div className="flex items-center gap-2 pt-1">
+                      <Calendar className="w-4 h-4 text-slate-400" />
+                      <span className="text-sm font-black text-slate-800">
                         {activeSub.endDate
                           ? new Date(activeSub.endDate).toLocaleDateString("vi-VN")
                           : "Đang duy trì"}
                       </span>
                     </div>
                   </div>
-                </div>
 
-                {activeSub.assignedCoach && (
-                  <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-xs">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-full bg-[#008b74] text-white flex items-center justify-center font-bold text-[11px]">
-                        {activeSub.assignedCoach.fullName.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold text-slate-400 block uppercase">
-                          Huấn luyện viên phụ trách
-                        </span>
-                        <span className="font-extrabold text-slate-900">
-                          {activeSub.assignedCoach.fullName}
-                        </span>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/60">
-                      PT 1-1
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
+                    <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
+                      Huấn luyện viên phụ trách
                     </span>
+                    <div className="flex items-center gap-2 pt-1">
+                      {activeSub.assignedCoach ? (
+                        <>
+                          <div className="w-6 h-6 rounded-full bg-[#008b74] text-white flex items-center justify-center font-bold text-[10px]">
+                            {activeSub.assignedCoach.fullName.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="text-sm font-black text-slate-900 truncate">
+                            {activeSub.assignedCoach.fullName}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-xs font-semibold text-slate-500">
+                          Chưa chỉ định HLV riêng
+                        </span>
+                      )}
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
             ) : (
               <div className="p-6 rounded-2xl bg-slate-50 text-slate-500 text-xs text-center border border-slate-200/70 space-y-2">
@@ -487,10 +488,10 @@ const MemberStatusOverview: React.FC<MemberStatusOverviewProps> = ({ profile }) 
         </div>
       </div>
 
-      {/* 2. CHỈ SỐ THỂ CHẤT & INBODY */}
-      <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
+      {/* 2. CHỈ SỐ THỂ CHẤT & INBODY (TRỌN 1 LINE) */}
+      <div className="w-full bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all">
         <div>
-          <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
             <span className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-900">
               <span className="p-1.5 rounded-xl bg-teal-50 text-teal-600">
                 <Activity className="w-4 h-4" />
@@ -504,45 +505,45 @@ const MemberStatusOverview: React.FC<MemberStatusOverviewProps> = ({ profile }) 
 
           <div className="pt-4">
             {hasBodyStats ? (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-center">
-                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 hover:bg-white hover:shadow-xs transition-all">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 hover:bg-white hover:shadow-xs transition-all">
                   <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
                     Chiều cao
                   </span>
-                  <span className="text-base font-black text-slate-900 mt-1 block">
+                  <span className="text-lg font-black text-slate-900 mt-1 block">
                     {height ? `${height} cm` : "--"}
                   </span>
                 </div>
 
-                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 hover:bg-white hover:shadow-xs transition-all">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 hover:bg-white hover:shadow-xs transition-all">
                   <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
                     Cân nặng
                   </span>
-                  <span className="text-base font-black text-slate-900 mt-1 block">
+                  <span className="text-lg font-black text-slate-900 mt-1 block">
                     {weight ? `${weight} kg` : "--"}
                   </span>
                 </div>
 
-                <div className="p-3 rounded-2xl bg-emerald-50/50 border border-emerald-100 hover:bg-emerald-50 hover:shadow-xs transition-all">
+                <div className="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-100 hover:bg-emerald-50 hover:shadow-xs transition-all">
                   <span className="text-[10px] font-extrabold text-emerald-700/80 uppercase tracking-wider block">
                     Chỉ số BMI
                   </span>
-                  <span className="text-base font-black text-emerald-800 mt-1 block">
+                  <span className="text-lg font-black text-emerald-800 mt-1 block">
                     {bmi ? `${bmi}` : "--"}
                   </span>
-                  <span className={cn("text-[9px] font-extrabold block mt-0.5", bmiStatus.color)}>
+                  <span className={cn("text-[10px] font-extrabold block mt-0.5", bmiStatus.color)}>
                     {bmiStatus.text}
                   </span>
                 </div>
 
-                <div className="p-3 rounded-2xl bg-amber-50/50 border border-amber-100 hover:bg-amber-50 hover:shadow-xs transition-all">
+                <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-100 hover:bg-amber-50 hover:shadow-xs transition-all">
                   <span className="text-[10px] font-extrabold text-amber-700/80 uppercase tracking-wider block">
                     Tỷ lệ mỡ
                   </span>
-                  <span className="text-base font-black text-amber-800 mt-1 block">
+                  <span className="text-lg font-black text-amber-800 mt-1 block">
                     {bodyFat ? `${bodyFat}%` : "--"}
                   </span>
-                  <span className="text-[9px] font-extrabold text-amber-600 block mt-0.5">
+                  <span className="text-[10px] font-extrabold text-amber-600 block mt-0.5">
                     Body Fat
                   </span>
                 </div>
@@ -559,8 +560,8 @@ const MemberStatusOverview: React.FC<MemberStatusOverviewProps> = ({ profile }) 
           </div>
         </div>
 
-        <p className="text-[11px] text-slate-400 pt-3 border-t border-slate-100/80 mt-3 flex items-center justify-between">
-          <span>* Chỉ số InBody hỗ trợ HLV xây dựng khối lượng bài tập chuẩn xác.</span>
+        <p className="text-[11px] text-slate-400 pt-3 border-t border-slate-100/80 mt-4 flex items-center justify-between">
+          <span>* Chỉ số InBody hỗ trợ HLV xây dựng khối lượng bài tập chuẩn xác theo thể trạng của bạn.</span>
         </p>
       </div>
     </div>
@@ -665,10 +666,10 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* 2-COLUMN BENTO GRID */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* CARD 1: THÔNG TIN CÁ NHÂN & TÀI KHOẢN (7 Cols) */}
-        <div className="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-xs space-y-6">
+      {/* CONTAINERS TRỌN 1 LINE CHO MỖI PHẦN */}
+      <div className="space-y-6">
+        {/* CARD 1: THÔNG TIN CÁ NHÂN & TÀI KHOẢN (TRỌN 1 LINE) */}
+        <div className="w-full bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-xs space-y-6">
           <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
             <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-[#008b74] flex items-center justify-center font-bold shrink-0">
               <User className="w-5 h-5" />
@@ -684,58 +685,60 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
           </div>
 
           <div className="space-y-4">
-            {/* Full Name */}
-            <div className="space-y-1.5 text-left">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700 inline-flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Họ và tên</span>
-                  <span className="text-rose-500 font-bold">*</span>
-                </span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Full Name */}
+              <div className="space-y-1.5 text-left">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 inline-flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Họ và tên</span>
+                    <span className="text-rose-500 font-bold">*</span>
+                  </span>
+                </div>
+                <Input
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Nhập họ và tên đầy đủ"
+                  className="h-11 rounded-2xl text-xs font-semibold bg-slate-50/90 border-slate-200 focus:bg-white text-slate-900 focus:border-[#008b74] focus:ring-2 focus:ring-[#008b74]/15 transition-all"
+                />
               </div>
-              <Input
-                required
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Nhập họ và tên đầy đủ"
-                className="h-11 rounded-2xl text-xs font-semibold bg-slate-50/90 border-slate-200 focus:bg-white text-slate-900 focus:border-[#008b74] focus:ring-2 focus:ring-[#008b74]/15 transition-all"
-              />
+
+              {/* Gender Segmented Control */}
+              <div className="space-y-1.5 text-left">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700">Giới tính</span>
+                  <span className="text-[11px] text-slate-400 font-medium">Hiển thị trên thẻ & hồ sơ</span>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100/80 rounded-2xl border border-slate-200/70">
+                  {[
+                    { id: "MALE" as GenderType, label: "Nam", icon: "♂" },
+                    { id: "FEMALE" as GenderType, label: "Nữ", icon: "♀" },
+                    { id: "OTHER" as GenderType, label: "Khác", icon: "⚧" },
+                  ].map((g) => {
+                    const active = gender === g.id;
+                    return (
+                      <button
+                        key={g.id}
+                        type="button"
+                        onClick={() => setGender(g.id)}
+                        className={cn(
+                          "flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-extrabold transition-all duration-200 cursor-pointer border",
+                          active
+                            ? "!bg-white !text-emerald-800 !border-emerald-300 shadow-xs"
+                            : "!bg-transparent !text-slate-600 !border-transparent hover:!text-slate-900 hover:!bg-white/60"
+                        )}
+                      >
+                        <span className="text-sm font-black">{g.icon}</span>
+                        <span>{g.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
-            {/* Gender Segmented Control */}
-            <div className="space-y-1.5 text-left">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700">Giới tính</span>
-                <span className="text-[11px] text-slate-400 font-medium">Hiển thị trên thẻ & hồ sơ</span>
-              </div>
-              <div className="grid grid-cols-3 gap-1.5 p-1.5 bg-slate-100/80 rounded-2xl border border-slate-200/70">
-                {[
-                  { id: "MALE" as GenderType, label: "Nam", icon: "♂" },
-                  { id: "FEMALE" as GenderType, label: "Nữ", icon: "♀" },
-                  { id: "OTHER" as GenderType, label: "Khác", icon: "⚧" },
-                ].map((g) => {
-                  const active = gender === g.id;
-                  return (
-                    <button
-                      key={g.id}
-                      type="button"
-                      onClick={() => setGender(g.id)}
-                      className={cn(
-                        "flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-extrabold transition-all duration-200 cursor-pointer border",
-                        active
-                          ? "!bg-white !text-emerald-800 !border-emerald-300 shadow-xs"
-                          : "!bg-transparent !text-slate-600 !border-transparent hover:!text-slate-900 hover:!bg-white/60"
-                      )}
-                    >
-                      <span className="text-sm font-black">{g.icon}</span>
-                      <span>{g.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-1">
               {/* Phone */}
               <div className="space-y-1.5 text-left">
                 <div className="flex items-center justify-between">
@@ -784,7 +787,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
                   <span>Email tài khoản</span>
                 </span>
                 <span className="inline-flex items-center gap-1 text-[11px] text-slate-400 font-medium">
-                  <Lock className="w-3 h-3 text-slate-400" /> Cố định
+                  <Lock className="w-3 h-3 text-slate-400" /> Cố định theo tài khoản
                 </span>
               </div>
               <Input
@@ -796,8 +799,8 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
           </div>
         </div>
 
-        {/* CARD 2: MỤC TIÊU THỂ HÌNH & SỨC KHỎE (5 Cols) */}
-        <div className="lg:col-span-5 bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-xs space-y-6">
+        {/* CARD 2: MỤC TIÊU THỂ HÌNH & SỨC KHỎE (TRỌN 1 LINE) */}
+        <div className="w-full bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-xs space-y-6">
           <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
             <div className="w-10 h-10 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center font-bold shrink-0">
               <Target className="w-5 h-5" />
@@ -812,9 +815,9 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Fitness Goals */}
-            <div className="space-y-2 text-left">
+            <div className="space-y-2.5 text-left">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-700 inline-flex items-center gap-1.5">
                   <Target className="w-3.5 h-3.5 text-emerald-600" />
@@ -866,7 +869,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
             </div>
 
             {/* Medical History */}
-            <div className="space-y-2 text-left pt-2 border-t border-slate-100">
+            <div className="space-y-2.5 text-left">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-700 inline-flex items-center gap-1.5">
                   <HeartPulse className="w-3.5 h-3.5 text-rose-500" />
