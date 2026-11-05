@@ -9,6 +9,9 @@ import {
   ArrowRight,
   BookOpen,
   ChevronRight,
+  Calendar,
+  Filter,
+  Clock,
 } from 'lucide-react';
 import { apiClient } from '@/services/api-client';
 import { vietnamDate } from '@/lib/date';
@@ -102,11 +105,15 @@ export const WorkoutPlansPage: React.FC = () => {
   const [selectedPlan, setSelectedPlan] = useState<MemberWorkoutPlanItem | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<WorkoutTemplateSession | null>(null);
 
+  // My Plans Filters
+  const [planSearch, setPlanSearch] = useState<string>('');
+  const [planDateFilter, setPlanDateFilter] = useState<'ALL' | 'THIS_MONTH' | 'LAST_MONTH'>('ALL');
+  const [dateSort, setDateSort] = useState<'DESC' | 'ASC'>('DESC');
+
   // Template Tab state
   const [templateDiscipline, setTemplateDiscipline] = useState<'BOXING' | 'YOGA'>('BOXING');
   const [templateWeekFilter, setTemplateWeekFilter] = useState<'ALL' | '1' | '2' | '3' | '4'>('ALL');
   const [templateSearch, setTemplateSearch] = useState<string>('');
-  const [dateSort, setDateSort] = useState<'DESC' | 'ASC'>('DESC');
 
   // 1. Fetch member's real assigned workout plans
   const {
@@ -136,14 +143,53 @@ export const WorkoutPlansPage: React.FC = () => {
     },
   });
 
-  // Sort plans by date
-  const sortedPlans = useMemo(() => {
-    return [...rawPlans].sort((a, b) => {
+  // Filtered and Sorted assigned plans
+  const filteredAndSortedPlans = useMemo(() => {
+    let list = [...rawPlans];
+
+    // 1. Search Query
+    if (planSearch.trim()) {
+      const q = planSearch.toLowerCase().trim();
+      list = list.filter((p) => {
+        const titleMatch = p.title?.toLowerCase().includes(q);
+        const notesMatch = p.notes?.toLowerCase().includes(q);
+        const coachMatch = p.coach?.fullName?.toLowerCase().includes(q);
+        const exerciseMatch = p.exercises?.some((ex) =>
+          ex.exercise?.title?.toLowerCase().includes(q) ||
+          ex.exercise?.category?.toLowerCase().includes(q)
+        );
+        return titleMatch || notesMatch || coachMatch || exerciseMatch;
+      });
+    }
+
+    // 2. Date Filter
+    const now = new Date();
+    if (planDateFilter === 'THIS_MONTH') {
+      const curMonth = now.getMonth();
+      const curYear = now.getFullYear();
+      list = list.filter((p) => {
+        const d = new Date(p.createdAt);
+        return d.getMonth() === curMonth && d.getFullYear() === curYear;
+      });
+    } else if (planDateFilter === 'LAST_MONTH') {
+      const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lm = lastMonthDate.getMonth();
+      const ly = lastMonthDate.getFullYear();
+      list = list.filter((p) => {
+        const d = new Date(p.createdAt);
+        return d.getMonth() === lm && d.getFullYear() === ly;
+      });
+    }
+
+    // 3. Sort by Date
+    list.sort((a, b) => {
       const timeA = new Date(a.createdAt || 0).getTime();
       const timeB = new Date(b.createdAt || 0).getTime();
       return dateSort === 'DESC' ? timeB - timeA : timeA - timeB;
     });
-  }, [rawPlans, dateSort]);
+
+    return list;
+  }, [rawPlans, planSearch, planDateFilter, dateSort]);
 
   // Filtered Templates
   const filteredTemplates = useMemo(() => {
@@ -166,7 +212,7 @@ export const WorkoutPlansPage: React.FC = () => {
 
   // Lock background scroll when any modal opens
   useEffect(() => {
-    const isModalOpen = !!selectedPlan || !!selectedTemplate;
+    const isModalOpen = Boolean(selectedPlan || selectedTemplate);
     if (!isModalOpen) return;
 
     const originalOverflow = document.body.style.overflow;
@@ -193,34 +239,39 @@ export const WorkoutPlansPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-6 pb-16">
       {/* ========================================================= */}
       {/* PAGE HEADER                                               */}
       {/* ========================================================= */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 text-white p-6 sm:p-8 rounded-[2rem] border border-slate-800 shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 space-y-1.5">
           <div className="flex items-center gap-2">
-            <span className="p-2 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-400">
+            <span className="p-2 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
               <Dumbbell className="w-5 h-5" />
             </span>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
-              Giáo Án & Lộ Trình Tập Luyện
-            </h1>
+            <span className="text-xs font-black uppercase tracking-widest text-emerald-400">
+              Training Center
+            </span>
           </div>
-          <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-            Theo dõi danh mục bài tập, mức tạ, số hiệp và lời dặn cá nhân hóa từ Huấn luyện viên
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+            Giáo Án & Lộ Trình Tập Luyện
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-400 max-w-xl">
+            Theo dõi khối lượng tập luyện, số hiệp, mức tạ và lời dặn cá nhân hóa từ Huấn luyện viên
           </p>
         </div>
 
         {/* Tab Switcher */}
-        <div className="inline-flex p-1 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 shrink-0 self-start md:self-auto">
+        <div className="relative z-10 inline-flex p-1.5 rounded-2xl bg-slate-950/80 border border-slate-800 shrink-0 self-start md:self-auto backdrop-blur-md">
           <button
             type="button"
             onClick={() => setActiveTab('MY_PLANS')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'MY_PLANS'
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                ? 'bg-emerald-500 text-slate-950 shadow-md font-black'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
             }`}
           >
             <Dumbbell className="w-3.5 h-3.5" />
@@ -228,8 +279,8 @@ export const WorkoutPlansPage: React.FC = () => {
             <span
               className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
                 activeTab === 'MY_PLANS'
-                  ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
-                  : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                  ? 'bg-slate-950 text-emerald-300'
+                  : 'bg-slate-800 text-slate-300'
               }`}
             >
               {rawPlans.length}
@@ -239,10 +290,10 @@ export const WorkoutPlansPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('TEMPLATES')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'TEMPLATES'
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                ? 'bg-emerald-500 text-slate-950 shadow-md font-black'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
@@ -250,8 +301,8 @@ export const WorkoutPlansPage: React.FC = () => {
             <span
               className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
                 activeTab === 'TEMPLATES'
-                  ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
-                  : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                  ? 'bg-slate-950 text-emerald-300'
+                  : 'bg-slate-800 text-slate-300'
               }`}
             >
               {rawTemplates.length || 12}
@@ -264,126 +315,194 @@ export const WorkoutPlansPage: React.FC = () => {
       {/* TAB 1: GIÁO ÁN CỦA TÔI (MY ASSIGNED WORKOUT PLANS)        */}
       {/* ========================================================= */}
       {activeTab === 'MY_PLANS' && (
-        <div className="space-y-4">
+        <div className="space-y-5">
+          {/* Enhanced Search & Filter Dock */}
+          <div className="p-4 rounded-3xl bg-white border border-slate-200/90 shadow-xs space-y-3">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+              {/* Search input */}
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={planSearch}
+                  onChange={(e) => setPlanSearch(e.target.value)}
+                  placeholder="Tìm theo tiêu đề, bài tập, tên HLV..."
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50/90 pl-10 pr-9 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-emerald-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/15 transition-all"
+                />
+                {planSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setPlanSearch('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-0.5"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Sort selector */}
+              <div className="flex items-center gap-2 self-end md:self-auto shrink-0">
+                <span className="text-xs font-bold text-slate-500">Sắp xếp:</span>
+                <select
+                  value={dateSort}
+                  onChange={(e) => setDateSort(e.target.value as 'DESC' | 'ASC')}
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer"
+                >
+                  <option value="DESC">Mới nhất (Ngày tạo)</option>
+                  <option value="ASC">Cũ nhất (Ngày tạo)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Quick Date Chips */}
+            <div className="flex items-center justify-between pt-2.5 border-t border-slate-100 flex-wrap gap-2">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[11px] font-extrabold text-slate-400 mr-1 flex items-center gap-1 uppercase tracking-wider">
+                  <Filter className="w-3 h-3" /> Lọc ngày:
+                </span>
+                {(
+                  [
+                    { key: 'ALL', label: 'Tất cả' },
+                    { key: 'THIS_MONTH', label: 'Tháng này' },
+                    { key: 'LAST_MONTH', label: 'Tháng trước' },
+                  ] as const
+                ).map((chip) => {
+                  const active = planDateFilter === chip.key;
+                  return (
+                    <button
+                      key={chip.key}
+                      type="button"
+                      onClick={() => setPlanDateFilter(chip.key)}
+                      className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                        active
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-xs'
+                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {chip.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <span className="text-xs font-semibold text-slate-400">
+                Hiển thị <strong className="text-slate-800">{filteredAndSortedPlans.length}</strong> giáo án
+              </span>
+            </div>
+          </div>
+
+          {/* Cards or Empty State */}
           {isLoadingPlans ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {[1, 2, 3].map((n) => (
                 <div
                   key={n}
-                  className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 animate-pulse space-y-4"
+                  className="p-6 rounded-3xl bg-white border border-slate-200/80 animate-pulse space-y-4"
                 >
                   <div className="flex justify-between items-center">
-                    <div className="h-5 w-24 bg-slate-200 dark:bg-slate-800 rounded-lg" />
-                    <div className="h-4 w-16 bg-slate-200 dark:bg-slate-800 rounded-lg" />
+                    <div className="h-5 w-24 bg-slate-200 rounded-lg" />
+                    <div className="h-4 w-16 bg-slate-200 rounded-lg" />
                   </div>
-                  <div className="h-6 w-3/4 bg-slate-200 dark:bg-slate-800 rounded-lg" />
+                  <div className="h-6 w-3/4 bg-slate-200 rounded-lg" />
                   <div className="space-y-2">
-                    <div className="h-4 w-full bg-slate-100 dark:bg-slate-800 rounded-md" />
-                    <div className="h-4 w-5/6 bg-slate-100 dark:bg-slate-800 rounded-md" />
+                    <div className="h-4 w-full bg-slate-100 rounded-md" />
+                    <div className="h-4 w-5/6 bg-slate-100 rounded-md" />
                   </div>
                 </div>
               ))}
             </div>
-          ) : rawPlans.length === 0 ? (
+          ) : filteredAndSortedPlans.length === 0 ? (
             /* Empty State */
-            <div className="p-8 sm:p-12 text-center rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4 max-w-2xl mx-auto">
-              <div className="w-16 h-16 rounded-3xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto border border-emerald-100 dark:border-emerald-900/50 shadow-inner">
+            <div className="p-8 sm:p-14 text-center rounded-3xl bg-white border border-slate-200/90 shadow-xs space-y-4 max-w-2xl mx-auto">
+              <div className="w-16 h-16 rounded-3xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-100 shadow-inner">
                 <BookOpen className="w-8 h-8" />
               </div>
               <div className="space-y-1.5">
-                <h3 className="text-base font-extrabold text-slate-900 dark:text-slate-100">
-                  Chưa có giáo án riêng từ Huấn luyện viên
+                <h3 className="text-base font-black text-slate-900">
+                  {rawPlans.length === 0
+                    ? 'Chưa có giáo án riêng từ Huấn luyện viên'
+                    : 'Không tìm thấy giáo án phù hợp với bộ lọc'}
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
-                  Khi bạn đặt ca tập PT 1-1 hoặc được huấn luyện viên chỉ định bài tập, giáo án và lời dặn chi tiết của từng buổi sẽ tự động xuất hiện tại đây.
+                <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
+                  {rawPlans.length === 0
+                    ? 'Khi bạn hoàn thành ca tập PT 1-1 hoặc được huấn luyện viên chỉ định bài tập, giáo án và lời dặn chi tiết sẽ tự động xuất hiện tại đây.'
+                    : 'Thử tìm kiếm với từ khóa khác hoặc chuyển sang mốc thời gian "Tất cả".'}
                 </p>
               </div>
 
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('TEMPLATES')}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm active:scale-[0.98] cursor-pointer"
-                >
-                  <Layers className="w-4 h-4" />
-                  <span>Khám phá lộ trình 12 buổi chuẩn</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
+              {rawPlans.length === 0 && (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('TEMPLATES')}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#008b74] hover:bg-[#007360] text-white text-xs font-bold transition-all shadow-md active:scale-[0.98] cursor-pointer"
+                  >
+                    <Layers className="w-4 h-4" />
+                    <span>Khám phá lộ trình 12 buổi chuẩn</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
-            /* Cards Grid */
-            <>
-              {/* Filter / Sort bar */}
-              <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800">
-                <span className="text-xs font-bold text-slate-500">
-                  Tổng cộng: <strong className="text-slate-800 dark:text-slate-200">{sortedPlans.length}</strong> giáo án
-                </span>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-400">Sắp xếp:</span>
-                  <select
-                    value={dateSort}
-                    onChange={(e) => setDateSort(e.target.value as 'DESC' | 'ASC')}
-                    className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500/20"
-                  >
-                    <option value="DESC">Mới nhất (Ngày tạo)</option>
-                    <option value="ASC">Cũ nhất (Ngày tạo)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {sortedPlans.map((plan) => {
+            /* Modern Athletic Bento Grid */
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {filteredAndSortedPlans.map((plan) => {
                 const totalExercises = plan.exercises?.length || 0;
-                const coachName = plan.coach?.fullName || 'Huấn luyện viên';
+                const coachName = plan.coach?.fullName || 'Huấn luyện viên phụ trách';
                 const tagLabel = plan.template?.disciplineCode || 'Giáo án 1-1';
 
                 return (
                   <article
                     key={plan.id}
                     onClick={() => setSelectedPlan(plan)}
-                    className="group relative p-5 rounded-3xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200/90 dark:border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)] hover:border-emerald-300 dark:hover:border-emerald-700/80 transition-all duration-200 flex flex-col justify-between gap-4 cursor-pointer"
+                    className="group relative p-6 rounded-3xl bg-white border border-slate-200/90 shadow-xs hover:border-emerald-400 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between gap-4 cursor-pointer"
                   >
-                    <div className="space-y-3">
+                    <div className="space-y-3.5">
                       {/* Top Badges & Date */}
                       <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="px-2.5 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800 text-[10px] font-black uppercase tracking-wider">
-                            {tagLabel}
-                          </span>
-                        </div>
+                        <span className="px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-[10px] font-black uppercase tracking-wider">
+                          {tagLabel}
+                        </span>
 
-                        <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+                        <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
                           {vietnamDate(plan.createdAt)}
                         </span>
                       </div>
 
                       {/* Coach info bar */}
-                      <div className="flex items-center gap-2 pt-0.5">
-                        <div className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-black flex items-center justify-center shrink-0 border border-emerald-200/60">
+                      <div className="flex items-center gap-2.5 p-2 rounded-2xl bg-slate-50 border border-slate-100">
+                        <div className="w-7 h-7 rounded-full bg-[#008b74] text-white text-[11px] font-black flex items-center justify-center shrink-0">
                           {coachName.charAt(0).toUpperCase()}
                         </div>
-                        <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 truncate">
-                          HLV: <strong className="text-slate-900 dark:text-slate-100">{coachName}</strong>
-                        </span>
+                        <div className="min-w-0">
+                          <span className="text-[10px] font-bold text-slate-400 block uppercase">
+                            HLV Phụ trách
+                          </span>
+                          <p className="text-xs font-extrabold text-slate-800 truncate">
+                            {coachName}
+                          </p>
+                        </div>
                       </div>
 
                       {/* Title & Notes */}
                       <div>
-                        <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors leading-snug">
+                        <h3 className="text-base font-black text-slate-900 group-hover:text-[#008b74] transition-colors leading-snug">
                           {plan.title}
                         </h3>
                         {plan.notes && (
-                          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 italic">
-                            "{plan.notes}"
-                          </p>
+                          <div className="mt-2 p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/60 text-[11px] text-amber-900 line-clamp-2 italic">
+                            🎯 "{plan.notes}"
+                          </div>
                         )}
                       </div>
 
                       {/* Exercise Previews */}
-                      <div className="space-y-1.5 pt-1 border-t border-slate-100 dark:border-slate-800">
-                        <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 pb-0.5">
-                          <span>Nội dung bài tập ({totalExercises})</span>
+                      <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                        <div className="flex items-center justify-between text-[11px] font-black text-slate-400 pb-0.5 uppercase tracking-wider">
+                          <span>Nội dung bài tập</span>
+                          <span className="text-[#008b74]">{totalExercises} bài</span>
                         </div>
 
                         {plan.exercises?.slice(0, 3).map((ex, idx) => {
@@ -394,27 +513,27 @@ export const WorkoutPlansPage: React.FC = () => {
                           return (
                             <div
                               key={ex.id || idx}
-                              className="p-2 rounded-xl bg-slate-50/80 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2 text-xs"
+                              className="p-2.5 rounded-xl bg-slate-50/90 border border-slate-200/60 flex items-center justify-between gap-2 text-xs"
                             >
-                              <div className="min-w-0 flex items-center gap-1.5">
-                                <span className="w-4 h-4 rounded-full bg-white dark:bg-slate-700 text-slate-500 dark:text-slate-300 text-[9px] font-bold flex items-center justify-center shrink-0 border border-slate-200/60">
+                              <div className="min-w-0 flex items-center gap-2">
+                                <span className="w-5 h-5 rounded-lg bg-white text-slate-600 text-[10px] font-black flex items-center justify-center shrink-0 border border-slate-200">
                                   {idx + 1}
                                 </span>
-                                <span className="font-semibold text-slate-700 dark:text-slate-200 truncate">
+                                <span className="font-bold text-slate-800 truncate">
                                   {primary}
                                 </span>
                               </div>
 
-                              <div className="flex items-center gap-1 shrink-0 text-[10.5px] font-bold text-slate-500 dark:text-slate-400">
-                                <span className="text-emerald-600 dark:text-emerald-400">
+                              <div className="flex items-center gap-1.5 shrink-0 text-[11px] font-black">
+                                <span className="text-[#008b74]">
                                   {ex.sets || 3}h
                                 </span>
-                                <span>×</span>
-                                <span>
+                                <span className="text-slate-400">×</span>
+                                <span className="text-slate-600">
                                   {ex.reps || 10} {unitStr}
                                 </span>
                                 {ex.weightKg !== null && ex.weightKg !== undefined && Number(ex.weightKg) > 0 && (
-                                  <span className="text-amber-600 dark:text-amber-400 ml-1">
+                                  <span className="text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200 text-[10px]">
                                     {ex.weightKg}kg
                                   </span>
                                 )}
@@ -424,25 +543,24 @@ export const WorkoutPlansPage: React.FC = () => {
                         })}
 
                         {totalExercises > 3 && (
-                          <p className="text-[10px] font-semibold text-slate-400 pt-0.5">
-                            + {totalExercises - 3} bài tập khác trong buổi
+                          <p className="text-[11px] font-bold text-slate-400 pt-0.5 text-center">
+                            + {totalExercises - 3} bài tập chi tiết khác
                           </p>
                         )}
                       </div>
                     </div>
 
                     {/* Card Footer */}
-                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 group-hover:underline flex items-center gap-1">
+                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                      <span className="text-xs font-black text-[#008b74] group-hover:underline flex items-center gap-1">
                         Xem chi tiết giáo án
-                        <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                        <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                       </span>
                     </div>
                   </article>
                 );
               })}
             </div>
-          </>
           )}
         </div>
       )}
@@ -451,33 +569,35 @@ export const WorkoutPlansPage: React.FC = () => {
       {/* TAB 2: LỘ TRÌNH 12 BUỔI MẪU (BOXING / YOGA)               */}
       {/* ========================================================= */}
       {activeTab === 'TEMPLATES' && (
-        <div className="space-y-4">
+        <div className="space-y-5">
           {/* Controls Bar */}
-          <div className="p-4 rounded-3xl bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border border-white/60 dark:border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-3">
+          <div className="p-4 rounded-3xl bg-white border border-slate-200/90 shadow-xs space-y-3">
             <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-              {/* Discipline Switcher: Chỉ Boxing & Yoga */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+              {/* Discipline Switcher */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
                 <button
                   type="button"
                   onClick={() => setTemplateDiscipline('BOXING')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                  className={`px-4 py-2 rounded-2xl text-xs font-black transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
                     templateDiscipline === 'BOXING'
-                      ? 'bg-rose-600 text-white shadow-xs'
-                      : 'bg-white/80 dark:bg-slate-800 text-rose-700 hover:bg-rose-50 border border-rose-200/70'
+                      ? 'bg-rose-600 text-white shadow-md'
+                      : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
                   }`}
                 >
-                  Boxing (12 buổi)
+                  <span>🥊</span>
+                  <span>Boxing (Lộ trình 12 buổi)</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setTemplateDiscipline('YOGA')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                  className={`px-4 py-2 rounded-2xl text-xs font-black transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
                     templateDiscipline === 'YOGA'
-                      ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'bg-white/80 dark:bg-slate-800 text-indigo-700 hover:bg-indigo-50 border border-indigo-200/70'
+                      ? 'bg-indigo-600 text-white shadow-md'
+                      : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200'
                   }`}
                 >
-                  Yoga (12 buổi)
+                  <span>🧘</span>
+                  <span>Yoga (Lộ trình 12 buổi)</span>
                 </button>
               </div>
 
@@ -488,14 +608,14 @@ export const WorkoutPlansPage: React.FC = () => {
                   type="text"
                   value={templateSearch}
                   onChange={(e) => setTemplateSearch(e.target.value)}
-                  placeholder="Tìm kiếm bài tập, kỹ thuật trong giáo trình..."
-                  className="w-full rounded-xl border border-slate-200/80 bg-white/90 dark:bg-slate-800 pl-9 pr-8 py-1.5 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-hidden transition-all shadow-2xs"
+                  placeholder="Tìm kiếm bài tập trong giáo trình..."
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 pl-9 pr-8 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-emerald-500 focus:outline-hidden transition-all"
                 />
                 {templateSearch && (
                   <button
                     type="button"
                     onClick={() => setTemplateSearch('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -504,8 +624,8 @@ export const WorkoutPlansPage: React.FC = () => {
             </div>
 
             {/* Week Filter */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pt-2 border-t border-slate-100/80 dark:border-slate-800 pb-1">
-              <span className="text-[11px] font-bold text-slate-400 mr-1 shrink-0">
+            <div className="flex items-center gap-1.5 overflow-x-auto pt-2.5 border-t border-slate-100 pb-1">
+              <span className="text-[11px] font-black text-slate-400 mr-1 shrink-0 uppercase tracking-wider">
                 Tuần học:
               </span>
               {(['ALL', '1', '2', '3', '4'] as const).map((w) => (
@@ -513,10 +633,10 @@ export const WorkoutPlansPage: React.FC = () => {
                   key={w}
                   type="button"
                   onClick={() => setTemplateWeekFilter(w)}
-                  className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+                  className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer border ${
                     templateWeekFilter === w
-                      ? 'bg-emerald-600 text-white shadow-xs font-bold'
-                      : 'bg-slate-100/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 border border-slate-200/50'
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                      : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border-slate-200'
                   }`}
                 >
                   {w === 'ALL' ? 'Tất cả 4 tuần' : `Tuần ${w}`}
@@ -527,62 +647,62 @@ export const WorkoutPlansPage: React.FC = () => {
 
           {/* Templates Grid */}
           {isLoadingTemplates ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {[1, 2, 3].map((n) => (
                 <div
                   key={n}
-                  className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 animate-pulse space-y-4"
+                  className="p-6 rounded-3xl bg-white border border-slate-200 animate-pulse space-y-4"
                 >
-                  <div className="h-5 w-24 bg-slate-200 dark:bg-slate-800 rounded-lg" />
-                  <div className="h-6 w-3/4 bg-slate-200 dark:bg-slate-800 rounded-lg" />
-                  <div className="h-16 bg-slate-100 dark:bg-slate-800 rounded-xl" />
+                  <div className="h-5 w-24 bg-slate-200 rounded-lg" />
+                  <div className="h-6 w-3/4 bg-slate-200 rounded-lg" />
+                  <div className="h-16 bg-slate-100 rounded-xl" />
                 </div>
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {filteredTemplates.map((tpl) => (
                 <article
                   key={tpl.id}
                   onClick={() => setSelectedTemplate(tpl)}
-                  className="group relative p-5 rounded-3xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200/90 dark:border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)] hover:border-emerald-300 dark:hover:border-emerald-700 transition-all duration-200 flex flex-col justify-between gap-4 cursor-pointer"
+                  className="group relative p-6 rounded-3xl bg-white border border-slate-200/90 shadow-xs hover:border-emerald-400 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between gap-4 cursor-pointer"
                 >
-                  <div className="space-y-3">
+                  <div className="space-y-3.5">
                     <div className="flex items-center justify-between">
-                      <span className="px-2.5 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800 text-[10px] font-black uppercase tracking-wider">
+                      <span className="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-black uppercase tracking-wider">
                         {tpl.disciplineCode}
                       </span>
-                      <span className="text-[11px] font-bold text-slate-400">
+                      <span className="text-[11px] font-extrabold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
                         Tuần {tpl.weekNumber}
                       </span>
                     </div>
 
                     <div>
-                      <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 transition-colors leading-snug">
+                      <h4 className="text-base font-black text-slate-900 group-hover:text-emerald-600 transition-colors leading-snug">
                         {tpl.title}
                       </h4>
                       {tpl.description && (
-                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
+                        <p className="mt-1.5 text-xs text-slate-500 line-clamp-2">
                           {tpl.description}
                         </p>
                       )}
                     </div>
 
                     {/* Exercises Preview */}
-                    <div className="space-y-1.5 pt-1 border-t border-slate-100 dark:border-slate-800">
-                      <div className="text-[11px] font-bold text-slate-400 pb-0.5">
-                        {tpl.exercises?.length || 0} bài tập chuẩn
+                    <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                      <div className="text-[11px] font-black text-slate-400 pb-0.5 uppercase tracking-wider">
+                        {tpl.exercises?.length || 0} bài tập chuẩn hóa
                       </div>
 
                       {tpl.exercises?.slice(0, 3).map((ex, idx) => (
                         <div
                           key={ex.id || idx}
-                          className="p-2 rounded-xl bg-slate-50/80 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2 text-xs"
+                          className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/60 flex items-center justify-between gap-2 text-xs"
                         >
-                          <span className="font-semibold text-slate-700 dark:text-slate-300 truncate">
+                          <span className="font-bold text-slate-700 truncate">
                             {ex.exercise?.title}
                           </span>
-                          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
+                          <span className="text-[11px] font-black text-emerald-700 shrink-0">
                             {ex.sets || 3} hiệp × {ex.reps || 10}
                           </span>
                         </div>
@@ -590,10 +710,10 @@ export const WorkoutPlansPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 group-hover:underline flex items-center gap-1">
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-xs font-black text-emerald-600 group-hover:underline flex items-center gap-1">
                       Xem chi tiết đề cương
-                      <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                      <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                     </span>
                   </div>
                 </article>
@@ -608,7 +728,7 @@ export const WorkoutPlansPage: React.FC = () => {
       {/* ========================================================= */}
       {selectedPlan && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-md p-4 overflow-y-auto"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) setSelectedPlan(null);
           }}
@@ -616,18 +736,18 @@ export const WorkoutPlansPage: React.FC = () => {
           <div
             role="dialog"
             aria-modal="true"
-            className="flex w-full max-w-2xl max-h-[90vh] flex-col overflow-hidden rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+            className="flex w-full max-w-2xl max-h-[90vh] flex-col overflow-hidden rounded-[2.5rem] bg-white border border-slate-200 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
           >
             {/* Header */}
-            <div className="shrink-0 border-b border-slate-200/80 dark:border-slate-800 p-6 bg-slate-50/70 dark:bg-slate-800/50">
+            <div className="shrink-0 border-b border-slate-100 p-6 sm:p-7 bg-gradient-to-br from-slate-900 to-slate-950 text-white relative">
               <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0 space-y-2">
+                <div className="min-w-0 space-y-2.5">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 px-3 py-1 text-xs font-black uppercase">
+                    <span className="rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 text-xs font-black uppercase">
                       {selectedPlan.template?.disciplineCode || 'Giáo án cá nhân'}
                     </span>
                     {selectedPlan.template?.weekNumber && (
-                      <span className="rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 text-xs font-bold border border-slate-200 dark:border-slate-700">
+                      <span className="rounded-xl bg-slate-800 text-slate-300 px-2.5 py-1 text-xs font-bold border border-slate-700">
                         Tuần {selectedPlan.template.weekNumber}
                       </span>
                     )}
@@ -636,25 +756,25 @@ export const WorkoutPlansPage: React.FC = () => {
                     </span>
                   </div>
 
-                  <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-slate-100 leading-snug">
+                  <h2 className="text-xl sm:text-2xl font-black text-white leading-snug">
                     {selectedPlan.title}
                   </h2>
 
                   {/* Coach attribution */}
                   <div className="flex items-center gap-2 pt-1">
-                    <div className="w-6 h-6 rounded-full bg-emerald-600 text-white text-[10px] font-black flex items-center justify-center shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-emerald-500 text-slate-950 text-xs font-black flex items-center justify-center shrink-0">
                       {(selectedPlan.coach?.fullName || 'H').charAt(0).toUpperCase()}
                     </div>
-                    <span className="text-xs text-slate-600 dark:text-slate-300">
+                    <span className="text-xs text-slate-300">
                       Huấn luyện viên phụ trách:{' '}
-                      <strong className="text-slate-900 dark:text-slate-100">
+                      <strong className="text-white">
                         {selectedPlan.coach?.fullName || 'HLV chỉ định'}
                       </strong>
                     </span>
                   </div>
 
                   {selectedPlan.notes && (
-                    <div className="p-3 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-900/40 text-xs text-amber-900 dark:text-amber-300 italic">
+                    <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-200 italic">
                       🎯 <strong>Mục tiêu buổi tập:</strong> "{selectedPlan.notes}"
                     </div>
                   )}
@@ -663,7 +783,7 @@ export const WorkoutPlansPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setSelectedPlan(null)}
-                  className="rounded-2xl p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="rounded-full p-2 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -671,9 +791,9 @@ export const WorkoutPlansPage: React.FC = () => {
             </div>
 
             {/* Body */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-3.5">
-              <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider pb-1">
-                <span>Danh sách động tác ({selectedPlan.exercises?.length || 0})</span>
+            <div className="flex-1 overflow-y-auto p-6 sm:p-7 space-y-4">
+              <div className="flex items-center justify-between text-xs font-black text-slate-400 uppercase tracking-wider pb-1">
+                <span>Danh mục động tác ({selectedPlan.exercises?.length || 0})</span>
               </div>
 
               {selectedPlan.exercises?.map((ex, idx) => {
@@ -684,60 +804,63 @@ export const WorkoutPlansPage: React.FC = () => {
                 return (
                   <div
                     key={ex.id || idx}
-                    className="p-4 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/90 dark:border-slate-700 shadow-2xs space-y-3"
+                    className="p-5 rounded-3xl bg-slate-50/80 border border-slate-200/80 shadow-xs space-y-3.5 hover:bg-white transition-all"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-3 min-w-0">
-                        <span className="w-7 h-7 rounded-xl bg-slate-900 dark:bg-slate-700 text-white font-mono text-xs font-black flex items-center justify-center shrink-0">
+                        <span className="w-8 h-8 rounded-2xl bg-slate-900 text-white font-mono text-xs font-black flex items-center justify-center shrink-0 shadow-xs">
                           {String(idx + 1).padStart(2, '0')}
                         </span>
                         <div className="min-w-0">
-                          <h4 className="text-sm font-extrabold text-slate-900 dark:text-slate-100">
+                          <h4 className="text-sm font-black text-slate-900">
                             {primary}
                           </h4>
                           {secondary && (
-                            <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+                            <p className="text-[11px] font-semibold text-slate-400">
                               {secondary}
                             </p>
                           )}
                         </div>
                       </div>
 
-                      <span className="rounded-lg bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 px-2.5 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-300 shrink-0">
+                      <span className="rounded-xl bg-slate-200/80 border border-slate-300 px-2.5 py-1 text-[10px] font-black text-slate-700 shrink-0">
                         {translateCategory(ex.exercise?.category)}
                       </span>
                     </div>
 
                     {/* Metrics Pills */}
                     <div className="flex flex-wrap items-center gap-2 text-xs">
-                      <span className="px-2.5 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-200/60 dark:border-emerald-800">
+                      <span className="px-3 py-1 rounded-xl bg-emerald-50 text-emerald-800 font-extrabold border border-emerald-200">
                         {ex.sets || 3} hiệp
                       </span>
-                      <span className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold border border-slate-200/60">
+                      <span className="px-3 py-1 rounded-xl bg-slate-200/70 text-slate-800 font-extrabold border border-slate-300/70">
                         {ex.reps || 10} {unitStr}
                       </span>
                       {ex.weightKg !== null && ex.weightKg !== undefined && Number(ex.weightKg) > 0 && (
-                        <span className="px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 font-bold border border-amber-200/60">
+                        <span className="px-3 py-1 rounded-xl bg-amber-50 text-amber-800 font-extrabold border border-amber-200">
                           Tạ: {ex.weightKg} kg
                         </span>
                       )}
-                      <span className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                        ⏱ Nghỉ {ex.restSeconds || 60}s
+                      <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-600 font-semibold border border-slate-200 flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5 text-slate-400" />
+                        Nghỉ {ex.restSeconds || 60}s
                       </span>
-                      <span className="px-2.5 py-1 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-500 text-[11px]">
-                        🎯 {meta.muscleVi}
-                      </span>
+                      {meta.muscleVi && (
+                        <span className="px-3 py-1 rounded-xl bg-teal-50 text-teal-800 text-[11px] font-bold border border-teal-200">
+                          🎯 {meta.muscleVi}
+                        </span>
+                      )}
                     </div>
 
                     {/* Coach Feedback Box */}
                     {ex.coachFeedback && (
-                      <div className="p-3 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-800/60 text-xs text-emerald-900 dark:text-emerald-300 space-y-1">
-                        <div className="font-black flex items-center gap-1.5 text-emerald-800 dark:text-emerald-200">
-                          <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                      <div className="p-3.5 rounded-2xl bg-emerald-50/90 border border-emerald-200 text-xs text-emerald-950 space-y-1">
+                        <div className="font-black flex items-center gap-1.5 text-emerald-800">
+                          <MessageSquare className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                           <span>Lời dặn của Huấn luyện viên:</span>
                         </div>
-                        <p className="leading-relaxed pl-5 font-medium">
-                          {ex.coachFeedback}
+                        <p className="leading-relaxed pl-5 font-semibold text-emerald-900">
+                          "{ex.coachFeedback}"
                         </p>
                       </div>
                     )}
@@ -747,13 +870,13 @@ export const WorkoutPlansPage: React.FC = () => {
             </div>
 
             {/* Footer */}
-            <div className="shrink-0 border-t border-slate-200 dark:border-slate-800 p-4 bg-slate-50/50 dark:bg-slate-800/40">
+            <div className="shrink-0 border-t border-slate-100 p-4 bg-slate-50/80">
               <button
                 type="button"
                 onClick={() => setSelectedPlan(null)}
-                className="w-full py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-bold transition-all cursor-pointer"
+                className="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black transition-all cursor-pointer shadow-md"
               >
-                Đóng
+                Đóng giáo án
               </button>
             </div>
           </div>
@@ -765,7 +888,7 @@ export const WorkoutPlansPage: React.FC = () => {
       {/* ========================================================= */}
       {selectedTemplate && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-md p-4 overflow-y-auto"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) setSelectedTemplate(null);
           }}
@@ -773,27 +896,27 @@ export const WorkoutPlansPage: React.FC = () => {
           <div
             role="dialog"
             aria-modal="true"
-            className="flex w-full max-w-2xl max-h-[90vh] flex-col overflow-hidden rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+            className="flex w-full max-w-2xl max-h-[90vh] flex-col overflow-hidden rounded-[2.5rem] bg-white border border-slate-200 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
           >
             {/* Header */}
-            <div className="shrink-0 border-b border-slate-200/80 dark:border-slate-800 p-6 bg-slate-50/70 dark:bg-slate-800/50">
+            <div className="shrink-0 border-b border-slate-100 p-6 sm:p-7 bg-gradient-to-br from-slate-900 to-slate-950 text-white relative">
               <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0 space-y-1.5">
+                <div className="min-w-0 space-y-2">
                   <div className="flex items-center gap-2">
-                    <span className="rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 text-xs font-bold border border-slate-200 dark:border-slate-700">
+                    <span className="rounded-xl bg-slate-800 text-slate-300 px-3 py-1 text-xs font-bold border border-slate-700">
                       Tuần {selectedTemplate.weekNumber}
                     </span>
-                    <span className="rounded-xl bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 text-xs font-bold uppercase">
+                    <span className="rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2.5 py-1 text-xs font-black uppercase">
                       {selectedTemplate.disciplineCode}
                     </span>
                   </div>
 
-                  <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-slate-100 leading-snug">
+                  <h2 className="text-xl sm:text-2xl font-black text-white leading-snug">
                     {selectedTemplate.title}
                   </h2>
 
                   {selectedTemplate.description && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    <p className="text-xs text-slate-300 leading-relaxed">
                       {selectedTemplate.description}
                     </p>
                   )}
@@ -802,7 +925,7 @@ export const WorkoutPlansPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setSelectedTemplate(null)}
-                  className="rounded-2xl p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="rounded-full p-2 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -810,9 +933,9 @@ export const WorkoutPlansPage: React.FC = () => {
             </div>
 
             {/* Body */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-3.5">
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider pb-1">
-                Danh sách bài tập ({selectedTemplate.exercises?.length || 0})
+            <div className="flex-1 overflow-y-auto p-6 sm:p-7 space-y-4">
+              <div className="text-xs font-black text-slate-400 uppercase tracking-wider pb-1">
+                Danh sách bài tập chuẩn ({selectedTemplate.exercises?.length || 0})
               </div>
 
               {selectedTemplate.exercises?.map((ex, idx) => {
@@ -823,48 +946,51 @@ export const WorkoutPlansPage: React.FC = () => {
                 return (
                   <div
                     key={ex.id || idx}
-                    className="p-4 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/90 dark:border-slate-700 shadow-2xs space-y-2.5"
+                    className="p-5 rounded-3xl bg-slate-50/80 border border-slate-200/80 shadow-xs space-y-3 hover:bg-white transition-all"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-3 min-w-0">
-                        <span className="w-7 h-7 rounded-xl bg-slate-900 dark:bg-slate-700 text-white font-mono text-xs font-black flex items-center justify-center shrink-0">
+                        <span className="w-8 h-8 rounded-2xl bg-slate-900 text-white font-mono text-xs font-black flex items-center justify-center shrink-0 shadow-xs">
                           {String(idx + 1).padStart(2, '0')}
                         </span>
                         <div className="min-w-0">
-                          <h4 className="text-sm font-extrabold text-slate-900 dark:text-slate-100">
+                          <h4 className="text-sm font-black text-slate-900">
                             {primary}
                           </h4>
                           {secondary && (
-                            <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+                            <p className="text-[11px] font-semibold text-slate-400">
                               {secondary}
                             </p>
                           )}
                         </div>
                       </div>
 
-                      <span className="rounded-lg bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 px-2.5 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-300 shrink-0">
+                      <span className="rounded-xl bg-slate-200/80 border border-slate-300 px-2.5 py-1 text-[10px] font-black text-slate-700 shrink-0">
                         {translateCategory(ex.exercise?.category)}
                       </span>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 text-xs">
-                      <span className="px-2.5 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-200/60">
+                      <span className="px-3 py-1 rounded-xl bg-emerald-50 text-emerald-800 font-extrabold border border-emerald-200">
                         {ex.sets || 3} hiệp
                       </span>
-                      <span className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold border border-slate-200/60">
+                      <span className="px-3 py-1 rounded-xl bg-slate-200/70 text-slate-800 font-extrabold border border-slate-300/70">
                         {ex.reps || 10} {unitStr}
                       </span>
                       {ex.weightKg !== null && ex.weightKg !== undefined && Number(ex.weightKg) > 0 && (
-                        <span className="px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 font-bold border border-amber-200/60">
+                        <span className="px-3 py-1 rounded-xl bg-amber-50 text-amber-800 font-extrabold border border-amber-200">
                           Tạ: {ex.weightKg} kg
                         </span>
                       )}
-                      <span className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                        ⏱ Nghỉ {ex.restSeconds || 60}s
+                      <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-600 font-semibold border border-slate-200 flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5 text-slate-400" />
+                        Nghỉ {ex.restSeconds || 60}s
                       </span>
-                      <span className="px-2.5 py-1 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-500 text-[11px]">
-                        🎯 {meta.muscleVi}
-                      </span>
+                      {meta.muscleVi && (
+                        <span className="px-3 py-1 rounded-xl bg-teal-50 text-teal-800 text-[11px] font-bold border border-teal-200">
+                          🎯 {meta.muscleVi}
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
@@ -872,13 +998,13 @@ export const WorkoutPlansPage: React.FC = () => {
             </div>
 
             {/* Footer */}
-            <div className="shrink-0 border-t border-slate-200 dark:border-slate-800 p-4 bg-slate-50/50 dark:bg-slate-800/40">
+            <div className="shrink-0 border-t border-slate-100 p-4 bg-slate-50/80">
               <button
                 type="button"
                 onClick={() => setSelectedTemplate(null)}
-                className="w-full py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-bold transition-all cursor-pointer"
+                className="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black transition-all cursor-pointer shadow-md"
               >
-                Đóng
+                Đóng đề cương
               </button>
             </div>
           </div>
