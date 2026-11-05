@@ -12,6 +12,8 @@ import {
   Calendar,
   Filter,
   Clock,
+  Target,
+  ShieldCheck,
 } from 'lucide-react';
 import { apiClient } from '@/services/api-client';
 import { vietnamDate } from '@/lib/date';
@@ -128,7 +130,34 @@ export const WorkoutPlansPage: React.FC = () => {
     },
   });
 
-  // 2. Fetch official 12-session template roadmaps
+  // 2. Fetch coaches list to resolve coachId to Coach's actual Name
+  const { data: coachesList = [] } = useQuery({
+    queryKey: ['coaches', 'all-list'],
+    queryFn: async () => {
+      try {
+        const res = await apiClient.get<any>('/coaches');
+        const data = res.data;
+        return Array.isArray(data) ? data : [];
+      } catch {
+        return [];
+      }
+    },
+  });
+
+  // 3. Fetch member profile to get assigned coach fallback from subscription
+  const { data: memberProfile } = useQuery({
+    queryKey: ['member', 'profile-subscription-coach'],
+    queryFn: async () => {
+      try {
+        const res = await apiClient.get<any>('/users/me');
+        return res.data;
+      } catch {
+        return null;
+      }
+    },
+  });
+
+  // 4. Fetch official 12-session template roadmaps
   const {
     data: rawTemplates = [],
     isLoading: isLoadingTemplates,
@@ -143,6 +172,72 @@ export const WorkoutPlansPage: React.FC = () => {
     },
   });
 
+  // Cache of dynamically fetched coach names from /users/:id
+  const [coachUserMap, setCoachUserMap] = useState<Record<string, string>>({});
+
+  // Build high-performance lookup map of coaches
+  const coachMap = useMemo(() => {
+    const map = new Map<string, string>();
+    coachesList.forEach((c: any) => {
+      if (c.id && c.fullName) map.set(c.id, c.fullName);
+      if (c.userId && c.fullName) map.set(c.userId, c.fullName);
+      if (c.coachProfile?.id && c.fullName) map.set(c.coachProfile.id, c.fullName);
+      if (c.coachProfile?.userId && c.fullName) map.set(c.coachProfile.userId, c.fullName);
+    });
+    return map;
+  }, [coachesList]);
+
+  // For any plan that has a coachId not yet found, fetch /users/:id
+  useEffect(() => {
+    rawPlans.forEach((plan) => {
+      const cId = plan.coachId;
+      if (!cId) return;
+      const existingName = plan.coach?.fullName?.trim();
+      if (
+        existingName &&
+        existingName !== 'Huấn luyện viên phụ trách' &&
+        existingName !== 'HLV phụ trách' &&
+        existingName !== 'HLV chỉ định'
+      ) {
+        return;
+      }
+      if (coachMap.has(cId) || coachUserMap[cId]) return;
+
+      void apiClient
+        .get<any>(`/users/${cId}`)
+        .then((res) => {
+          if (res.data?.fullName) {
+            setCoachUserMap((prev) => ({ ...prev, [cId]: res.data.fullName }));
+          }
+        })
+        .catch(() => {});
+    });
+  }, [rawPlans, coachMap, coachUserMap]);
+
+  // Helper to reliably resolve the real Coach Name
+  const resolveCoachName = (plan: MemberWorkoutPlanItem): string => {
+    const directName = plan.coach?.fullName?.trim();
+    if (
+      directName &&
+      directName !== 'Huấn luyện viên phụ trách' &&
+      directName !== 'HLV phụ trách' &&
+      directName !== 'HLV chỉ định'
+    ) {
+      return directName;
+    }
+    if (plan.coachId) {
+      if (coachMap.has(plan.coachId)) return coachMap.get(plan.coachId)!;
+      if (coachUserMap[plan.coachId]) return coachUserMap[plan.coachId];
+    }
+    const assignedCoach =
+      memberProfile?.subscriptions?.find((s: any) => s.assignedCoach?.fullName)?.assignedCoach?.fullName ||
+      memberProfile?.subscriptions?.[0]?.assignedCoach?.fullName;
+    if (assignedCoach) {
+      return assignedCoach;
+    }
+    return 'Huấn luyện viên PT';
+  };
+
   // Filtered and Sorted assigned plans
   const filteredAndSortedPlans = useMemo(() => {
     let list = [...rawPlans];
@@ -151,12 +246,14 @@ export const WorkoutPlansPage: React.FC = () => {
     if (planSearch.trim()) {
       const q = planSearch.toLowerCase().trim();
       list = list.filter((p) => {
+        const cName = resolveCoachName(p).toLowerCase();
         const titleMatch = p.title?.toLowerCase().includes(q);
         const notesMatch = p.notes?.toLowerCase().includes(q);
-        const coachMatch = p.coach?.fullName?.toLowerCase().includes(q);
-        const exerciseMatch = p.exercises?.some((ex) =>
-          ex.exercise?.title?.toLowerCase().includes(q) ||
-          ex.exercise?.category?.toLowerCase().includes(q)
+        const coachMatch = cName.includes(q);
+        const exerciseMatch = p.exercises?.some(
+          (ex) =>
+            ex.exercise?.title?.toLowerCase().includes(q) ||
+            ex.exercise?.category?.toLowerCase().includes(q)
         );
         return titleMatch || notesMatch || coachMatch || exerciseMatch;
       });
@@ -189,7 +286,7 @@ export const WorkoutPlansPage: React.FC = () => {
     });
 
     return list;
-  }, [rawPlans, planSearch, planDateFilter, dateSort]);
+  }, [rawPlans, planSearch, planDateFilter, dateSort, coachMap, coachUserMap, memberProfile]);
 
   // Filtered Templates
   const filteredTemplates = useMemo(() => {
@@ -326,7 +423,7 @@ export const WorkoutPlansPage: React.FC = () => {
                   type="text"
                   value={planSearch}
                   onChange={(e) => setPlanSearch(e.target.value)}
-                  placeholder="Tìm theo tiêu đề, bài tập, tên HLV..."
+                  placeholder="Tìm theo tên HLV, tiêu đề, bài tập..."
                   className="w-full rounded-2xl border border-slate-200 bg-slate-50/90 pl-10 pr-9 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-emerald-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/15 transition-all"
                 />
                 {planSearch && (
@@ -449,8 +546,8 @@ export const WorkoutPlansPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {filteredAndSortedPlans.map((plan) => {
                 const totalExercises = plan.exercises?.length || 0;
-                const coachName = plan.coach?.fullName || 'Huấn luyện viên phụ trách';
-                const tagLabel = plan.template?.disciplineCode || 'Giáo án 1-1';
+                const coachName = resolveCoachName(plan);
+                const tagLabel = plan.template?.disciplineCode || 'Giáo án cá nhân 1-1';
 
                 return (
                   <article
@@ -471,16 +568,16 @@ export const WorkoutPlansPage: React.FC = () => {
                         </span>
                       </div>
 
-                      {/* Coach info bar */}
-                      <div className="flex items-center gap-2.5 p-2 rounded-2xl bg-slate-50 border border-slate-100">
-                        <div className="w-7 h-7 rounded-full bg-[#008b74] text-white text-[11px] font-black flex items-center justify-center shrink-0">
+                      {/* Coach info bar: CLEARLY DISPLAYS ACTUAL COACH'S FULL NAME */}
+                      <div className="flex items-center gap-2.5 p-2.5 rounded-2xl bg-gradient-to-r from-slate-50 to-emerald-50/40 border border-slate-200/70">
+                        <div className="w-8 h-8 rounded-full bg-[#008b74] text-white text-xs font-black flex items-center justify-center shrink-0 shadow-xs ring-2 ring-emerald-500/20">
                           {coachName.charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <span className="text-[10px] font-bold text-slate-400 block uppercase">
-                            HLV Phụ trách
+                          <span className="text-[10px] font-extrabold text-slate-400 block uppercase tracking-wider">
+                            Huấn luyện viên phụ trách
                           </span>
-                          <p className="text-xs font-extrabold text-slate-800 truncate">
+                          <p className="text-xs font-black text-slate-900 truncate">
                             {coachName}
                           </p>
                         </div>
@@ -492,7 +589,7 @@ export const WorkoutPlansPage: React.FC = () => {
                           {plan.title}
                         </h3>
                         {plan.notes && (
-                          <div className="mt-2 p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/60 text-[11px] text-amber-900 line-clamp-2 italic">
+                          <div className="mt-2 p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/60 text-[11px] text-amber-900 line-clamp-2 italic font-medium">
                             🎯 "{plan.notes}"
                           </div>
                         )}
@@ -724,171 +821,225 @@ export const WorkoutPlansPage: React.FC = () => {
       )}
 
       {/* ========================================================= */}
-      {/* MODAL 1: CHI TIẾT GIÁO ÁN HỌC VIÊN                        */}
+      {/* MODAL 1: CHI TIẾT GIÁO ÁN HỌC VIÊN (REDESIGNED ULTRA-SLEEK) */}
       {/* ========================================================= */}
-      {selectedPlan && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-md p-4 overflow-y-auto"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setSelectedPlan(null);
-          }}
-        >
+      {selectedPlan && (() => {
+        const modalCoachName = resolveCoachName(selectedPlan);
+        const exercisesCount = selectedPlan.exercises?.length || 0;
+        const totalSets = selectedPlan.exercises?.reduce((sum, e) => sum + (e.sets || 3), 0) || 0;
+
+        return (
           <div
-            role="dialog"
-            aria-modal="true"
-            className="flex w-full max-w-2xl max-h-[90vh] flex-col overflow-hidden rounded-[2.5rem] bg-white border border-slate-200 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 sm:p-6 overflow-y-auto"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) setSelectedPlan(null);
+            }}
           >
-            {/* Header */}
-            <div className="shrink-0 border-b border-slate-100 p-6 sm:p-7 bg-gradient-to-br from-slate-900 to-slate-950 text-white relative">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0 space-y-2.5">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 text-xs font-black uppercase">
-                      {selectedPlan.template?.disciplineCode || 'Giáo án cá nhân'}
-                    </span>
-                    {selectedPlan.template?.weekNumber && (
-                      <span className="rounded-xl bg-slate-800 text-slate-300 px-2.5 py-1 text-xs font-bold border border-slate-700">
-                        Tuần {selectedPlan.template.weekNumber}
+            <div
+              role="dialog"
+              aria-modal="true"
+              className="flex w-full max-w-3xl max-h-[92vh] flex-col overflow-hidden rounded-[2.5rem] bg-white border border-slate-200 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+            >
+              {/* Header with athletic dark gradient & glow */}
+              <div className="shrink-0 border-b border-slate-800 p-6 sm:p-8 bg-gradient-to-br from-slate-950 via-[#07171a] to-[#041d1a] text-white relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+                <div className="relative z-10 flex items-start justify-between gap-4">
+                  <div className="min-w-0 space-y-3">
+                    {/* Top Badges */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 text-xs font-black uppercase tracking-wider">
+                        {selectedPlan.template?.disciplineCode || 'Giáo án cá nhân 1-1'}
                       </span>
-                    )}
-                    <span className="text-xs font-medium text-slate-400">
-                      Lập ngày: {vietnamDate(selectedPlan.createdAt)}
-                    </span>
-                  </div>
-
-                  <h2 className="text-xl sm:text-2xl font-black text-white leading-snug">
-                    {selectedPlan.title}
-                  </h2>
-
-                  {/* Coach attribution */}
-                  <div className="flex items-center gap-2 pt-1">
-                    <div className="w-7 h-7 rounded-full bg-emerald-500 text-slate-950 text-xs font-black flex items-center justify-center shrink-0">
-                      {(selectedPlan.coach?.fullName || 'H').charAt(0).toUpperCase()}
-                    </div>
-                    <span className="text-xs text-slate-300">
-                      Huấn luyện viên phụ trách:{' '}
-                      <strong className="text-white">
-                        {selectedPlan.coach?.fullName || 'HLV chỉ định'}
-                      </strong>
-                    </span>
-                  </div>
-
-                  {selectedPlan.notes && (
-                    <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-200 italic">
-                      🎯 <strong>Mục tiêu buổi tập:</strong> "{selectedPlan.notes}"
-                    </div>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setSelectedPlan(null)}
-                  className="rounded-full p-2 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Body */}
-            <div className="flex-1 overflow-y-auto p-6 sm:p-7 space-y-4">
-              <div className="flex items-center justify-between text-xs font-black text-slate-400 uppercase tracking-wider pb-1">
-                <span>Danh mục động tác ({selectedPlan.exercises?.length || 0})</span>
-              </div>
-
-              {selectedPlan.exercises?.map((ex, idx) => {
-                const meta = parseExerciseInstructions(ex.exercise?.instructions);
-                const { primary, secondary } = parseExerciseTitle(ex.exercise?.title);
-                const unitStr = meta.unitVi || 'lần';
-
-                return (
-                  <div
-                    key={ex.id || idx}
-                    className="p-5 rounded-3xl bg-slate-50/80 border border-slate-200/80 shadow-xs space-y-3.5 hover:bg-white transition-all"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3 min-w-0">
-                        <span className="w-8 h-8 rounded-2xl bg-slate-900 text-white font-mono text-xs font-black flex items-center justify-center shrink-0 shadow-xs">
-                          {String(idx + 1).padStart(2, '0')}
+                      {selectedPlan.template?.weekNumber && (
+                        <span className="rounded-xl bg-slate-800 text-slate-300 px-2.5 py-1 text-xs font-bold border border-slate-700">
+                          Tuần {selectedPlan.template.weekNumber}
                         </span>
-                        <div className="min-w-0">
-                          <h4 className="text-sm font-black text-slate-900">
-                            {primary}
-                          </h4>
-                          {secondary && (
-                            <p className="text-[11px] font-semibold text-slate-400">
-                              {secondary}
-                            </p>
-                          )}
+                      )}
+                      <span className="text-xs font-medium text-slate-400 flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                        Lập ngày {vietnamDate(selectedPlan.createdAt)}
+                      </span>
+                    </div>
+
+                    {/* Plan Title */}
+                    <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight tracking-tight">
+                      {selectedPlan.title}
+                    </h2>
+
+                    {/* Coach attribution - PROMINENT ACTUAL COACH NAME */}
+                    <div className="inline-flex items-center gap-3 p-2.5 pr-4 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-inner">
+                      <div className="w-9 h-9 rounded-xl bg-emerald-500 text-slate-950 text-sm font-black flex items-center justify-center shrink-0 shadow-md">
+                        {modalCoachName.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-extrabold text-slate-400 block uppercase tracking-wider">
+                          Huấn luyện viên phụ trách
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-black text-emerald-300">
+                            {modalCoachName}
+                          </span>
+                          <ShieldCheck className="w-4 h-4 text-emerald-400" />
                         </div>
                       </div>
-
-                      <span className="rounded-xl bg-slate-200/80 border border-slate-300 px-2.5 py-1 text-[10px] font-black text-slate-700 shrink-0">
-                        {translateCategory(ex.exercise?.category)}
-                      </span>
                     </div>
 
-                    {/* Metrics Pills */}
-                    <div className="flex flex-wrap items-center gap-2 text-xs">
-                      <span className="px-3 py-1 rounded-xl bg-emerald-50 text-emerald-800 font-extrabold border border-emerald-200">
-                        {ex.sets || 3} hiệp
-                      </span>
-                      <span className="px-3 py-1 rounded-xl bg-slate-200/70 text-slate-800 font-extrabold border border-slate-300/70">
-                        {ex.reps || 10} {unitStr}
-                      </span>
-                      {ex.weightKg !== null && ex.weightKg !== undefined && Number(ex.weightKg) > 0 && (
-                        <span className="px-3 py-1 rounded-xl bg-amber-50 text-amber-800 font-extrabold border border-amber-200">
-                          Tạ: {ex.weightKg} kg
-                        </span>
-                      )}
-                      <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-600 font-semibold border border-slate-200 flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5 text-slate-400" />
-                        Nghỉ {ex.restSeconds || 60}s
-                      </span>
-                      {meta.muscleVi && (
-                        <span className="px-3 py-1 rounded-xl bg-teal-50 text-teal-800 text-[11px] font-bold border border-teal-200">
-                          🎯 {meta.muscleVi}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Coach Feedback Box */}
-                    {ex.coachFeedback && (
-                      <div className="p-3.5 rounded-2xl bg-emerald-50/90 border border-emerald-200 text-xs text-emerald-950 space-y-1">
-                        <div className="font-black flex items-center gap-1.5 text-emerald-800">
-                          <MessageSquare className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                          <span>Lời dặn của Huấn luyện viên:</span>
+                    {/* Session Notes / Target Callout */}
+                    {selectedPlan.notes && (
+                      <div className="p-3.5 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 text-xs text-emerald-200 space-y-1">
+                        <div className="flex items-center gap-1.5 font-bold text-emerald-400 uppercase tracking-wide text-[10px]">
+                          <Target className="w-3.5 h-3.5" />
+                          <span>Mục tiêu buổi tập:</span>
                         </div>
-                        <p className="leading-relaxed pl-5 font-semibold text-emerald-900">
-                          "{ex.coachFeedback}"
+                        <p className="leading-relaxed font-semibold italic pl-5 text-emerald-100">
+                          "{selectedPlan.notes}"
                         </p>
                       </div>
                     )}
                   </div>
-                );
-              })}
-            </div>
 
-            {/* Footer */}
-            <div className="shrink-0 border-t border-slate-100 p-4 bg-slate-50/80">
-              <button
-                type="button"
-                onClick={() => setSelectedPlan(null)}
-                className="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black transition-all cursor-pointer shadow-md"
-              >
-                Đóng giáo án
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPlan(null)}
+                    className="rounded-2xl p-2.5 text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 transition-all cursor-pointer shrink-0"
+                    title="Đóng modal"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Quick Summary Stats Ribbon */}
+                <div className="grid grid-cols-3 gap-2 pt-4 mt-4 border-t border-slate-800/80 text-center">
+                  <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Tổng bài tập</span>
+                    <span className="text-sm font-black text-white">{exercisesCount} bài</span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Tổng khối lượng</span>
+                    <span className="text-sm font-black text-emerald-400">{totalSets} hiệp</span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Hình thức</span>
+                    <span className="text-sm font-black text-amber-300">Kèm 1-1</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Body: Exercise Matrix */}
+              <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-4 bg-slate-50/60">
+                <div className="flex items-center justify-between text-xs font-black text-slate-500 uppercase tracking-wider pb-1">
+                  <span>Chi tiết danh mục động tác ({exercisesCount})</span>
+                  <span className="text-slate-400 font-semibold normal-case">Thực hiện theo thứ tự 01 → {exercisesCount}</span>
+                </div>
+
+                {selectedPlan.exercises?.map((ex, idx) => {
+                  const meta = parseExerciseInstructions(ex.exercise?.instructions);
+                  const { primary, secondary } = parseExerciseTitle(ex.exercise?.title);
+                  const unitStr = meta.unitVi || 'lần';
+
+                  return (
+                    <div
+                      key={ex.id || idx}
+                      className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/90 shadow-xs space-y-4 hover:border-emerald-300 hover:shadow-md transition-all"
+                    >
+                      {/* Exercise Header */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3.5 min-w-0">
+                          <span className="w-9 h-9 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white font-mono text-xs font-black flex items-center justify-center shrink-0 shadow-md">
+                            {String(idx + 1).padStart(2, '0')}
+                          </span>
+                          <div className="min-w-0">
+                            <h4 className="text-base font-black text-slate-900 leading-snug">
+                              {primary}
+                            </h4>
+                            {secondary && (
+                              <p className="text-xs font-semibold text-slate-400 mt-0.5">
+                                {secondary}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <span className="rounded-xl bg-slate-100 border border-slate-200 px-3 py-1 text-[11px] font-black text-slate-700 shrink-0 uppercase tracking-wide">
+                          {translateCategory(ex.exercise?.category)}
+                        </span>
+                      </div>
+
+                      {/* Dose Matrix Pills */}
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                        <span className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 font-black border border-emerald-200/80 shadow-2xs">
+                          {ex.sets || 3} hiệp
+                        </span>
+                        <span className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-800 font-extrabold border border-slate-200">
+                          {ex.reps || 10} {unitStr}
+                        </span>
+                        {ex.weightKg !== null && ex.weightKg !== undefined && Number(ex.weightKg) > 0 && (
+                          <span className="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-900 font-black border border-amber-200 flex items-center gap-1 shadow-2xs">
+                            <span>🏋️</span>
+                            <span>Mức tạ: {ex.weightKg} kg</span>
+                          </span>
+                        )}
+                        <span className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 font-semibold border border-slate-200 flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Nghỉ {ex.restSeconds || 60}s</span>
+                        </span>
+                        {meta.muscleVi && (
+                          <span className="px-3 py-1.5 rounded-xl bg-teal-50 text-teal-800 text-xs font-bold border border-teal-200">
+                            🎯 {meta.muscleVi}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Instructions / Technique Guide */}
+                      {meta.instructionsText && (
+                        <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/60 text-xs text-slate-600 leading-relaxed">
+                          <span className="font-bold text-slate-700 block mb-0.5">Hướng dẫn kỹ thuật:</span>
+                          <p>{meta.instructionsText}</p>
+                        </div>
+                      )}
+
+                      {/* Coach Personalized Feedback Callout */}
+                      {ex.coachFeedback && (
+                        <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50/60 border border-emerald-200 text-xs text-emerald-950 space-y-1.5 shadow-2xs">
+                          <div className="font-black flex items-center gap-1.5 text-emerald-900">
+                            <MessageSquare className="w-4 h-4 text-emerald-700 shrink-0" />
+                            <span>Lời dặn riêng từ HLV {modalCoachName}:</span>
+                          </div>
+                          <p className="leading-relaxed pl-5 font-semibold text-emerald-950 text-xs italic">
+                            "{ex.coachFeedback}"
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="shrink-0 border-t border-slate-200 p-4 sm:p-5 bg-white flex items-center justify-between gap-4">
+                <span className="text-xs text-slate-400 font-medium hidden sm:block">
+                  Giáo án được thiết kế chuyên biệt cho thể trạng của bạn bởi HLV {modalCoachName}.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPlan(null)}
+                  className="w-full sm:w-auto px-8 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black transition-all cursor-pointer shadow-md ml-auto"
+                >
+                  Đóng giáo án
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ========================================================= */}
       {/* MODAL 2: CHI TIẾT BUỔI HỌC MẪU (TEMPLATE SESSION)          */}
       {/* ========================================================= */}
       {selectedTemplate && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-md p-4 overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 sm:p-6 overflow-y-auto"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) setSelectedTemplate(null);
           }}
@@ -896,12 +1047,12 @@ export const WorkoutPlansPage: React.FC = () => {
           <div
             role="dialog"
             aria-modal="true"
-            className="flex w-full max-w-2xl max-h-[90vh] flex-col overflow-hidden rounded-[2.5rem] bg-white border border-slate-200 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+            className="flex w-full max-w-3xl max-h-[92vh] flex-col overflow-hidden rounded-[2.5rem] bg-white border border-slate-200 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
           >
             {/* Header */}
-            <div className="shrink-0 border-b border-slate-100 p-6 sm:p-7 bg-gradient-to-br from-slate-900 to-slate-950 text-white relative">
+            <div className="shrink-0 border-b border-slate-800 p-6 sm:p-8 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white relative">
               <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0 space-y-2">
+                <div className="min-w-0 space-y-2.5">
                   <div className="flex items-center gap-2">
                     <span className="rounded-xl bg-slate-800 text-slate-300 px-3 py-1 text-xs font-bold border border-slate-700">
                       Tuần {selectedTemplate.weekNumber}
@@ -911,12 +1062,12 @@ export const WorkoutPlansPage: React.FC = () => {
                     </span>
                   </div>
 
-                  <h2 className="text-xl sm:text-2xl font-black text-white leading-snug">
+                  <h2 className="text-2xl sm:text-3xl font-black text-white leading-snug">
                     {selectedTemplate.title}
                   </h2>
 
                   {selectedTemplate.description && (
-                    <p className="text-xs text-slate-300 leading-relaxed">
+                    <p className="text-xs text-slate-300 leading-relaxed max-w-xl">
                       {selectedTemplate.description}
                     </p>
                   )}
@@ -925,7 +1076,7 @@ export const WorkoutPlansPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setSelectedTemplate(null)}
-                  className="rounded-full p-2 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+                  className="rounded-2xl p-2.5 text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 transition-colors cursor-pointer shrink-0"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -933,8 +1084,8 @@ export const WorkoutPlansPage: React.FC = () => {
             </div>
 
             {/* Body */}
-            <div className="flex-1 overflow-y-auto p-6 sm:p-7 space-y-4">
-              <div className="text-xs font-black text-slate-400 uppercase tracking-wider pb-1">
+            <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-4 bg-slate-50/60">
+              <div className="text-xs font-black text-slate-500 uppercase tracking-wider pb-1">
                 Danh sách bài tập chuẩn ({selectedTemplate.exercises?.length || 0})
               </div>
 
@@ -946,7 +1097,7 @@ export const WorkoutPlansPage: React.FC = () => {
                 return (
                   <div
                     key={ex.id || idx}
-                    className="p-5 rounded-3xl bg-slate-50/80 border border-slate-200/80 shadow-xs space-y-3 hover:bg-white transition-all"
+                    className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/90 shadow-xs space-y-3.5 hover:bg-white transition-all"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-3 min-w-0">
@@ -954,18 +1105,18 @@ export const WorkoutPlansPage: React.FC = () => {
                           {String(idx + 1).padStart(2, '0')}
                         </span>
                         <div className="min-w-0">
-                          <h4 className="text-sm font-black text-slate-900">
+                          <h4 className="text-base font-black text-slate-900">
                             {primary}
                           </h4>
                           {secondary && (
-                            <p className="text-[11px] font-semibold text-slate-400">
+                            <p className="text-xs font-medium text-slate-400">
                               {secondary}
                             </p>
                           )}
                         </div>
                       </div>
 
-                      <span className="rounded-xl bg-slate-200/80 border border-slate-300 px-2.5 py-1 text-[10px] font-black text-slate-700 shrink-0">
+                      <span className="rounded-xl bg-slate-100 border border-slate-200 px-3 py-1 text-[10px] font-black text-slate-700 shrink-0 uppercase">
                         {translateCategory(ex.exercise?.category)}
                       </span>
                     </div>
@@ -974,7 +1125,7 @@ export const WorkoutPlansPage: React.FC = () => {
                       <span className="px-3 py-1 rounded-xl bg-emerald-50 text-emerald-800 font-extrabold border border-emerald-200">
                         {ex.sets || 3} hiệp
                       </span>
-                      <span className="px-3 py-1 rounded-xl bg-slate-200/70 text-slate-800 font-extrabold border border-slate-300/70">
+                      <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-800 font-extrabold border border-slate-200">
                         {ex.reps || 10} {unitStr}
                       </span>
                       {ex.weightKg !== null && ex.weightKg !== undefined && Number(ex.weightKg) > 0 && (
@@ -987,7 +1138,7 @@ export const WorkoutPlansPage: React.FC = () => {
                         Nghỉ {ex.restSeconds || 60}s
                       </span>
                       {meta.muscleVi && (
-                        <span className="px-3 py-1 rounded-xl bg-teal-50 text-teal-800 text-[11px] font-bold border border-teal-200">
+                        <span className="px-3 py-1 rounded-xl bg-teal-50 text-teal-800 text-xs font-bold border border-teal-200">
                           🎯 {meta.muscleVi}
                         </span>
                       )}
@@ -998,7 +1149,7 @@ export const WorkoutPlansPage: React.FC = () => {
             </div>
 
             {/* Footer */}
-            <div className="shrink-0 border-t border-slate-100 p-4 bg-slate-50/80">
+            <div className="shrink-0 border-t border-slate-200 p-4 bg-white">
               <button
                 type="button"
                 onClick={() => setSelectedTemplate(null)}
