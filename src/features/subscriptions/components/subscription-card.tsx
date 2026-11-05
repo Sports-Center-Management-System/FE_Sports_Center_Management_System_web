@@ -144,16 +144,15 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ item, discip
         {/* Subtle Dark Gradient Veil */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/45 to-transparent" />
 
-        {/* Top Badges (Discipline pill on left, Tier + Status on right) */}
-        <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2">
-          {/* Discipline */}
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase bg-black/60 text-white backdrop-blur-md border border-white/20">
-            <DisciplineIcon nameOrCode={disciplineName} className="w-3.5 h-3.5 text-emerald-400" />
-            <span>{disciplineName}</span>
-          </span>
+        {/* Top Badges (Discipline + Tier on left, Status on right) */}
+        <div className="absolute top-3 left-3 right-3 flex items-start justify-between gap-2">
+          {/* Left: Discipline & Tier Badges */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-bold tracking-wide uppercase bg-black/60 text-white backdrop-blur-md border border-white/20">
+              <DisciplineIcon nameOrCode={disciplineName} className="w-3.5 h-3.5 text-emerald-400" />
+              <span>{disciplineName}</span>
+            </span>
 
-          {/* Tier & Status Badges */}
-          <div className="flex items-center gap-1.5">
             <span
               className={cn(
                 'px-2.5 py-1 rounded-full text-[10px] font-black tracking-wider uppercase border backdrop-blur-md',
@@ -166,51 +165,36 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ item, discip
             >
               {isVip ? 'VIP ĐẶC QUYỀN' : isPlus ? 'PLUS TOÀN DIỆN' : item.packageTier}
             </span>
-
-            <span
-              className={cn(
-                'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-bold border backdrop-blur-md',
-                isActive
-                  ? 'bg-emerald-500/90 text-white border-emerald-400'
-                  : isFrozen
-                  ? 'bg-sky-500/90 text-white border-sky-400'
-                  : 'bg-slate-600/90 text-white border-slate-500',
-              )}
-            >
-              {isActive ? (
-                <>
-                  <CheckCircle2 className="w-3 h-3" />
-                  Đang dùng
-                </>
-              ) : isFrozen ? (
-                <>
-                  <Snowflake className="w-3 h-3" />
-                  Đóng băng
-                </>
-              ) : (
-                <>
-                  <Clock className="w-3 h-3" />
-                  Hết hạn
-                </>
-              )}
-            </span>
           </div>
-        </div>
 
-        {/* Floating Quick Fullscreen Trigger: "Xem chi tiết" (Matches PlanCard on plans page) */}
-        <div className="absolute top-12 right-3">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              setIsDetailOpen(true)
-            }}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white/20 hover:bg-white/35 text-white backdrop-blur-md border border-white/25 transition-all shadow-sm cursor-pointer"
-            title="Xem chi tiết đầy đủ thông tin gói tập"
+          {/* Right: Status Badge */}
+          <span
+            className={cn(
+              'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-bold border backdrop-blur-md shrink-0',
+              isActive
+                ? 'bg-emerald-500/90 text-white border-emerald-400'
+                : isFrozen
+                ? 'bg-sky-500/90 text-white border-sky-400'
+                : 'bg-slate-600/90 text-white border-slate-500',
+            )}
           >
-            <Maximize2 className="w-3 h-3" />
-            <span>Chi tiết sử dụng</span>
-          </button>
+            {isActive ? (
+              <>
+                <CheckCircle2 className="w-3 h-3" />
+                Đang dùng
+              </>
+            ) : isFrozen ? (
+              <>
+                <Snowflake className="w-3 h-3" />
+                Đóng băng
+              </>
+            ) : (
+              <>
+                <Clock className="w-3 h-3" />
+                Hết hạn
+              </>
+            )}
+          </span>
         </div>
 
         {/* Plan Name & Expiry Overlay */}

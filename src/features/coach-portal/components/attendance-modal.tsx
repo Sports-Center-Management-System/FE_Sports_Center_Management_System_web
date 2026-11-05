@@ -110,7 +110,7 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
           <div>
             <h3 className="text-base font-bold text-slate-900">Điểm danh & Nhật ký buổi tập</h3>
             <p className="text-xs text-slate-500">
-              Học viên: {booking.member?.fullName || (booking.memberId ? `#${booking.memberId.slice(0, 8)}` : 'Học viên')}
+              Học viên: {booking.member?.fullName || 'Học viên'}
             </p>
           </div>
           <button
@@ -184,7 +184,7 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
             </div>
             <div className="text-xs min-w-0">
               <p className="font-bold text-slate-900 truncate">
-                {booking.member?.fullName || (booking.memberId ? `Học viên (#${booking.memberId.slice(0, 8)})` : 'Học viên')}
+                {booking.member?.fullName || 'Học viên'}
               </p>
               <p className="text-slate-500">{booking.member?.phone || 'Chưa có SĐT'}</p>
               {booking.member?.memberProfile?.fitnessGoals &&

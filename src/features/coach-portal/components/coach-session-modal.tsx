@@ -259,8 +259,7 @@ export const CoachSessionModal: React.FC<CoachSessionModalProps> = ({
               <div className="space-y-2">
                 {session.bookings.map((booking) => {
                   const memberName =
-                    booking.member?.fullName ||
-                    (booking.memberId ? `Học viên (#${booking.memberId.slice(0, 8)})` : 'Học viên');
+                    booking.member?.fullName || 'Học viên';
                   const isCancelled = booking.status === 'CANCELLED';
                   const attStatus = booking.attendance?.status;
                   const isAttended =

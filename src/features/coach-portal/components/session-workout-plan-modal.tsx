@@ -121,8 +121,7 @@ export const SessionWorkoutPlanModal: React.FC<SessionWorkoutPlanModalProps> = (
   }, [plan]);
 
   const memberName =
-    booking.member?.fullName ||
-    (booking.memberId ? `Học viên #${booking.memberId.slice(0, 8)}` : 'Học viên PT');
+    booking.member?.fullName || 'Học viên PT';
 
   // Filter plans created for this specific student
   const matchingMemberPlans = useMemo(() => {
@@ -440,15 +439,6 @@ export const SessionWorkoutPlanModal: React.FC<SessionWorkoutPlanModalProps> = (
                     <h3 className="text-base font-extrabold text-slate-900">
                       {planTitle || plan?.title || 'Giáo Án Buổi Tập PT 1-1'}
                     </h3>
-                    {plan?.sessionOrder ? (
-                      <span className="rounded-full bg-emerald-600 text-white text-[10px] font-black px-2.5 py-0.5">
-                        Buổi {plan.sessionOrder}/12
-                      </span>
-                    ) : (
-                      <span className="rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 border border-amber-300">
-                        Cá nhân hóa
-                      </span>
-                    )}
                   </div>
                   <p className="text-xs text-slate-500 mt-0.5">
                     Ca dạy: {sessionTitle} • Học viên: <strong className="text-slate-800">{memberName}</strong>
@@ -611,10 +601,6 @@ export const SessionWorkoutPlanModal: React.FC<SessionWorkoutPlanModalProps> = (
                                         <h4 className="font-extrabold text-slate-900 text-sm truncate">
                                           {studentName}
                                         </h4>
-                                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold">
-                                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
-                                          Áp dụng
-                                        </span>
                                       </div>
                                       <p className="text-[11px] text-slate-400 truncate">
                                         {studentPhone} · Ngày tạo: {new Date(mPlan.createdAt).toLocaleDateString('vi-VN')}
@@ -905,7 +891,7 @@ export const SessionWorkoutPlanModal: React.FC<SessionWorkoutPlanModalProps> = (
                                       isBoxing ? 'bg-rose-600' : 'bg-indigo-600'
                                     }`}
                                   >
-                                    Buổi {tpl.sessionOrder}/12
+                                    {tpl.disciplineCode}
                                   </span>
                                   <span className="rounded-md bg-slate-100 text-slate-600 border border-slate-200/80 px-2 py-0.5 text-[10px] font-bold">
                                     Tuần {tpl.weekNumber}

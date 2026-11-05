@@ -66,6 +66,7 @@ export const CoachWorkoutPlansPage: React.FC = () => {
   // --- Tab 2: Custom Plans ---
   const [customPlanSearch, setCustomPlanSearch] = useState<string>('');
   const [selectedStudentFilter, setSelectedStudentFilter] = useState<string>('ALL');
+  const [dateSort, setDateSort] = useState<'DESC' | 'ASC'>('DESC');
 
   // --- Tab 3: Exercise Library ---
   const [exerciseSearch, setExerciseSearch] = useState<string>('');
@@ -344,7 +345,7 @@ export const CoachWorkoutPlansPage: React.FC = () => {
   }, [templates, templateWeekFilter, templateSearch]);
 
   const filteredPlans = useMemo(() => {
-    return plans.filter((p) => {
+    const list = plans.filter((p) => {
       const matchStudent =
         selectedStudentFilter === 'ALL' || p.memberId === selectedStudentFilter;
       const q = customPlanSearch.trim().toLowerCase();
@@ -359,7 +360,13 @@ export const CoachWorkoutPlansPage: React.FC = () => {
 
       return matchStudent && matchSearch;
     });
-  }, [plans, selectedStudentFilter, customPlanSearch, memberMap]);
+
+    return list.sort((a, b) => {
+      const timeA = new Date(a.createdAt || 0).getTime();
+      const timeB = new Date(b.createdAt || 0).getTime();
+      return dateSort === 'DESC' ? timeB - timeA : timeA - timeB;
+    });
+  }, [plans, selectedStudentFilter, customPlanSearch, memberMap, dateSort]);
 
   const exerciseCategories = useMemo(() => {
     const set = new Set<string>();
@@ -712,9 +719,6 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1.5 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="rounded-lg bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider">
-                            BUỔI {String(tpl.sessionOrder).padStart(2, '0')} / 12
-                          </span>
                           <span
                             className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-lg border ${
                               isBoxing
@@ -870,23 +874,40 @@ export const CoachWorkoutPlansPage: React.FC = () => {
           {/* Integrated Student Filter & Search Bar */}
           <div className="p-4 rounded-3xl bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border border-white/60 dark:border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-3">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-              {/* Student Filter Dropdown */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider shrink-0">
-                  Học viên:
-                </span>
-                <select
-                  value={selectedStudentFilter}
-                  onChange={(e) => setSelectedStudentFilter(e.target.value)}
-                  className="rounded-xl border border-slate-200/80 bg-white/90 dark:bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-100 shadow-2xs focus:border-emerald-500 focus:outline-hidden"
-                >
-                  <option value="ALL">Tất cả học viên ({plans.length} giáo án)</option>
-                  {members.map((m) => (
-                    <option key={m.id} value={m.user?.id || m.id}>
-                      {m.user?.fullName || m.user?.email || `Học viên #${m.id.slice(0, 6)}`}
-                    </option>
-                  ))}
-                </select>
+              <div className="flex items-center gap-3 flex-wrap">
+                {/* Student Filter Dropdown */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider shrink-0">
+                    Học viên:
+                  </span>
+                  <select
+                    value={selectedStudentFilter}
+                    onChange={(e) => setSelectedStudentFilter(e.target.value)}
+                    className="rounded-xl border border-slate-200/80 bg-white/90 dark:bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-100 shadow-2xs focus:border-emerald-500 focus:outline-hidden"
+                  >
+                    <option value="ALL">Tất cả học viên ({plans.length} giáo án)</option>
+                    {members.map((m) => (
+                      <option key={m.id} value={m.user?.id || m.id}>
+                        {m.user?.fullName || m.user?.email || 'Học viên'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Date Sort Dropdown */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider shrink-0">
+                    Sắp xếp:
+                  </span>
+                  <select
+                    value={dateSort}
+                    onChange={(e) => setDateSort(e.target.value as 'DESC' | 'ASC')}
+                    className="rounded-xl border border-slate-200/80 bg-white/90 dark:bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-100 shadow-2xs focus:border-emerald-500 focus:outline-hidden"
+                  >
+                    <option value="DESC">Mới nhất (Ngày tạo)</option>
+                    <option value="ASC">Cũ nhất (Ngày tạo)</option>
+                  </select>
+                </div>
               </div>
 
               {/* Search input */}
@@ -972,10 +993,6 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                             <h4 className="text-sm font-extrabold text-slate-900 dark:text-slate-100 truncate">
                               {studentName}
                             </h4>
-                            <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-1.5 py-0.2 rounded-md">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                              Áp dụng
-                            </span>
                           </div>
                           <p className="text-[11px] text-slate-400 truncate">
                             {student?.user?.phone || 'Học viên kèm riêng 1:1'} · Ngày tạo: {new Date(plan.createdAt).toLocaleDateString('vi-VN')}
@@ -1690,7 +1707,7 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                         <option value="">-- Chọn học viên nhận giáo án --</option>
                         {members.map((m) => (
                           <option key={m.id} value={m.user?.id || m.id}>
-                            {m.user?.fullName || m.user?.email || `Học viên #${m.id.slice(0, 6)}`} ({m.user?.phone || 'Chưa có SĐT'})
+                            {m.user?.fullName || m.user?.email || 'Học viên'} ({m.user?.phone || 'Chưa có SĐT'})
                           </option>
                         ))}
                       </select>

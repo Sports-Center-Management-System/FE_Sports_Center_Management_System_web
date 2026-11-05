@@ -106,6 +106,7 @@ export const WorkoutPlansPage: React.FC = () => {
   const [templateDiscipline, setTemplateDiscipline] = useState<'BOXING' | 'YOGA'>('BOXING');
   const [templateWeekFilter, setTemplateWeekFilter] = useState<'ALL' | '1' | '2' | '3' | '4'>('ALL');
   const [templateSearch, setTemplateSearch] = useState<string>('');
+  const [dateSort, setDateSort] = useState<'DESC' | 'ASC'>('DESC');
 
   // 1. Fetch member's real assigned workout plans
   const {
@@ -134,6 +135,15 @@ export const WorkoutPlansPage: React.FC = () => {
       return Array.isArray(data) ? data : [];
     },
   });
+
+  // Sort plans by date
+  const sortedPlans = useMemo(() => {
+    return [...rawPlans].sort((a, b) => {
+      const timeA = new Date(a.createdAt || 0).getTime();
+      const timeB = new Date(b.createdAt || 0).getTime();
+      return dateSort === 'DESC' ? timeB - timeA : timeA - timeB;
+    });
+  }, [rawPlans, dateSort]);
 
   // Filtered Templates
   const filteredTemplates = useMemo(() => {
@@ -303,13 +313,30 @@ export const WorkoutPlansPage: React.FC = () => {
             </div>
           ) : (
             /* Cards Grid */
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {rawPlans.map((plan) => {
+            <>
+              {/* Filter / Sort bar */}
+              <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800">
+                <span className="text-xs font-bold text-slate-500">
+                  Tổng cộng: <strong className="text-slate-800 dark:text-slate-200">{sortedPlans.length}</strong> giáo án
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-400">Sắp xếp:</span>
+                  <select
+                    value={dateSort}
+                    onChange={(e) => setDateSort(e.target.value as 'DESC' | 'ASC')}
+                    className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  >
+                    <option value="DESC">Mới nhất (Ngày tạo)</option>
+                    <option value="ASC">Cũ nhất (Ngày tạo)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {sortedPlans.map((plan) => {
                 const totalExercises = plan.exercises?.length || 0;
                 const coachName = plan.coach?.fullName || 'Huấn luyện viên';
-                const sessionLabel = plan.sessionOrder
-                  ? `Buổi ${plan.sessionOrder}/12`
-                  : 'Giáo án cá nhân';
+                const tagLabel = plan.template?.disciplineCode || 'Giáo án 1-1';
 
                 return (
                   <article
@@ -322,13 +349,8 @@ export const WorkoutPlansPage: React.FC = () => {
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="px-2.5 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800 text-[10px] font-black uppercase tracking-wider">
-                            {sessionLabel}
+                            {tagLabel}
                           </span>
-                          {plan.template?.disciplineCode && (
-                            <span className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 text-[10px] font-bold uppercase">
-                              {plan.template.disciplineCode}
-                            </span>
-                          )}
                         </div>
 
                         <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
@@ -420,6 +442,7 @@ export const WorkoutPlansPage: React.FC = () => {
                 );
               })}
             </div>
+          </>
           )}
         </div>
       )}
@@ -527,7 +550,7 @@ export const WorkoutPlansPage: React.FC = () => {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="px-2.5 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800 text-[10px] font-black uppercase tracking-wider">
-                        Buổi {tpl.sessionOrder}/12
+                        {tpl.disciplineCode}
                       </span>
                       <span className="text-[11px] font-bold text-slate-400">
                         Tuần {tpl.weekNumber}
@@ -601,7 +624,7 @@ export const WorkoutPlansPage: React.FC = () => {
                 <div className="min-w-0 space-y-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 px-3 py-1 text-xs font-black uppercase">
-                      {selectedPlan.sessionOrder ? `Buổi ${selectedPlan.sessionOrder}/12` : 'Giáo án cá nhân'}
+                      {selectedPlan.template?.disciplineCode || 'Giáo án cá nhân'}
                     </span>
                     {selectedPlan.template?.weekNumber && (
                       <span className="rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 text-xs font-bold border border-slate-200 dark:border-slate-700">
@@ -757,9 +780,6 @@ export const WorkoutPlansPage: React.FC = () => {
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 space-y-1.5">
                   <div className="flex items-center gap-2">
-                    <span className="rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 px-3 py-1 text-xs font-black uppercase">
-                      Buổi {selectedTemplate.sessionOrder}/12
-                    </span>
                     <span className="rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 text-xs font-bold border border-slate-200 dark:border-slate-700">
                       Tuần {selectedTemplate.weekNumber}
                     </span>

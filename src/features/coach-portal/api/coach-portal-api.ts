@@ -110,7 +110,7 @@ export const coachPortalApi = {
       if (mId) {
         return {
           id: mId,
-          fullName: fallbackMember?.fullName || `Học viên #${mId.slice(0, 8)}`,
+          fullName: fallbackMember?.fullName || 'Học viên',
           phone: fallbackMember?.phone,
           avatarUrl: fallbackMember?.avatarUrl,
           memberProfile: fallbackMember?.memberProfile,

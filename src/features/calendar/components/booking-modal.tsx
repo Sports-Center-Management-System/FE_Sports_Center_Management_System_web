@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { NavLink } from 'react-router'
 import type {
   CalendarSchedule,
   CalendarPtSlot,
@@ -11,6 +10,7 @@ import type {
 } from '../types/calendar.types'
 import { formatBookingSlotRange, formatDateToYMD } from '../utils/calendar-date.utils'
 import type { CalendarEventItem } from './calendar-grid'
+import { getWorkoutPlanByBookingApi } from '../services/calendar-api.service'
 import {
   X,
   Clock,
@@ -126,6 +126,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [selectedPtDisciplineId, setSelectedPtDisciplineId] = useState('')
+  const [assignedPlan, setAssignedPlan] = useState<any>(null)
+  const [isViewingAssignedPlan, setIsViewingAssignedPlan] = useState(false)
 
   if (!event) return null
 
@@ -189,6 +191,21 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   // Date strings for quota and subscription validity check
   const todayStr = formatDateToYMD(new Date())
   const sessionDateStr = startAt ? formatDateToYMD(new Date(startAt)) : todayStr
+
+  // Check if coach has assigned a workout plan for this booking
+  React.useEffect(() => {
+    if (existingBooking?.id) {
+      getWorkoutPlanByBookingApi(existingBooking.id).then((res: any) => {
+        if (res && res.id) {
+          setAssignedPlan(res)
+        } else {
+          setAssignedPlan(null)
+        }
+      })
+    } else {
+      setAssignedPlan(null)
+    }
+  }, [existingBooking?.id])
 
   // Pre-flight check for Group Class
   const matchingGroupSub = useMemo(() => {
@@ -398,7 +415,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   return typeof document !== 'undefined'
     ? createPortal(
-        <aside
+        <>
+          <aside
           aria-label="Chi tiết buổi tập"
           className="fixed right-5 top-24 z-[9999] flex w-[calc(100vw-2.5rem)] max-w-sm flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl animate-in slide-in-from-right duration-200"
         >
@@ -657,27 +675,32 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             </div>
           )}
 
-          {/* Workout plan banner for PT 1-1 session */}
-          {existingBooking && (existingBooking.bookingType === 'PERSONAL_TRAINING' || existingBooking.type === 'PERSONAL_TRAINING' || !!existingBooking.coachAvailabilityId || !!ptData) && (
-            <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-50/90 via-teal-50/80 to-white border border-emerald-200/90 shadow-2xs space-y-2">
+          {/* Workout plan banner ONLY WHEN COACH HAS ACTUALLY ASSIGNED A PLAN */}
+          {existingBooking && assignedPlan && (
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50/90 via-teal-50/80 to-white border border-emerald-200/90 shadow-2xs space-y-2">
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-emerald-600 text-white">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-emerald-600 text-white shadow-xs">
                     <Dumbbell className="h-4 w-4" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-slate-900">Giáo án & Bài tập của ca tập</h4>
-                    <p className="text-[11px] text-slate-500">Xem danh mục bài tập, mức tạ và lời dặn HLV</p>
+                    <h4 className="text-xs font-black text-slate-900">
+                      {assignedPlan.title || 'Giáo án buổi tập của HLV'}
+                    </h4>
+                    <p className="text-[11px] text-slate-500">
+                      HLV đã soạn {assignedPlan.exercises?.length || 0} bài tập cho buổi học này
+                    </p>
                   </div>
                 </div>
 
-                <NavLink
-                  to="/portal/member/workout-plans"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition shrink-0"
+                <button
+                  type="button"
+                  onClick={() => setIsViewingAssignedPlan(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition shrink-0 cursor-pointer"
                 >
-                  <span>Mở giáo án</span>
+                  <span>Xem giáo án</span>
                   <ArrowRight className="h-3.5 w-3.5" />
-                </NavLink>
+                </button>
               </div>
             </div>
           )}
@@ -837,7 +860,88 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           </div>
         )}
       </div>
-    </aside>,
+    </aside>
+
+    {/* Assigned Workout Plan Viewer Modal (M14.1) */}
+    {isViewingAssignedPlan && assignedPlan && (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
+        <div className="w-full max-w-lg max-h-[85vh] rounded-3xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
+          <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800 bg-emerald-50/60 dark:bg-emerald-950/20">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-emerald-600 text-white">
+                <Dumbbell className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-slate-900 dark:text-slate-100">
+                  {assignedPlan.title || 'Giáo Án Buổi Tập PT 1-1'}
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  {coachName} · {assignedPlan.exercises?.length || 0} bài tập
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsViewingAssignedPlan(false)}
+              className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="p-5 overflow-y-auto space-y-4 flex-1">
+            {assignedPlan.notes && (
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300">
+                <strong className="block text-[11px] text-emerald-800 dark:text-emerald-400 mb-0.5">Lời dặn của HLV:</strong>
+                {assignedPlan.notes}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                Danh sách bài tập ({assignedPlan.exercises?.length || 0})
+              </h4>
+              {(assignedPlan.exercises || []).map((ex: any, idx: number) => (
+                <div key={ex.id || idx} className="p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-800/40 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center shrink-0">
+                      {idx + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                        {ex.exercise?.title || ex.title || 'Bài tập'}
+                      </div>
+                      {ex.coachFeedback && (
+                        <div className="text-[10px] text-amber-700 italic truncate">
+                          💡 {ex.coachFeedback}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right text-[11px] font-mono font-bold text-slate-700 dark:text-slate-300 shrink-0">
+                    <div>{ex.sets || 3} hiệp × {ex.reps || 10} reps</div>
+                    <div className="text-[10px] font-normal text-slate-400">
+                      {ex.weightKg ? `${ex.weightKg} kg` : 'Bodyweight'} · Nghỉ {ex.restSeconds || 60}s
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setIsViewingAssignedPlan(false)}
+              className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold cursor-pointer"
+            >
+              Đóng giáo án
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+  </>,
     document.body
   ) : null
 }
