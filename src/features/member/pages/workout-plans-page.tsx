@@ -5,20 +5,17 @@ import {
   Layers,
   Search,
   X,
-  MessageSquare,
   ArrowRight,
   BookOpen,
   ChevronRight,
   Calendar,
   Filter,
-  Target,
-  ShieldCheck,
 } from 'lucide-react';
+import { WorkoutPlanDetailModal } from '@/components/common/workout-plan-detail-modal';
 import { apiClient } from '@/services/api-client';
 import { vietnamDate } from '@/lib/date';
 import {
   parseExerciseInstructions,
-  translateCategory,
   parseExerciseTitle,
 } from '@/features/coach-portal/utils/exercise-metadata.utils';
 
@@ -820,409 +817,28 @@ export const WorkoutPlansPage: React.FC = () => {
       )}
 
       {/* ========================================================= */}
-      {/* MODAL 1: CHI TIẾT GIÁO ÁN HỌC VIÊN (REDESIGNED ULTRA-SLEEK) */}
+      {/* MODAL 1: CHI TIẾT GIÁO ÁN HỌC VIÊN                        */}
       {/* ========================================================= */}
-      {selectedPlan && (() => {
-        const modalCoachName = resolveCoachName(selectedPlan);
-        const exercisesCount = selectedPlan.exercises?.length || 0;
-        const totalSets = selectedPlan.exercises?.reduce((sum, e) => sum + (e.sets || 3), 0) || 0;
-
-        return (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-3 sm:p-6 overflow-y-auto"
-            onMouseDown={(e) => {
-              if (e.target === e.currentTarget) setSelectedPlan(null);
-            }}
-          >
-            <div
-              role="dialog"
-              aria-modal="true"
-              className="flex w-full max-w-5xl max-h-[94vh] flex-col overflow-hidden rounded-[2.5rem] bg-white border border-slate-200 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
-            >
-              {/* Header: compact, sleek & high-contrast */}
-              <div className="shrink-0 border-b border-slate-800 px-6 py-4 sm:px-8 sm:py-5 bg-gradient-to-r from-slate-950 via-[#0a1f22] to-slate-950 text-white relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-
-                <div className="relative z-10 flex items-start justify-between gap-4">
-                  <div className="min-w-0 space-y-2">
-                    {/* Top Badges & Meta */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 text-xs font-black uppercase tracking-wider">
-                        {selectedPlan.template?.disciplineCode || 'Giáo án cá nhân 1-1'}
-                      </span>
-                      {selectedPlan.template?.weekNumber && (
-                        <span className="rounded-xl bg-slate-800 text-slate-300 px-2.5 py-1 text-xs font-bold border border-slate-700">
-                          Tuần {selectedPlan.template.weekNumber}
-                        </span>
-                      )}
-                      <span className="text-xs font-medium text-slate-400 flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                        Lập ngày {vietnamDate(selectedPlan.createdAt)}
-                      </span>
-                      {/* Coach badge */}
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-slate-900/90 border border-slate-800 text-xs">
-                        <div className="w-4 h-4 rounded-md bg-emerald-500 text-slate-950 text-[10px] font-black flex items-center justify-center shrink-0">
-                          {modalCoachName.charAt(0).toUpperCase()}
-                        </div>
-                        <span className="text-slate-400 font-medium text-[11px]">HLV:</span>
-                        <span className="font-extrabold text-emerald-300 text-xs">{modalCoachName}</span>
-                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                      </div>
-                    </div>
-
-                    {/* Plan Title */}
-                    <h2 className="text-xl sm:text-2xl font-black text-white leading-tight tracking-tight">
-                      {selectedPlan.title}
-                    </h2>
-
-                    {/* Compact Session Target / Notes */}
-                    {selectedPlan.notes && (
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-950/60 border border-emerald-500/30 text-xs text-emerald-200 max-w-2xl">
-                        <Target className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span className="font-bold text-emerald-300 shrink-0">Mục tiêu:</span>
-                        <span className="truncate italic text-emerald-100">"{selectedPlan.notes}"</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setSelectedPlan(null)}
-                    className="rounded-2xl p-2.5 text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 transition-all cursor-pointer shrink-0"
-                    title="Đóng modal"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Body: High-prominence Exercise Matrix */}
-              <div className="flex-1 overflow-y-auto p-5 sm:p-8 space-y-4 bg-slate-50/70">
-                <div className="flex items-center justify-between text-xs font-black text-slate-600 uppercase tracking-wider pb-1">
-                  <span className="flex items-center gap-2">
-                    <Dumbbell className="w-4 h-4 text-emerald-600" />
-                    <span>Danh sách bài tập ({exercisesCount} bài • {totalSets} hiệp)</span>
-                  </span>
-                  <span className="text-slate-400 font-semibold normal-case hidden sm:inline">
-                    Thực hiện theo thứ tự 01 → {exercisesCount}
-                  </span>
-                </div>
-
-                {selectedPlan.exercises?.map((ex, idx) => {
-                  const meta = parseExerciseInstructions(ex.exercise?.instructions);
-                  const { primary, secondary } = parseExerciseTitle(ex.exercise?.title);
-                  const unitStr = meta.unitVi || 'lần';
-
-                  return (
-                    <div
-                      key={ex.id || idx}
-                      className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/90 shadow-xs space-y-4 hover:border-emerald-300 hover:shadow-md transition-all"
-                    >
-                      {/* Exercise Header */}
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start gap-3.5 min-w-0">
-                          <span className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-slate-950 text-emerald-400 font-mono text-base font-black flex items-center justify-center shrink-0 shadow-md ring-2 ring-emerald-500/20">
-                            {String(idx + 1).padStart(2, '0')}
-                          </span>
-                          <div className="min-w-0">
-                            <h4 className="text-lg sm:text-xl font-black text-slate-950 leading-snug">
-                              {primary}
-                            </h4>
-                            {secondary && (
-                              <p className="text-xs sm:text-sm font-semibold text-slate-400 mt-0.5">
-                                {secondary}
-                              </p>
-                            )}
-                            <div className="flex items-center gap-2 mt-2 flex-wrap">
-                              {meta.muscleVi && (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-teal-50 text-teal-800 text-xs font-bold border border-teal-200/80">
-                                  🎯 {meta.muscleVi}
-                                </span>
-                              )}
-                              {meta.equipmentVi && (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200">
-                                  🏋️ {meta.equipmentVi}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        <span className="rounded-xl bg-slate-100 border border-slate-200 px-3.5 py-1.5 text-xs font-black text-slate-700 shrink-0 uppercase tracking-wide">
-                          {translateCategory(ex.exercise?.category)}
-                        </span>
-                      </div>
-
-                      {/* Dose Matrix (Hiệp, Lần, Tạ, Nghỉ) - 4 BIG PROMINENT TILES */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 pt-1">
-                        <div className="p-3 sm:p-3.5 rounded-2xl bg-emerald-50/90 border border-emerald-200/90 text-center">
-                          <span className="text-[10px] sm:text-[11px] font-black text-emerald-700 uppercase tracking-wider block">
-                            Số hiệp
-                          </span>
-                          <span className="text-2xl sm:text-3xl font-black text-emerald-950 block mt-0.5">
-                            {ex.sets || 3}
-                          </span>
-                        </div>
-
-                        <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-center">
-                          <span className="text-[10px] sm:text-[11px] font-black text-slate-500 uppercase tracking-wider block">
-                            Số lần / Hiệp
-                          </span>
-                          <span className="text-2xl sm:text-3xl font-black text-slate-900 block mt-0.5">
-                            {ex.reps || 10}{' '}
-                            <span className="text-sm font-bold text-slate-500">{unitStr}</span>
-                          </span>
-                        </div>
-
-                        <div className="p-3 sm:p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200/90 text-center">
-                          <span className="text-[10px] sm:text-[11px] font-black text-amber-700 uppercase tracking-wider block">
-                            Mức tạ
-                          </span>
-                          <span className="text-2xl sm:text-3xl font-black text-amber-950 block mt-0.5">
-                            {ex.weightKg !== null && ex.weightKg !== undefined && Number(ex.weightKg) > 0 ? (
-                              <>
-                                {ex.weightKg}{' '}
-                                <span className="text-sm font-bold text-amber-700">kg</span>
-                              </>
-                            ) : (
-                              <span className="text-base sm:text-lg font-bold text-amber-800/70">
-                                Bodyweight
-                              </span>
-                            )}
-                          </span>
-                        </div>
-
-                        <div className="p-3 sm:p-3.5 rounded-2xl bg-sky-50/90 border border-sky-200/90 text-center">
-                          <span className="text-[10px] sm:text-[11px] font-black text-sky-700 uppercase tracking-wider block">
-                            Nghỉ giữa hiệp
-                          </span>
-                          <span className="text-2xl sm:text-3xl font-black text-sky-950 block mt-0.5">
-                            {ex.restSeconds || 60}{' '}
-                            <span className="text-sm font-bold text-sky-700">giây</span>
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Instructions / Technique Guide */}
-                      {meta.instructionsText && (
-                        <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs sm:text-sm text-slate-700 leading-relaxed">
-                          <span className="font-extrabold text-slate-900 block mb-1">
-                            💡 Hướng dẫn kỹ thuật:
-                          </span>
-                          <p className="font-medium text-slate-600">{meta.instructionsText}</p>
-                        </div>
-                      )}
-
-                      {/* Coach Personalized Feedback Callout */}
-                      {ex.coachFeedback && (
-                        <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50/60 border border-emerald-200 text-xs sm:text-sm text-emerald-950 space-y-1 shadow-2xs">
-                          <div className="font-black flex items-center gap-1.5 text-emerald-900">
-                            <MessageSquare className="w-4 h-4 text-emerald-700 shrink-0" />
-                            <span>Lời dặn riêng từ HLV {modalCoachName}:</span>
-                          </div>
-                          <p className="leading-relaxed pl-5 font-bold text-emerald-950 italic">
-                            "{ex.coachFeedback}"
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Modal Footer */}
-              <div className="shrink-0 border-t border-slate-200 p-4 sm:p-5 bg-white flex items-center justify-between gap-4">
-                <span className="text-xs text-slate-400 font-medium hidden sm:block">
-                  Giáo án được thiết kế chuyên biệt cho thể trạng của bạn bởi HLV {modalCoachName}.
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setSelectedPlan(null)}
-                  className="w-full sm:w-auto px-8 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black transition-all cursor-pointer shadow-md ml-auto"
-                >
-                  Đóng giáo án
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      <WorkoutPlanDetailModal
+        isOpen={Boolean(selectedPlan)}
+        onClose={() => setSelectedPlan(null)}
+        title={selectedPlan?.title}
+        coachName={selectedPlan ? resolveCoachName(selectedPlan) : ''}
+        notes={selectedPlan?.notes}
+        exercises={selectedPlan?.exercises || []}
+      />
 
       {/* ========================================================= */}
       {/* MODAL 2: CHI TIẾT BUỔI HỌC MẪU (TEMPLATE SESSION)          */}
       {/* ========================================================= */}
-      {selectedTemplate && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-3 sm:p-6 overflow-y-auto"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setSelectedTemplate(null);
-          }}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            className="flex w-full max-w-5xl max-h-[94vh] flex-col overflow-hidden rounded-[2.5rem] bg-white border border-slate-200 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
-          >
-            {/* Header */}
-            <div className="shrink-0 border-b border-slate-800 px-6 py-4 sm:px-8 sm:py-5 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 text-white relative">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-xl bg-slate-800 text-slate-300 px-3 py-1 text-xs font-bold border border-slate-700">
-                      Tuần {selectedTemplate.weekNumber}
-                    </span>
-                    <span className="rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2.5 py-1 text-xs font-black uppercase">
-                      {selectedTemplate.disciplineCode}
-                    </span>
-                  </div>
-
-                  <h2 className="text-xl sm:text-2xl font-black text-white leading-snug">
-                    {selectedTemplate.title}
-                  </h2>
-
-                  {selectedTemplate.description && (
-                    <p className="text-xs text-slate-300 leading-relaxed max-w-xl">
-                      {selectedTemplate.description}
-                    </p>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setSelectedTemplate(null)}
-                  className="rounded-2xl p-2.5 text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 transition-colors cursor-pointer shrink-0"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Body */}
-            <div className="flex-1 overflow-y-auto p-5 sm:p-8 space-y-4 bg-slate-50/70">
-              <div className="text-xs font-black text-slate-600 uppercase tracking-wider pb-1">
-                Danh sách bài tập chuẩn ({selectedTemplate.exercises?.length || 0} bài)
-              </div>
-
-              {selectedTemplate.exercises?.map((ex, idx) => {
-                const meta = parseExerciseInstructions(ex.exercise?.instructions);
-                const { primary, secondary } = parseExerciseTitle(ex.exercise?.title);
-                const unitStr = meta.unitVi || 'lần';
-
-                return (
-                  <div
-                    key={ex.id || idx}
-                    className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/90 shadow-xs space-y-4 hover:border-emerald-300 transition-all"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-3.5 min-w-0">
-                        <span className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-slate-900 text-emerald-400 font-mono text-base font-black flex items-center justify-center shrink-0 shadow-md">
-                          {String(idx + 1).padStart(2, '0')}
-                        </span>
-                        <div className="min-w-0">
-                          <h4 className="text-lg sm:text-xl font-black text-slate-950">
-                            {primary}
-                          </h4>
-                          {secondary && (
-                            <p className="text-xs sm:text-sm font-semibold text-slate-400 mt-0.5">
-                              {secondary}
-                            </p>
-                          )}
-                          <div className="flex items-center gap-2 mt-2 flex-wrap">
-                            {meta.muscleVi && (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-teal-50 text-teal-800 text-xs font-bold border border-teal-200/80">
-                                🎯 {meta.muscleVi}
-                              </span>
-                            )}
-                            {meta.equipmentVi && (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200">
-                                🏋️ {meta.equipmentVi}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <span className="rounded-xl bg-slate-100 border border-slate-200 px-3.5 py-1.5 text-xs font-black text-slate-700 shrink-0 uppercase">
-                        {translateCategory(ex.exercise?.category)}
-                      </span>
-                    </div>
-
-                    {/* Dose Matrix (Hiệp, Lần, Tạ, Nghỉ) */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 pt-1">
-                      <div className="p-3 sm:p-3.5 rounded-2xl bg-emerald-50/90 border border-emerald-200/90 text-center">
-                        <span className="text-[10px] sm:text-[11px] font-black text-emerald-700 uppercase tracking-wider block">
-                          Số hiệp
-                        </span>
-                        <span className="text-2xl sm:text-3xl font-black text-emerald-950 block mt-0.5">
-                          {ex.sets || 3}
-                        </span>
-                      </div>
-
-                      <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-center">
-                        <span className="text-[10px] sm:text-[11px] font-black text-slate-500 uppercase tracking-wider block">
-                          Số lần / Hiệp
-                        </span>
-                        <span className="text-2xl sm:text-3xl font-black text-slate-900 block mt-0.5">
-                          {ex.reps || 10}{' '}
-                          <span className="text-sm font-bold text-slate-500">{unitStr}</span>
-                        </span>
-                      </div>
-
-                      <div className="p-3 sm:p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200/90 text-center">
-                        <span className="text-[10px] sm:text-[11px] font-black text-amber-700 uppercase tracking-wider block">
-                          Mức tạ
-                        </span>
-                        <span className="text-2xl sm:text-3xl font-black text-amber-950 block mt-0.5">
-                          {ex.weightKg !== null && ex.weightKg !== undefined && Number(ex.weightKg) > 0 ? (
-                            <>
-                              {ex.weightKg}{' '}
-                              <span className="text-sm font-bold text-amber-700">kg</span>
-                            </>
-                          ) : (
-                            <span className="text-base sm:text-lg font-bold text-amber-800/70">
-                              Bodyweight
-                            </span>
-                          )}
-                        </span>
-                      </div>
-
-                      <div className="p-3 sm:p-3.5 rounded-2xl bg-sky-50/90 border border-sky-200/90 text-center">
-                        <span className="text-[10px] sm:text-[11px] font-black text-sky-700 uppercase tracking-wider block">
-                          Nghỉ giữa hiệp
-                        </span>
-                        <span className="text-2xl sm:text-3xl font-black text-sky-950 block mt-0.5">
-                          {ex.restSeconds || 60}{' '}
-                          <span className="text-sm font-bold text-sky-700">giây</span>
-                        </span>
-                      </div>
-                    </div>
-
-                    {meta.instructionsText && (
-                      <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs sm:text-sm text-slate-700 leading-relaxed">
-                        <span className="font-extrabold text-slate-900 block mb-1">
-                          💡 Hướng dẫn kỹ thuật:
-                        </span>
-                        <p className="font-medium text-slate-600">{meta.instructionsText}</p>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Footer */}
-            <div className="shrink-0 border-t border-slate-200 p-4 bg-white">
-              <button
-                type="button"
-                onClick={() => setSelectedTemplate(null)}
-                className="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black transition-all cursor-pointer shadow-md"
-              >
-                Đóng đề cương
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <WorkoutPlanDetailModal
+        isOpen={Boolean(selectedTemplate)}
+        onClose={() => setSelectedTemplate(null)}
+        title={selectedTemplate ? `Tuần ${selectedTemplate.weekNumber}: ${selectedTemplate.title}` : ''}
+        coachName={`Giáo án chuẩn ${selectedTemplate?.disciplineCode || 'GYM'}`}
+        notes={selectedTemplate?.description}
+        exercises={selectedTemplate?.exercises || []}
+      />
     </div>
   );
 };

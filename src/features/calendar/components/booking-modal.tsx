@@ -11,6 +11,7 @@ import type {
 import { formatBookingSlotRange, formatDateToYMD } from '../utils/calendar-date.utils'
 import type { CalendarEventItem } from './calendar-grid'
 import { getWorkoutPlanByBookingApi } from '../services/calendar-api.service'
+import { WorkoutPlanDetailModal } from '@/components/common/workout-plan-detail-modal'
 import {
   X,
   Clock,
@@ -863,84 +864,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     </aside>
 
     {/* Assigned Workout Plan Viewer Modal (M14.1) */}
-    {isViewingAssignedPlan && assignedPlan && (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
-        <div className="w-full max-w-lg max-h-[85vh] rounded-3xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
-          <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800 bg-emerald-50/60 dark:bg-emerald-950/20">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-emerald-600 text-white">
-                <Dumbbell className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-black text-slate-900 dark:text-slate-100">
-                  {assignedPlan.title || 'Giáo Án Buổi Tập PT 1-1'}
-                </h3>
-                <p className="text-[11px] text-slate-500">
-                  {coachName} · {assignedPlan.exercises?.length || 0} bài tập
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsViewingAssignedPlan(false)}
-              className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="p-5 overflow-y-auto space-y-4 flex-1">
-            {assignedPlan.notes && (
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300">
-                <strong className="block text-[11px] text-emerald-800 dark:text-emerald-400 mb-0.5">Lời dặn của HLV:</strong>
-                {assignedPlan.notes}
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                Danh sách bài tập ({assignedPlan.exercises?.length || 0})
-              </h4>
-              {(assignedPlan.exercises || []).map((ex: any, idx: number) => (
-                <div key={ex.id || idx} className="p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-800/40 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center shrink-0">
-                      {idx + 1}
-                    </span>
-                    <div className="min-w-0">
-                      <div className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
-                        {ex.exercise?.title || ex.title || 'Bài tập'}
-                      </div>
-                      {ex.coachFeedback && (
-                        <div className="text-[10px] text-amber-700 italic truncate">
-                          💡 {ex.coachFeedback}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-right text-[11px] font-mono font-bold text-slate-700 dark:text-slate-300 shrink-0">
-                    <div>{ex.sets || 3} hiệp × {ex.reps || 10} reps</div>
-                    <div className="text-[10px] font-normal text-slate-400">
-                      {ex.weightKg ? `${ex.weightKg} kg` : 'Bodyweight'} · Nghỉ {ex.restSeconds || 60}s
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 flex justify-end">
-            <button
-              type="button"
-              onClick={() => setIsViewingAssignedPlan(false)}
-              className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold cursor-pointer"
-            >
-              Đóng giáo án
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
+    <WorkoutPlanDetailModal
+      isOpen={Boolean(isViewingAssignedPlan && assignedPlan)}
+      onClose={() => setIsViewingAssignedPlan(false)}
+      title={assignedPlan?.title || 'Giáo Án Buổi Tập PT 1-1'}
+      coachName={coachName}
+      notes={assignedPlan?.notes}
+      exercises={assignedPlan?.exercises || []}
+    />
   </>,
     document.body
   ) : null
