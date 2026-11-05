@@ -20,7 +20,9 @@ import {
   Td,
   TextInput,
   Th,
+  Pagination,
 } from '../components/manager-ui'
+import { usePagination } from '../lib/use-pagination'
 
 type Tab = 'rooms' | 'equipment' | 'lockers'
 const zones: LockerZone[] = ['MALE_LOCKER', 'FEMALE_LOCKER', 'VIP_AREA']
@@ -43,7 +45,11 @@ export function ManagerFacilitiesPage() {
     void queryClient.invalidateQueries({ queryKey: key })
   }
   const onError = (err: unknown) => setError(errorMessage(err))
-  const disableRoom = useMutation({ mutationFn: managerApi.disableRoom, onSuccess: invalidate(managerKeys.rooms), onError })
+  const disableRoom = useMutation({
+    mutationFn: managerApi.disableRoom,
+    onSuccess: invalidate(managerKeys.rooms),
+    onError,
+  })
   const disableEquipment = useMutation({
     mutationFn: managerApi.disableEquipment,
     onSuccess: invalidate(managerKeys.equipment),
@@ -51,20 +57,34 @@ export function ManagerFacilitiesPage() {
   })
   const lockerStatus = useMutation({
     mutationFn: (locker: Locker) =>
-      managerApi.setLockerStatus(locker.id, locker.status === 'MAINTENANCE' ? 'AVAILABLE' : 'MAINTENANCE'),
+      managerApi.setLockerStatus(
+        locker.id,
+        locker.status === 'MAINTENANCE' ? 'AVAILABLE' : 'MAINTENANCE',
+      ),
     onSuccess: invalidate(managerKeys.lockers),
     onError,
   })
 
   const roomRows = rooms.data ?? []
   const roomName = new Map(roomRows.map((r) => [r.id, r.name]))
-  const equipmentRows = [...(equipment.data ?? [])].sort((a, b) =>
-    (roomName.get(a.roomId) ?? '').localeCompare(roomName.get(b.roomId) ?? '') || a.name.localeCompare(b.name),
+  const equipmentRows = [...(equipment.data ?? [])].sort(
+    (a, b) =>
+      (roomName.get(a.roomId) ?? '').localeCompare(roomName.get(b.roomId) ?? '') ||
+      a.name.localeCompare(b.name),
   )
   const lockerRows = (lockers.data ?? []).filter((l) => !zoneFilter || l.zone === zoneFilter)
-  const lockerCount = (status: string) => (lockers.data ?? []).filter((l) => l.status === status).length
+  const roomPage = usePagination(roomRows, 15)
+  const equipmentPage = usePagination(equipmentRows, 15)
+  const lockerPage = usePagination(lockerRows, 20, zoneFilter)
+  const lockerCount = (status: string) =>
+    (lockers.data ?? []).filter((l) => l.status === status).length
 
-  const state = (query: { isLoading: boolean; isError: boolean; error: unknown; refetch: () => unknown }) =>
+  const state = (query: {
+    isLoading: boolean
+    isError: boolean
+    error: unknown
+    refetch: () => unknown
+  }) =>
     query.isLoading || query.isError ? (
       <StateMessage
         loading={query.isLoading}
@@ -93,7 +113,11 @@ export function ManagerFacilitiesPage() {
 
   return (
     <>
-      <PageHeader title="Cơ sở vật chất" description="Phòng tập, thiết bị và tủ đồ đang sử dụng." actions={addButton} />
+      <PageHeader
+        title="Cơ sở vật chất"
+        description="Phòng tập, thiết bị và tủ đồ đang sử dụng."
+        actions={addButton}
+      />
       <Tabs
         value={tab}
         onChange={(value) => {
@@ -113,46 +137,52 @@ export function ManagerFacilitiesPage() {
       {tab === 'rooms' ? (
         <Panel>
           {state(rooms) ?? (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Phòng</Th>
-                  <Th>Sức chứa</Th>
-                  <Th>Vị trí</Th>
-                  <Th>Thiết bị</Th>
-                  <Th className="text-right">Thao tác</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {roomRows.length === 0 ? (
-                  <EmptyRow colSpan={5}>Chưa có phòng nào.</EmptyRow>
-                ) : (
-                  roomRows.map((room) => (
-                    <tr key={room.id}>
-                      <Td className="font-medium text-slate-900">{room.name}</Td>
-                      <Td className="tabular-nums">{room.capacity} người</Td>
-                      <Td>{room.locationNote ?? '—'}</Td>
-                      <Td className="tabular-nums">
-                        {(equipment.data ?? []).filter((e) => e.roomId === room.id).length}
-                      </Td>
-                      <Td className="whitespace-nowrap text-right">
-                        <Btn size="sm" tone="ghost" onClick={() => setRoomForm(room)}>
-                          Sửa
-                        </Btn>
-                        <Btn
-                          size="sm"
-                          tone="danger"
-                          disabled={disableRoom.isPending}
-                          onClick={() => window.confirm(`Ngừng sử dụng ${room.name}?`) && disableRoom.mutate(room.id)}
-                        >
-                          Ngừng dùng
-                        </Btn>
-                      </Td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </Table>
+            <>
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>Phòng</Th>
+                    <Th>Sức chứa</Th>
+                    <Th>Vị trí</Th>
+                    <Th>Thiết bị</Th>
+                    <Th className="text-right">Thao tác</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {roomRows.length === 0 ? (
+                    <EmptyRow colSpan={5}>Chưa có phòng nào.</EmptyRow>
+                  ) : (
+                    roomPage.items.map((room) => (
+                      <tr key={room.id}>
+                        <Td className="font-medium text-slate-900">{room.name}</Td>
+                        <Td className="tabular-nums">{room.capacity} người</Td>
+                        <Td>{room.locationNote ?? '—'}</Td>
+                        <Td className="tabular-nums">
+                          {(equipment.data ?? []).filter((e) => e.roomId === room.id).length}
+                        </Td>
+                        <Td className="whitespace-nowrap text-right">
+                          <Btn size="sm" tone="ghost" onClick={() => setRoomForm(room)}>
+                            Sửa
+                          </Btn>
+                          <Btn
+                            size="sm"
+                            tone="danger"
+                            disabled={disableRoom.isPending}
+                            onClick={() =>
+                              window.confirm(`Ngừng sử dụng ${room.name}?`) &&
+                              disableRoom.mutate(room.id)
+                            }
+                          >
+                            Ngừng dùng
+                          </Btn>
+                        </Td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </Table>
+              <Pagination pager={roomPage.pager} />
+            </>
           )}
         </Panel>
       ) : null}
@@ -160,44 +190,48 @@ export function ManagerFacilitiesPage() {
       {tab === 'equipment' ? (
         <Panel>
           {state(equipment) ?? (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Thiết bị</Th>
-                  <Th>Loại</Th>
-                  <Th>Phòng</Th>
-                  <Th className="text-right">Thao tác</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {equipmentRows.length === 0 ? (
-                  <EmptyRow colSpan={4}>Chưa có thiết bị nào.</EmptyRow>
-                ) : (
-                  equipmentRows.map((item) => (
-                    <tr key={item.id}>
-                      <Td className="font-medium text-slate-900">{item.name}</Td>
-                      <Td className="font-mono text-xs">{item.equipmentType}</Td>
-                      <Td>{roomName.get(item.roomId) ?? 'Phòng đã ngừng dùng'}</Td>
-                      <Td className="whitespace-nowrap text-right">
-                        <Btn size="sm" tone="ghost" onClick={() => setEquipmentForm(item)}>
-                          Sửa
-                        </Btn>
-                        <Btn
-                          size="sm"
-                          tone="danger"
-                          disabled={disableEquipment.isPending}
-                          onClick={() =>
-                            window.confirm(`Ngừng sử dụng ${item.name}?`) && disableEquipment.mutate(item.id)
-                          }
-                        >
-                          Ngừng dùng
-                        </Btn>
-                      </Td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </Table>
+            <>
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>Thiết bị</Th>
+                    <Th>Loại</Th>
+                    <Th>Phòng</Th>
+                    <Th className="text-right">Thao tác</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {equipmentRows.length === 0 ? (
+                    <EmptyRow colSpan={4}>Chưa có thiết bị nào.</EmptyRow>
+                  ) : (
+                    equipmentPage.items.map((item) => (
+                      <tr key={item.id}>
+                        <Td className="font-medium text-slate-900">{item.name}</Td>
+                        <Td className="font-mono text-xs">{item.equipmentType}</Td>
+                        <Td>{roomName.get(item.roomId) ?? 'Phòng đã ngừng dùng'}</Td>
+                        <Td className="whitespace-nowrap text-right">
+                          <Btn size="sm" tone="ghost" onClick={() => setEquipmentForm(item)}>
+                            Sửa
+                          </Btn>
+                          <Btn
+                            size="sm"
+                            tone="danger"
+                            disabled={disableEquipment.isPending}
+                            onClick={() =>
+                              window.confirm(`Ngừng sử dụng ${item.name}?`) &&
+                              disableEquipment.mutate(item.id)
+                            }
+                          >
+                            Ngừng dùng
+                          </Btn>
+                        </Td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </Table>
+              <Pagination pager={equipmentPage.pager} />
+            </>
           )}
         </Panel>
       ) : null}
@@ -222,40 +256,51 @@ export function ManagerFacilitiesPage() {
           }
         >
           {state(lockers) ?? (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Số tủ</Th>
-                  <Th>Khu</Th>
-                  <Th>Trạng thái</Th>
-                  <Th className="text-right">Thao tác</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {lockerRows.length === 0 ? (
-                  <EmptyRow colSpan={4}>Chưa có tủ nào.</EmptyRow>
-                ) : (
-                  lockerRows.map((locker) => (
-                    <tr key={locker.id}>
-                      <Td className="font-medium tabular-nums text-slate-900">{locker.lockerNumber}</Td>
-                      <Td>{zoneLabel[locker.zone] ?? locker.zone}</Td>
-                      <Td>
-                        <Pill tone={lockerTone[locker.status]}>{lockerStatusLabel[locker.status]}</Pill>
-                      </Td>
-                      <Td className="text-right">
-                        {locker.status === 'OCCUPIED' ? (
-                          <span className="text-xs text-slate-400">Đang có hội viên dùng</span>
-                        ) : (
-                          <Btn size="sm" disabled={lockerStatus.isPending} onClick={() => lockerStatus.mutate(locker)}>
-                            {locker.status === 'MAINTENANCE' ? 'Bảo trì xong' : 'Chuyển bảo trì'}
-                          </Btn>
-                        )}
-                      </Td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </Table>
+            <>
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>Số tủ</Th>
+                    <Th>Khu</Th>
+                    <Th>Trạng thái</Th>
+                    <Th className="text-right">Thao tác</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lockerRows.length === 0 ? (
+                    <EmptyRow colSpan={4}>Chưa có tủ nào.</EmptyRow>
+                  ) : (
+                    lockerPage.items.map((locker) => (
+                      <tr key={locker.id}>
+                        <Td className="font-medium tabular-nums text-slate-900">
+                          {locker.lockerNumber}
+                        </Td>
+                        <Td>{zoneLabel[locker.zone] ?? locker.zone}</Td>
+                        <Td>
+                          <Pill tone={lockerTone[locker.status]}>
+                            {lockerStatusLabel[locker.status]}
+                          </Pill>
+                        </Td>
+                        <Td className="text-right">
+                          {locker.status === 'OCCUPIED' ? (
+                            <span className="text-xs text-slate-400">Đang có hội viên dùng</span>
+                          ) : (
+                            <Btn
+                              size="sm"
+                              disabled={lockerStatus.isPending}
+                              onClick={() => lockerStatus.mutate(locker)}
+                            >
+                              {locker.status === 'MAINTENANCE' ? 'Bảo trì xong' : 'Chuyển bảo trì'}
+                            </Btn>
+                          )}
+                        </Td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </Table>
+              <Pagination pager={lockerPage.pager} />
+            </>
           )}
         </Panel>
       ) : null}
@@ -339,7 +384,15 @@ function FormModal({
   )
 }
 
-function RoomForm({ room, onClose, onSaved }: { room: Room | null; onClose: () => void; onSaved: () => void }) {
+function RoomForm({
+  room,
+  onClose,
+  onSaved,
+}: {
+  room: Room | null
+  onClose: () => void
+  onSaved: () => void
+}) {
   const [form, setForm] = useState({
     name: room?.name ?? '',
     capacity: String(room?.capacity ?? 15),
@@ -368,7 +421,12 @@ function RoomForm({ room, onClose, onSaved }: { room: Room | null; onClose: () =
       onSubmit={() => save.mutate()}
     >
       <Field label="Tên phòng">
-        <TextInput required maxLength={100} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        <TextInput
+          required
+          maxLength={100}
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+        />
       </Field>
       <Field label="Sức chứa (người)">
         <TextInput
@@ -410,7 +468,11 @@ function EquipmentForm({
   const [error, setError] = useState<string | null>(null)
   const save = useMutation({
     mutationFn: () => {
-      const body = { roomId: form.roomId, name: form.name.trim(), equipmentType: form.equipmentType.trim().toUpperCase() }
+      const body = {
+        roomId: form.roomId,
+        name: form.name.trim(),
+        equipmentType: form.equipmentType.trim().toUpperCase(),
+      }
       return item ? managerApi.updateEquipment(item.id, body) : managerApi.createEquipment(body)
     },
     onSuccess: onSaved,
@@ -426,7 +488,12 @@ function EquipmentForm({
       onSubmit={() => save.mutate()}
     >
       <Field label="Tên thiết bị">
-        <TextInput required maxLength={150} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        <TextInput
+          required
+          maxLength={150}
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+        />
       </Field>
       <Field label="Loại" hint="Ví dụ GLOVES, TREADMILL, YOGA_MAT.">
         <TextInput
@@ -437,7 +504,11 @@ function EquipmentForm({
         />
       </Field>
       <Field label="Đặt tại phòng">
-        <SelectInput required value={form.roomId} onChange={(e) => setForm({ ...form, roomId: e.target.value })}>
+        <SelectInput
+          required
+          value={form.roomId}
+          onChange={(e) => setForm({ ...form, roomId: e.target.value })}
+        >
           {rooms.map((r) => (
             <option key={r.id} value={r.id}>
               {r.name}
@@ -453,7 +524,8 @@ function LockerForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
   const [form, setForm] = useState({ lockerNumber: '', zone: 'MALE_LOCKER' as LockerZone })
   const [error, setError] = useState<string | null>(null)
   const save = useMutation({
-    mutationFn: () => managerApi.createLocker({ lockerNumber: form.lockerNumber.trim(), zone: form.zone }),
+    mutationFn: () =>
+      managerApi.createLocker({ lockerNumber: form.lockerNumber.trim(), zone: form.zone }),
     onSuccess: onSaved,
     onError: (err) => setError(errorMessage(err)),
   })
@@ -475,7 +547,10 @@ function LockerForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
         />
       </Field>
       <Field label="Khu">
-        <SelectInput value={form.zone} onChange={(e) => setForm({ ...form, zone: e.target.value as LockerZone })}>
+        <SelectInput
+          value={form.zone}
+          onChange={(e) => setForm({ ...form, zone: e.target.value as LockerZone })}
+        >
           {zones.map((z) => (
             <option key={z} value={z}>
               {zoneLabel[z]}

@@ -1,6 +1,21 @@
 import { get, post, put, query, request } from '@/lib/api'
 import type {
+  Attendance,
+  Booking,
   CancellationRequest,
+  CoachSlot,
+  CreateMemberPayload,
+  DisciplinePayload,
+  ExerciseKnowledge,
+  GateCheckinResult,
+  InbodyLog,
+  InbodyPayload,
+  Invoice,
+  MemberProfilePayload,
+  PaymentMethod,
+  SalePayload,
+  WorkoutPlan,
+  WorkoutTemplate,
   ClassPayload,
   CoachPenalty,
   CoachRate,
@@ -34,9 +49,15 @@ import type {
 } from '../types/manager.types'
 
 const del = <T>(path: string) => request<T>(path, { method: 'DELETE' })
+const upload = <T>(path: string, file: File) => {
+  const body = new FormData()
+  body.append('file', file)
+  return request<T>(path, { method: 'POST', body })
+}
 
 export const managerApi = {
   disciplines: () => get<Discipline[]>('/disciplines', true),
+  createDiscipline: (body: DisciplinePayload) => post<Discipline>('/disciplines', body),
 
   summary: () => get<ManagerSummary>('/analytics/manager-summary'),
   revenue: () => get<RevenueReport>('/analytics/revenue'),
@@ -55,9 +76,12 @@ export const managerApi = {
   coaches: () => get<CoachRow[]>('/coaches'),
   specialties: () => get<Specialty[]>('/specialties', true),
   createSpecialty: (body: SpecialtyPayload) => post<Specialty>('/specialties', body),
+  updateSpecialty: (id: string, body: Partial<SpecialtyPayload>) =>
+    put<Specialty>(`/specialties/${id}`, body),
   deleteSpecialty: (id: string) => del<{ id: string }>(`/specialties/${id}`),
   assignSpecialties: (coachId: string, specialtyIds: string[]) =>
     post<unknown>(`/coaches/${coachId}/specialties`, { specialtyIds }),
+  coachSlots: (coachId: string) => get<CoachSlot[]>(`/coaches/availability${query({ coachId })}`),
   rates: (coachId: string) => get<CoachRate[]>(`/coaches/${coachId}/rates`),
   createRate: (coachId: string, body: RatePayload) =>
     post<CoachRate>(`/coaches/${coachId}/rates`, body),
@@ -67,8 +91,11 @@ export const managerApi = {
     del<{ id: string }>(`/coaches/${coachId}/rates/${rateId}`),
 
   cancellations: () => get<CancellationRequest[]>('/cancellation-requests'),
-  reviewCancellation: (id: string, body: { action: 'APPROVE' } | { action: 'REJECT'; rejectionReason: string }) =>
-    put<CancellationRequest>(`/cancellation-requests/${id}/review`, body),
+  reviewCancellation: (
+    id: string,
+    body: { action: 'APPROVE' } | { action: 'REJECT'; rejectionReason: string },
+  ) => put<CancellationRequest>(`/cancellation-requests/${id}/review`, body),
+  withdrawCancellation: (id: string) => del<CancellationRequest>(`/cancellation-requests/${id}`),
   penalties: () => get<CoachPenalty[]>('/coach-penalties'),
   reviewPenalty: (id: string, decision: string) =>
     put<CoachPenalty>(`/coach-penalties/${id}/review`, { decision }),
@@ -97,15 +124,70 @@ export const managerApi = {
   updateEquipment: (id: string, body: EquipmentPayload) => put<Equipment>(`/equipment/${id}`, body),
   disableEquipment: (id: string) => del<Equipment>(`/equipment/${id}`),
   lockers: () => get<Locker[]>('/lockers'),
-  createLocker: (body: { lockerNumber: string; zone: LockerZone }) => post<Locker>('/lockers', body),
-  setLockerStatus: (id: string, status: LockerStatus) => put<Locker>(`/lockers/${id}/status`, { status }),
+  createLocker: (body: { lockerNumber: string; zone: LockerZone }) =>
+    post<Locker>('/lockers', body),
+  setLockerStatus: (id: string, status: LockerStatus) =>
+    put<Locker>(`/lockers/${id}/status`, { status }),
+  returnLocker: (assignmentId: string) =>
+    put<{ id: string; returnedAt: string }>(`/lockers/assignments/${assignmentId}/return`, {}),
 
   members: (q: string) => get<UserRow[]>(`/users/members${query({ q })}`),
   member: (id: string) => get<MemberDetail>(`/users/${id}`),
+  createMember: (body: CreateMemberPayload) =>
+    post<UserRow>('/users/members', { ...body, role: 'MEMBER' }),
+  updateMember: (id: string, body: MemberProfilePayload) =>
+    put<MemberDetail>(`/users/members/${id}`, body),
+  uploadMemberAvatar: (id: string, file: File) =>
+    upload<UserRow>(`/users/members/${id}/avatar`, file),
+  inbody: (memberId: string) =>
+    get<{ logs: InbodyLog[] }>(`/inbody/my-progress${query({ memberId })}`).then((res) => res.logs),
+  createInbody: (body: InbodyPayload) => post<InbodyLog>('/inbody/logs', body),
+  updateInbody: (id: string, body: Partial<InbodyPayload>) =>
+    put<InbodyLog>(`/inbody/logs/${id}`, body),
   memberSubscriptions: (memberId: string) =>
     get<MemberSubscription[]>(`/memberships/subscriptions${query({ memberId })}`),
   setSubscriptionStatus: (id: string, status: 'ACTIVE' | 'FROZEN') =>
     put<MemberSubscription>(`/memberships/subscriptions/${id}/status`, { status }),
+
+  exercises: () => get<ExerciseKnowledge[]>('/exercise-knowledge'),
+  createExercise: (body: { title: string; category: string; instructions: string }) =>
+    post<ExerciseKnowledge>('/exercise-knowledge', body),
+  templates: (discipline?: string) =>
+    get<WorkoutTemplate[]>(`/workout-templates${query({ discipline })}`),
+  workoutPlans: () => get<WorkoutPlan[]>('/workout-plans'),
+  bookingPlan: (bookingId: string) =>
+    get<WorkoutPlan | null>(`/bookings/${bookingId}/workout-plan`),
+  assignTemplate: (body: { bookingId: string; templateCode?: string; sessionOrder?: number }) =>
+    post<WorkoutPlan>('/workout-plans/assign-template', body),
+
+  sell: (body: SalePayload) => post<unknown>('/billing/purchase', body),
+  sellVip: ({ memberId, ...body }: SalePayload) =>
+    post<unknown>('/billing/subscriptions/vip', { ...body, userId: memberId }),
+  renew: (
+    subscriptionId: string,
+    body: { paymentMethod: PaymentMethod; transactionRef?: string },
+  ) => post<unknown>(`/billing/subscriptions/${subscriptionId}/renew`, body),
+  sellPtAddon: (
+    subscriptionId: string,
+    body: { addonSessions: number; paymentMethod: PaymentMethod; transactionRef?: string },
+  ) => post<unknown>(`/billing/subscriptions/${subscriptionId}/pt-addon`, body),
+  invoices: () => get<Invoice[]>('/billing/invoices'),
+
+  bookings: () => get<Booking[]>('/bookings'),
+  bookGroup: (body: { scheduleId: string; memberId: string }) =>
+    post<Booking>('/bookings/group-class', body),
+  bookPt: (body: { coachAvailabilityId: string; disciplineId: string; memberId: string }) =>
+    post<Booking>('/bookings/pt', body),
+  cancelBooking: (id: string, reason?: string) =>
+    put<Booking>(`/bookings/${id}/cancel`, reason ? { reason } : {}),
+
+  gateCheckin: (body: {
+    userId: string
+    preferredZone?: string
+    towelIssued?: boolean
+    notes?: string
+  }) => post<GateCheckinResult>('/attendances/gate-checkin', body),
+  attendances: (memberId: string) => get<Attendance[]>(`/attendances${query({ memberId })}`),
 }
 
 export const managerKeys = {
@@ -129,4 +211,13 @@ export const managerKeys = {
   members: (q: string) => ['manager', 'members', q] as const,
   member: (id: string) => ['manager', 'member', id] as const,
   memberSubscriptions: (id: string) => ['manager', 'member-subscriptions', id] as const,
+  inbody: (id: string) => ['manager', 'inbody', id] as const,
+  coachSlots: (coachId: string) => ['manager', 'coach-slots', coachId] as const,
+  exercises: ['manager', 'exercises'] as const,
+  templates: (discipline: string) => ['manager', 'templates', discipline] as const,
+  workoutPlans: ['manager', 'workout-plans'] as const,
+  bookingPlan: (id: string) => ['manager', 'booking-plan', id] as const,
+  invoices: ['manager', 'invoices'] as const,
+  bookings: ['manager', 'bookings'] as const,
+  attendances: (id: string) => ['manager', 'attendances', id] as const,
 }

@@ -1,9 +1,16 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { managerApi, managerKeys } from '../api/manager-api'
 import type { MemberSubscription } from '../types/manager.types'
-import { errorMessage, formatDate, formatDay, subscriptionStatusLabel, tierLabel } from '../lib/format'
+import {
+  errorMessage,
+  formatDate,
+  formatDay,
+  subscriptionStatusLabel,
+  tierLabel,
+} from '../lib/format'
 import {
   Btn,
   EmptyRow,
@@ -16,7 +23,15 @@ import {
   Td,
   TextInput,
   Th,
+  Pagination,
 } from '../components/manager-ui'
+import { usePagination } from '../lib/use-pagination'
+import {
+  AvatarButton,
+  CreateMemberForm,
+  EditMemberForm,
+  InbodyPanel,
+} from '../components/member-forms'
 
 const statusTone = { ACTIVE: 'green', EXPIRED: 'gray', FROZEN: 'blue' } as const
 
@@ -24,8 +39,14 @@ export function ManagerMembersPage() {
   const [draft, setDraft] = useState('')
   const [q, setQ] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const members = useQuery({ queryKey: managerKeys.members(q), queryFn: () => managerApi.members(q) })
+  const [creating, setCreating] = useState(false)
+  const queryClient = useQueryClient()
+  const members = useQuery({
+    queryKey: managerKeys.members(q),
+    queryFn: () => managerApi.members(q),
+  })
   const rows = members.data ?? []
+  const { items: pageRows, pager } = usePagination(rows, 15, q)
 
   const search = (event: FormEvent) => {
     event.preventDefault()
@@ -34,7 +55,16 @@ export function ManagerMembersPage() {
 
   return (
     <>
-      <PageHeader title="Hội viên" description="Tra cứu hội viên và quản lý hợp đồng gói tập." />
+      <PageHeader
+        title="Hội viên & InBody"
+        description="Tra cứu hội viên, hồ sơ, hợp đồng gói tập và chỉ số InBody."
+        actions={
+          <Btn tone="primary" onClick={() => setCreating(true)}>
+            <Plus className="h-4 w-4" />
+            Đăng ký hội viên
+          </Btn>
+        }
+      />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         <Panel>
           <form onSubmit={search} className="flex gap-2 border-b border-slate-200 p-3">
@@ -62,9 +92,11 @@ export function ManagerMembersPage() {
               </p>
               <ul className="divide-y divide-slate-100">
                 {rows.length === 0 ? (
-                  <li className="px-4 py-8 text-center text-sm text-slate-400">Không tìm thấy hội viên.</li>
+                  <li className="px-4 py-8 text-center text-sm text-slate-400">
+                    Không tìm thấy hội viên.
+                  </li>
                 ) : null}
-                {rows.map((member) => (
+                {pageRows.map((member) => (
                   <li key={member.id}>
                     <button
                       type="button"
@@ -75,7 +107,9 @@ export function ManagerMembersPage() {
                       )}
                     >
                       <span className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-medium text-slate-900">{member.fullName}</span>
+                        <span className="text-sm font-medium text-slate-900">
+                          {member.fullName}
+                        </span>
                         {member.isActive ? null : <Pill>Đã khóa</Pill>}
                       </span>
                       <span className="block text-xs text-slate-500">
@@ -85,6 +119,7 @@ export function ManagerMembersPage() {
                   </li>
                 ))}
               </ul>
+              <Pagination pager={pager} />
             </>
           )}
         </Panel>
@@ -92,17 +127,32 @@ export function ManagerMembersPage() {
           <MemberDetail key={selectedId} memberId={selectedId} />
         ) : (
           <Panel>
-            <p className="px-4 py-12 text-center text-sm text-slate-400">Chọn một hội viên để xem hợp đồng.</p>
+            <p className="px-4 py-12 text-center text-sm text-slate-400">
+              Chọn một hội viên để xem hợp đồng.
+            </p>
           </Panel>
         )}
       </div>
+      {creating ? (
+        <CreateMemberForm
+          onClose={() => setCreating(false)}
+          onSaved={(member) => {
+            setCreating(false)
+            void queryClient.invalidateQueries({ queryKey: ['manager', 'members'] })
+            setSelectedId(member.id)
+          }}
+        />
+      ) : null}
     </>
   )
 }
 
 function MemberDetail({ memberId }: { memberId: string }) {
   const queryClient = useQueryClient()
-  const member = useQuery({ queryKey: managerKeys.member(memberId), queryFn: () => managerApi.member(memberId) })
+  const member = useQuery({
+    queryKey: managerKeys.member(memberId),
+    queryFn: () => managerApi.member(memberId),
+  })
   const subscriptions = useQuery({
     queryKey: managerKeys.memberSubscriptions(memberId),
     queryFn: () => managerApi.memberSubscriptions(memberId),
@@ -118,10 +168,25 @@ function MemberDetail({ memberId }: { memberId: string }) {
     onError: (err) => setError(errorMessage(err)),
   })
   const m = member.data
+  const [editing, setEditing] = useState(false)
+  const refreshMember = () =>
+    void queryClient.invalidateQueries({ queryKey: managerKeys.member(memberId) })
 
   return (
     <div className="min-w-0 space-y-6">
-      <Panel title="Thông tin hội viên">
+      <Panel
+        title="Thông tin hội viên"
+        actions={
+          m ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <AvatarButton memberId={m.id} onUploaded={refreshMember} />
+              <Btn size="sm" onClick={() => setEditing(true)}>
+                Sửa hồ sơ
+              </Btn>
+            </div>
+          ) : null
+        }
+      >
         {member.isLoading || member.isError ? (
           <StateMessage
             loading={member.isLoading}
@@ -130,6 +195,15 @@ function MemberDetail({ memberId }: { memberId: string }) {
           />
         ) : m ? (
           <dl className="grid gap-x-6 gap-y-3 p-4 text-sm sm:grid-cols-2">
+            {m.avatarUrl ? (
+              <div className="sm:col-span-2">
+                <img
+                  src={m.avatarUrl}
+                  alt={`Ảnh của ${m.fullName}`}
+                  className="h-16 w-16 rounded-full object-cover"
+                />
+              </div>
+            ) : null}
             <div>
               <dt className="text-xs text-slate-500">Họ tên</dt>
               <dd className="font-medium text-slate-900">{m.fullName}</dd>
@@ -146,6 +220,12 @@ function MemberDetail({ memberId }: { memberId: string }) {
               <dt className="text-xs text-slate-500">Số điện thoại</dt>
               <dd>{m.phone ?? '—'}</dd>
             </div>
+            {m.memberProfile?.heightCm ? (
+              <div>
+                <dt className="text-xs text-slate-500">Chiều cao</dt>
+                <dd>{Number(m.memberProfile.heightCm)} cm</dd>
+              </div>
+            ) : null}
             {m.memberProfile?.fitnessGoals ? (
               <div className="sm:col-span-2">
                 <dt className="text-xs text-slate-500">Mục tiêu tập luyện</dt>
@@ -188,7 +268,9 @@ function MemberDetail({ memberId }: { memberId: string }) {
                 (subscriptions.data ?? []).map((sub) => (
                   <tr key={sub.id}>
                     <Td>
-                      <div className="font-medium text-slate-900">{sub.plan?.name ?? 'Gói tập'}</div>
+                      <div className="font-medium text-slate-900">
+                        {sub.plan?.name ?? 'Gói tập'}
+                      </div>
                       <div className="text-xs text-slate-400">
                         {tierLabel[sub.packageTier]}
                         {sub.assignedCoach ? `, HLV ${sub.assignedCoach.fullName}` : ''}
@@ -201,9 +283,13 @@ function MemberDetail({ memberId }: { memberId: string }) {
                       Nhóm {sub.remainingGroupSessions ?? 0}, PT {sub.remainingPtSessions ?? 0}
                     </Td>
                     <Td>
-                      <Pill tone={statusTone[sub.status]}>{subscriptionStatusLabel[sub.status]}</Pill>
+                      <Pill tone={statusTone[sub.status]}>
+                        {subscriptionStatusLabel[sub.status]}
+                      </Pill>
                       {sub.status === 'FROZEN' && sub.frozenAt ? (
-                        <div className="mt-1 text-xs text-slate-400">từ {formatDate(sub.frozenAt)}</div>
+                        <div className="mt-1 text-xs text-slate-400">
+                          từ {formatDate(sub.frozenAt)}
+                        </div>
                       ) : null}
                     </Td>
                     <Td className="text-right">
@@ -234,6 +320,18 @@ function MemberDetail({ memberId }: { memberId: string }) {
           </Table>
         )}
       </Panel>
+      <InbodyPanel memberId={memberId} />
+      {editing && m ? (
+        <EditMemberForm
+          member={m}
+          onClose={() => setEditing(false)}
+          onSaved={() => {
+            setEditing(false)
+            refreshMember()
+            void queryClient.invalidateQueries({ queryKey: ['manager', 'members'] })
+          }}
+        />
+      ) : null}
     </div>
   )
 }

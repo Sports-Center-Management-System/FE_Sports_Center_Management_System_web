@@ -36,7 +36,9 @@ export function ManagerStaffShiftsPage() {
   const [editing, setEditing] = useState<StaffShift | { day: string } | null>(null)
 
   const names = new Map((staff.data ?? []).map((user) => [user.id, user.fullName]))
-  const receptionists = (staff.data ?? []).filter((user) => user.role === 'RECEPTIONIST' && user.isActive)
+  const receptionists = (staff.data ?? []).filter(
+    (user) => user.role === 'RECEPTIONIST' && user.isActive,
+  )
   const days = weekdays.map((label, index) => ({ label, day: addDaysToDay(week, index) }))
   const byDay = new Map<string, StaffShift[]>()
   for (const shift of shifts.data ?? []) {
@@ -62,13 +64,23 @@ export function ManagerStaffShiftsPage() {
         title={`Tuần ${formatDay(week)} – ${formatDay(addDaysToDay(week, 6))}`}
         actions={
           <div className="flex items-center gap-1">
-            <Btn size="sm" tone="ghost" aria-label="Tuần trước" onClick={() => setWeek(addDaysToDay(week, -7))}>
+            <Btn
+              size="sm"
+              tone="ghost"
+              aria-label="Tuần trước"
+              onClick={() => setWeek(addDaysToDay(week, -7))}
+            >
               <ChevronLeft className="h-4 w-4" />
             </Btn>
             <Btn size="sm" onClick={() => setWeek(mondayOf(vnDay()))}>
               Tuần này
             </Btn>
-            <Btn size="sm" tone="ghost" aria-label="Tuần sau" onClick={() => setWeek(addDaysToDay(week, 7))}>
+            <Btn
+              size="sm"
+              tone="ghost"
+              aria-label="Tuần sau"
+              onClick={() => setWeek(addDaysToDay(week, 7))}
+            >
               <ChevronRight className="h-4 w-4" />
             </Btn>
           </div>
@@ -86,9 +98,15 @@ export function ManagerStaffShiftsPage() {
               const list = byDay.get(day) ?? []
               return (
                 <div key={day} className="flex min-h-[180px] flex-col p-2">
-                  <div className={day === today ? 'mb-2 font-medium text-[#007461]' : 'mb-2 text-slate-600'}>
+                  <div
+                    className={
+                      day === today ? 'mb-2 font-medium text-[#007461]' : 'mb-2 text-slate-600'
+                    }
+                  >
                     <span className="text-sm">{label}</span>
-                    <span className="ml-1 text-xs text-slate-400">{formatDay(day).slice(0, 5)}</span>
+                    <span className="ml-1 text-xs text-slate-400">
+                      {formatDay(day).slice(0, 5)}
+                    </span>
                   </div>
                   <div className="flex-1 space-y-1.5">
                     {list.map((shift) => (
@@ -101,8 +119,12 @@ export function ManagerStaffShiftsPage() {
                         <span className="block font-medium tabular-nums text-slate-900">
                           {formatTime(shift.startTime)}–{formatTime(shift.endTime)}
                         </span>
-                        <span className="block truncate text-slate-600">{names.get(shift.staffId) ?? 'Nhân viên'}</span>
-                        {shift.notes ? <span className="block truncate text-slate-400">{shift.notes}</span> : null}
+                        <span className="block truncate text-slate-600">
+                          {names.get(shift.staffId) ?? 'Nhân viên'}
+                        </span>
+                        {shift.notes ? (
+                          <span className="block truncate text-slate-400">{shift.notes}</span>
+                        ) : null}
                       </button>
                     ))}
                   </div>
@@ -175,7 +197,11 @@ function ShiftForm({
     onSuccess: onSaved,
     onError,
   })
-  const remove = useMutation({ mutationFn: () => managerApi.deleteShift(shift!.id), onSuccess: onSaved, onError })
+  const remove = useMutation({
+    mutationFn: () => managerApi.deleteShift(shift!.id),
+    onSuccess: onSaved,
+    onError,
+  })
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
@@ -231,7 +257,11 @@ function ShiftForm({
           </Field>
         </div>
         <Field label="Ghi chú">
-          <TextInput placeholder="Ví dụ: Ca sáng quầy chính" value={form.notes} onChange={set('notes')} />
+          <TextInput
+            placeholder="Ví dụ: Ca sáng quầy chính"
+            value={form.notes}
+            onChange={set('notes')}
+          />
         </Field>
         <FormError>{error}</FormError>
       </form>

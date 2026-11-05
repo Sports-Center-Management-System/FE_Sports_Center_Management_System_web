@@ -18,21 +18,32 @@ import {
   Td,
   TextArea,
   Th,
+  Pagination,
 } from '../components/manager-ui'
+import { usePagination } from '../lib/use-pagination'
 
 type Tab = 'pending' | 'history' | 'penalties'
 
-const statusTone = { PENDING: 'amber', APPROVED: 'green', REJECTED: 'red', CANCELLED: 'gray' } as const
+const statusTone = {
+  PENDING: 'amber',
+  APPROVED: 'green',
+  REJECTED: 'red',
+  CANCELLED: 'gray',
+} as const
 const actionLabel: Record<string, string> = {
   NONE: 'Không xử lý',
   WARNING: 'Nhắc nhở',
+  SUGGEST_RATE_REDUCTION_15PCT: 'Đề xuất giảm 15% biểu phí',
   TEMP_SUSPEND: 'Tạm đình chỉ',
 }
 
 export function ManagerPenaltiesPage() {
   const queryClient = useQueryClient()
   const [tab, setTab] = useState<Tab>('pending')
-  const requests = useQuery({ queryKey: managerKeys.cancellations, queryFn: managerApi.cancellations })
+  const requests = useQuery({
+    queryKey: managerKeys.cancellations,
+    queryFn: managerApi.cancellations,
+  })
   const penalties = useQuery({ queryKey: managerKeys.penalties, queryFn: managerApi.penalties })
   const staff = useQuery({ queryKey: managerKeys.staff, queryFn: managerApi.staff })
   const schedules = useQuery({ queryKey: managerKeys.schedules, queryFn: managerApi.schedules })
@@ -47,6 +58,9 @@ export function ManagerPenaltiesPage() {
   const history = all.filter((item) => item.status !== 'PENDING')
   const penaltyRows = penalties.data ?? []
   const openPenalties = penaltyRows.filter((p) => !p.isReviewedByManager).length
+  const pendingPage = usePagination(pending, 15)
+  const historyPage = usePagination(history, 15)
+  const penaltyPage = usePagination(penaltyRows, 15)
 
   const refreshRequests = () => {
     void queryClient.invalidateQueries({ queryKey: managerKeys.cancellations })
@@ -55,6 +69,17 @@ export function ManagerPenaltiesPage() {
   }
   const approve = useMutation({
     mutationFn: (id: string) => managerApi.reviewCancellation(id, { action: 'APPROVE' }),
+    onSuccess: () => {
+      setError(null)
+      refreshRequests()
+    },
+    onError: (err) => {
+      setError(errorMessage(err))
+      refreshRequests()
+    },
+  })
+  const withdraw = useMutation({
+    mutationFn: (id: string) => managerApi.withdrawCancellation(id),
     onSuccess: () => {
       setError(null)
       refreshRequests()
@@ -105,44 +130,66 @@ export function ManagerPenaltiesPage() {
       {tab === 'pending' ? (
         <Panel>
           {listState(requests) ?? (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>HLV</Th>
-                  <Th>Buổi bị hủy</Th>
-                  <Th>Lý do</Th>
-                  <Th>Gửi lúc</Th>
-                  <Th className="text-right">Quyết định</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {pending.length === 0 ? (
-                  <EmptyRow colSpan={5}>Không có đơn nào đang chờ duyệt.</EmptyRow>
-                ) : (
-                  pending.map((item) => (
-                    <tr key={item.id}>
-                      <Td className="font-medium text-slate-900">{coachName(item.coachId)}</Td>
-                      <Td>{target(item)}</Td>
-                      <Td className="max-w-[280px] whitespace-pre-line">{item.reasonMessage}</Td>
-                      <Td className="whitespace-nowrap">{formatDateTime(item.createdAt)}</Td>
-                      <Td className="whitespace-nowrap text-right">
-                        <Btn
-                          size="sm"
-                          tone="primary"
-                          disabled={approve.isPending}
-                          onClick={() => approve.mutate(item.id)}
-                        >
-                          Duyệt
-                        </Btn>
-                        <Btn size="sm" tone="danger" className="ml-1.5" onClick={() => setRejecting(item)}>
-                          Từ chối
-                        </Btn>
-                      </Td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </Table>
+            <>
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>HLV</Th>
+                    <Th>Buổi bị hủy</Th>
+                    <Th>Lý do</Th>
+                    <Th>Gửi lúc</Th>
+                    <Th className="text-right">Quyết định</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pending.length === 0 ? (
+                    <EmptyRow colSpan={5}>Không có đơn nào đang chờ duyệt.</EmptyRow>
+                  ) : (
+                    pendingPage.items.map((item) => (
+                      <tr key={item.id}>
+                        <Td className="font-medium text-slate-900">{coachName(item.coachId)}</Td>
+                        <Td>{target(item)}</Td>
+                        <Td className="max-w-[280px] whitespace-pre-line">{item.reasonMessage}</Td>
+                        <Td className="whitespace-nowrap">{formatDateTime(item.createdAt)}</Td>
+                        <Td className="whitespace-nowrap text-right">
+                          <Btn
+                            size="sm"
+                            tone="primary"
+                            disabled={approve.isPending}
+                            onClick={() => approve.mutate(item.id)}
+                          >
+                            Duyệt
+                          </Btn>
+                          <Btn
+                            size="sm"
+                            tone="danger"
+                            className="ml-1.5"
+                            onClick={() => setRejecting(item)}
+                          >
+                            Từ chối
+                          </Btn>
+                          <Btn
+                            size="sm"
+                            tone="ghost"
+                            className="ml-1.5"
+                            disabled={withdraw.isPending}
+                            title="Hủy đơn mà không duyệt hay từ chối, ví dụ khi HLV gửi nhầm"
+                            onClick={() =>
+                              window.confirm(
+                                'Hủy đơn này? Buổi tập vẫn giữ nguyên như chưa có đơn.',
+                              ) && withdraw.mutate(item.id)
+                            }
+                          >
+                            Hủy đơn
+                          </Btn>
+                        </Td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </Table>
+              <Pagination pager={pendingPage.pager} />
+            </>
           )}
         </Panel>
       ) : null}
@@ -150,42 +197,51 @@ export function ManagerPenaltiesPage() {
       {tab === 'history' ? (
         <Panel>
           {listState(requests) ?? (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>HLV</Th>
-                  <Th>Buổi</Th>
-                  <Th>Lý do</Th>
-                  <Th>Kết quả</Th>
-                  <Th>Xử lý lúc</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.length === 0 ? (
-                  <EmptyRow colSpan={5}>Chưa có đơn đã xử lý.</EmptyRow>
-                ) : (
-                  history.map((item) => (
-                    <tr key={item.id}>
-                      <Td className="font-medium text-slate-900">{coachName(item.coachId)}</Td>
-                      <Td>{target(item)}</Td>
-                      <Td className="max-w-[260px]">
-                        {item.reasonMessage}
-                        {item.rejectionReason ? (
-                          <div className="mt-1 text-xs text-rose-700">Lý do từ chối: {item.rejectionReason}</div>
-                        ) : null}
-                      </Td>
-                      <Td>
-                        <Pill tone={statusTone[item.status]}>{cancellationStatusLabel[item.status]}</Pill>
-                        {item.isFrontdeskOverride ? (
-                          <div className="mt-1 text-xs text-slate-400">Lễ tân xử lý</div>
-                        ) : null}
-                      </Td>
-                      <Td className="whitespace-nowrap">{formatDateTime(item.reviewedAt ?? item.createdAt)}</Td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </Table>
+            <>
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>HLV</Th>
+                    <Th>Buổi</Th>
+                    <Th>Lý do</Th>
+                    <Th>Kết quả</Th>
+                    <Th>Xử lý lúc</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.length === 0 ? (
+                    <EmptyRow colSpan={5}>Chưa có đơn đã xử lý.</EmptyRow>
+                  ) : (
+                    historyPage.items.map((item) => (
+                      <tr key={item.id}>
+                        <Td className="font-medium text-slate-900">{coachName(item.coachId)}</Td>
+                        <Td>{target(item)}</Td>
+                        <Td className="max-w-[260px]">
+                          {item.reasonMessage}
+                          {item.rejectionReason ? (
+                            <div className="mt-1 text-xs text-rose-700">
+                              Lý do từ chối: {item.rejectionReason}
+                            </div>
+                          ) : null}
+                        </Td>
+                        <Td>
+                          <Pill tone={statusTone[item.status]}>
+                            {cancellationStatusLabel[item.status]}
+                          </Pill>
+                          {item.isFrontdeskOverride ? (
+                            <div className="mt-1 text-xs text-slate-400">Lễ tân xử lý</div>
+                          ) : null}
+                        </Td>
+                        <Td className="whitespace-nowrap">
+                          {formatDateTime(item.reviewedAt ?? item.createdAt)}
+                        </Td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </Table>
+              <Pagination pager={historyPage.pager} />
+            </>
           )}
         </Panel>
       ) : null}
@@ -199,51 +255,58 @@ export function ManagerPenaltiesPage() {
               onRetry={() => void penalties.refetch()}
             />
           ) : (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>HLV</Th>
-                  <Th>Tháng</Th>
-                  <Th>Hệ thống đề xuất</Th>
-                  <Th>Quyết định của quản lý</Th>
-                  <Th className="text-right">Thao tác</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {penaltyRows.length === 0 ? (
-                  <EmptyRow colSpan={5}>Chưa có vi phạm nào.</EmptyRow>
-                ) : (
-                  penaltyRows.map((p) => (
-                    <tr key={p.id}>
-                      <Td className="font-medium text-slate-900">{coachName(p.coachId)}</Td>
-                      <Td className="tabular-nums">{p.appliedMonth}</Td>
-                      <Td>
-                        {actionLabel[p.suggestedAction] ?? p.suggestedAction}
-                        {Number(p.suggestedRateReductionPct) > 0
-                          ? `, giảm ${Number(p.suggestedRateReductionPct)}% biểu phí`
-                          : ''}
-                        {p.notes ? <div className="mt-1 text-xs text-slate-400">{p.notes}</div> : null}
-                      </Td>
-                      <Td className="max-w-[300px]">
-                        {p.isReviewedByManager ? (
-                          <>
-                            <div className="whitespace-pre-line">{p.managerFinalDecision}</div>
-                            <div className="mt-1 text-xs text-slate-400">{formatDateTime(p.reviewedAt)}</div>
-                          </>
-                        ) : (
-                          <Pill tone="amber">Chưa chốt</Pill>
-                        )}
-                      </Td>
-                      <Td className="text-right">
-                        <Btn size="sm" onClick={() => setReviewing(p)}>
-                          {p.isReviewedByManager ? 'Sửa quyết định' : 'Chốt quyết định'}
-                        </Btn>
-                      </Td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </Table>
+            <>
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>HLV</Th>
+                    <Th>Tháng</Th>
+                    <Th>Hệ thống đề xuất</Th>
+                    <Th>Quyết định của quản lý</Th>
+                    <Th className="text-right">Thao tác</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {penaltyRows.length === 0 ? (
+                    <EmptyRow colSpan={5}>Chưa có vi phạm nào.</EmptyRow>
+                  ) : (
+                    penaltyPage.items.map((p) => (
+                      <tr key={p.id}>
+                        <Td className="font-medium text-slate-900">{coachName(p.coachId)}</Td>
+                        <Td className="tabular-nums">{p.appliedMonth}</Td>
+                        <Td>
+                          {actionLabel[p.suggestedAction] ?? p.suggestedAction}
+                          {Number(p.suggestedRateReductionPct) > 0
+                            ? `, giảm ${Number(p.suggestedRateReductionPct)}% biểu phí`
+                            : ''}
+                          {p.notes ? (
+                            <div className="mt-1 text-xs text-slate-400">{p.notes}</div>
+                          ) : null}
+                        </Td>
+                        <Td className="max-w-[300px]">
+                          {p.isReviewedByManager ? (
+                            <>
+                              <div className="whitespace-pre-line">{p.managerFinalDecision}</div>
+                              <div className="mt-1 text-xs text-slate-400">
+                                {formatDateTime(p.reviewedAt)}
+                              </div>
+                            </>
+                          ) : (
+                            <Pill tone="amber">Chưa chốt</Pill>
+                          )}
+                        </Td>
+                        <Td className="text-right">
+                          <Btn size="sm" onClick={() => setReviewing(p)}>
+                            {p.isReviewedByManager ? 'Sửa quyết định' : 'Chốt quyết định'}
+                          </Btn>
+                        </Td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </Table>
+              <Pagination pager={penaltyPage.pager} />
+            </>
           )}
         </Panel>
       ) : null}
@@ -289,7 +352,10 @@ function RejectForm({
   const [error, setError] = useState<string | null>(null)
   const reject = useMutation({
     mutationFn: () =>
-      managerApi.reviewCancellation(request.id, { action: 'REJECT', rejectionReason: reason.trim() }),
+      managerApi.reviewCancellation(request.id, {
+        action: 'REJECT',
+        rejectionReason: reason.trim(),
+      }),
     onSuccess: onDone,
     onError: (err) => setError(errorMessage(err)),
   })
@@ -311,10 +377,17 @@ function RejectForm({
         </>
       }
     >
-      <p className="rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-600">{request.reasonMessage}</p>
+      <p className="rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-600">
+        {request.reasonMessage}
+      </p>
       <form id="reject-form" onSubmit={submit} className="space-y-3">
         <Field label="Lý do từ chối" hint="HLV sẽ thấy lý do này.">
-          <TextArea required maxLength={2000} value={reason} onChange={(event) => setReason(event.target.value)} />
+          <TextArea
+            required
+            maxLength={2000}
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+          />
         </Field>
         <FormError>{error}</FormError>
       </form>
@@ -360,7 +433,10 @@ function PenaltyForm({
       }
     >
       <form id="penalty-form" onSubmit={submit} className="space-y-3">
-        <Field label="Quyết định cuối cùng" hint={`${decision.trim().length}/2000 ký tự, tối thiểu 5.`}>
+        <Field
+          label="Quyết định cuối cùng"
+          hint={`${decision.trim().length}/2000 ký tự, tối thiểu 5.`}
+        >
           <TextArea
             rows={5}
             maxLength={2000}

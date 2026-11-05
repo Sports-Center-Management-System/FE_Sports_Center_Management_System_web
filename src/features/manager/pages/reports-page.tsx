@@ -2,7 +2,16 @@ import { useQuery } from '@tanstack/react-query'
 import { money } from '@/lib/api'
 import { managerApi, managerKeys } from '../api/manager-api'
 import { errorMessage } from '../lib/format'
-import { EmptyRow, PageHeader, Panel, Stat, StateMessage, Table, Td, Th } from '../components/manager-ui'
+import {
+  EmptyRow,
+  PageHeader,
+  Panel,
+  Stat,
+  StateMessage,
+  Table,
+  Td,
+  Th,
+} from '../components/manager-ui'
 
 function Bar({ value, max }: { value: number; max: number }) {
   const width = max > 0 ? Math.max(2, Math.round((value / max) * 100)) : 0
@@ -13,7 +22,8 @@ function Bar({ value, max }: { value: number; max: number }) {
   )
 }
 
-const share = (part: number, total: number) => (total > 0 ? `${Math.round((part / total) * 100)}%` : '0%')
+const share = (part: number, total: number) =>
+  total > 0 ? `${Math.round((part / total) * 100)}%` : '0%'
 
 export function ManagerReportsPage() {
   const revenue = useQuery({ queryKey: managerKeys.revenue, queryFn: managerApi.revenue })
@@ -24,7 +34,9 @@ export function ManagerReportsPage() {
   const coaches = [...(kpi.data?.coaches ?? [])].sort(
     (a, b) => b._count.coachedSchedules - a._count.coachedSchedules,
   )
-  const rooms = [...(kpi.data?.rooms ?? [])].sort((a, b) => b.totalScheduledHours - a.totalScheduledHours)
+  const rooms = [...(kpi.data?.rooms ?? [])].sort(
+    (a, b) => b.totalScheduledHours - a.totalScheduledHours,
+  )
   const topRoom = rooms[0]?.totalScheduledHours ?? 0
 
   return (
@@ -46,8 +58,16 @@ export function ManagerReportsPage() {
         <>
           <div className="mb-6 grid gap-3 sm:grid-cols-3">
             <Stat label="Tổng doanh thu" value={money(r.totalRevenue)} />
-            <Stat label="Gói cơ bản" value={money(r.baseRevenue)} hint={`${share(r.baseRevenue, r.totalRevenue)} tổng`} />
-            <Stat label="PT" value={money(r.ptRevenue)} hint={`${share(r.ptRevenue, r.totalRevenue)} tổng`} />
+            <Stat
+              label="Gói cơ bản"
+              value={money(r.baseRevenue)}
+              hint={`${share(r.baseRevenue, r.totalRevenue)} tổng`}
+            />
+            <Stat
+              label="PT"
+              value={money(r.ptRevenue)}
+              hint={`${share(r.ptRevenue, r.totalRevenue)} tổng`}
+            />
           </div>
           <Panel title="Doanh thu theo môn" className="mb-6">
             <Table>
@@ -65,7 +85,9 @@ export function ManagerReportsPage() {
                 ) : (
                   disciplines.map(([code, amount]) => (
                     <tr key={code}>
-                      <Td className="font-medium text-slate-900">{code === 'UNSPECIFIED' ? 'Chưa phân môn' : code}</Td>
+                      <Td className="font-medium text-slate-900">
+                        {code === 'UNSPECIFIED' ? 'Chưa phân môn' : code}
+                      </Td>
                       <Td>
                         <Bar value={amount} max={topDiscipline} />
                       </Td>
@@ -109,8 +131,16 @@ export function ManagerReportsPage() {
                       <tr key={coach.id}>
                         <Td className="font-medium text-slate-900">{coach.fullName}</Td>
                         <Td className="text-right tabular-nums">{coach._count.coachedSchedules}</Td>
-                        <Td className="text-right tabular-nums">{coach._count.coachAvailabilities}</Td>
-                        <Td className={monthly > 0 ? 'text-right tabular-nums text-rose-700' : 'text-right tabular-nums'}>
+                        <Td className="text-right tabular-nums">
+                          {coach._count.coachAvailabilities}
+                        </Td>
+                        <Td
+                          className={
+                            monthly > 0
+                              ? 'text-right tabular-nums text-rose-700'
+                              : 'text-right tabular-nums'
+                          }
+                        >
                           {monthly}
                         </Td>
                         <Td className="text-right tabular-nums">
@@ -127,15 +157,22 @@ export function ManagerReportsPage() {
 
         <Panel title="Giờ sử dụng phòng">
           {kpi.isLoading || kpi.isError ? (
-            <StateMessage loading={kpi.isLoading} error={kpi.isError ? errorMessage(kpi.error) : null} />
+            <StateMessage
+              loading={kpi.isLoading}
+              error={kpi.isError ? errorMessage(kpi.error) : null}
+            />
           ) : (
             <ul className="space-y-3 p-4">
-              {rooms.length === 0 ? <li className="text-sm text-slate-400">Chưa có phòng.</li> : null}
+              {rooms.length === 0 ? (
+                <li className="text-sm text-slate-400">Chưa có phòng.</li>
+              ) : null}
               {rooms.map((room) => (
                 <li key={room.id}>
                   <div className="mb-1 flex justify-between gap-3 text-sm">
                     <span className="text-slate-700">{room.name}</span>
-                    <span className="tabular-nums text-slate-500">{room.totalScheduledHours.toFixed(1)} giờ</span>
+                    <span className="tabular-nums text-slate-500">
+                      {room.totalScheduledHours.toFixed(1)} giờ
+                    </span>
                   </div>
                   <Bar value={room.totalScheduledHours} max={topRoom} />
                 </li>

@@ -5,7 +5,7 @@ import { money } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { managerApi, managerKeys } from '../api/manager-api'
 import type { CoachRate, CoachRow, Discipline, Specialty } from '../types/manager.types'
-import { dayOnly, errorMessage, formatDay, vnDay } from '../lib/format'
+import { dayOnly, errorMessage, formatDate, formatDay, formatTime, vnDay } from '../lib/format'
 import {
   Btn,
   EmptyRow,
@@ -23,17 +23,28 @@ import {
   TextArea,
   TextInput,
   Th,
+  Pagination,
 } from '../components/manager-ui'
+import { usePagination } from '../lib/use-pagination'
 
 export function ManagerCoachesPage() {
   const [tab, setTab] = useState<'coaches' | 'specialties'>('coaches')
   const coaches = useQuery({ queryKey: managerKeys.coaches, queryFn: managerApi.coaches })
-  const specialties = useQuery({ queryKey: managerKeys.specialties, queryFn: managerApi.specialties })
-  const disciplines = useQuery({ queryKey: managerKeys.disciplines, queryFn: managerApi.disciplines })
+  const specialties = useQuery({
+    queryKey: managerKeys.specialties,
+    queryFn: managerApi.specialties,
+  })
+  const disciplines = useQuery({
+    queryKey: managerKeys.disciplines,
+    queryFn: managerApi.disciplines,
+  })
 
   return (
     <>
-      <PageHeader title="HLV & biểu phí" description="Gán chuyên môn và đặt giá dạy 1-1 cho từng huấn luyện viên." />
+      <PageHeader
+        title="HLV & biểu phí"
+        description="Gán chuyên môn và đặt giá dạy 1-1 cho từng huấn luyện viên."
+      />
       <Tabs
         value={tab}
         onChange={setTab}
@@ -62,7 +73,9 @@ export function ManagerCoachesPage() {
 function currentRate(rates: CoachRate[]) {
   const today = vnDay()
   return rates.filter(
-    (rate) => dayOnly(rate.effectiveFrom) <= today && (!rate.effectiveTo || dayOnly(rate.effectiveTo) >= today),
+    (rate) =>
+      dayOnly(rate.effectiveFrom) <= today &&
+      (!rate.effectiveTo || dayOnly(rate.effectiveTo) >= today),
   )
 }
 
@@ -78,6 +91,7 @@ function CoachesTab({
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const list = coaches.data ?? []
   const selected = list.find((coach) => coach.id === selectedId) ?? null
+  const { items: pageCoaches, pager } = usePagination(list, 15)
 
   if (coaches.isLoading || coaches.isError)
     return (
@@ -94,8 +108,10 @@ function CoachesTab({
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
       <Panel title="Huấn luyện viên đang làm">
         <ul className="divide-y divide-slate-100">
-          {list.length === 0 ? <li className="px-4 py-8 text-center text-sm text-slate-400">Chưa có HLV.</li> : null}
-          {list.map((coach) => {
+          {list.length === 0 ? (
+            <li className="px-4 py-8 text-center text-sm text-slate-400">Chưa có HLV.</li>
+          ) : null}
+          {pageCoaches.map((coach) => {
             const specs = coach.coachProfile?.coachSpecialties ?? []
             const rates = currentRate(coach.coachRates)
             return (
@@ -110,7 +126,9 @@ function CoachesTab({
                 >
                   <span className="block text-sm font-medium text-slate-900">{coach.fullName}</span>
                   <span className="block text-xs text-slate-500">
-                    {specs.length ? specs.map((s) => s.specialty.name).join(', ') : 'Chưa gán chuyên môn'}
+                    {specs.length
+                      ? specs.map((s) => s.specialty.name).join(', ')
+                      : 'Chưa gán chuyên môn'}
                   </span>
                   <span className="block text-xs text-slate-400">
                     {rates.length
@@ -122,15 +140,19 @@ function CoachesTab({
             )
           })}
         </ul>
+        <Pagination pager={pager} />
       </Panel>
       {selected ? (
         <div className="min-w-0 space-y-6">
           <CoachSpecialties key={`s-${selected.id}`} coach={selected} specialties={specialties} />
           <CoachRates key={`r-${selected.id}`} coach={selected} disciplines={disciplines} />
+          <CoachSlots key={`a-${selected.id}`} coach={selected} />
         </div>
       ) : (
         <Panel>
-          <p className="px-4 py-12 text-center text-sm text-slate-400">Chọn một HLV để xem chuyên môn và biểu phí.</p>
+          <p className="px-4 py-12 text-center text-sm text-slate-400">
+            Chọn một HLV để xem chuyên môn và biểu phí.
+          </p>
         </Panel>
       )}
     </div>
@@ -168,14 +190,21 @@ function CoachSpecialties({ coach, specialties }: { coach: CoachRow; specialties
     <Panel
       title={`Chuyên môn của ${coach.fullName}`}
       actions={
-        <Btn size="sm" tone="primary" disabled={!dirty || save.isPending} onClick={() => save.mutate()}>
+        <Btn
+          size="sm"
+          tone="primary"
+          disabled={!dirty || save.isPending}
+          onClick={() => save.mutate()}
+        >
           {save.isPending ? 'Đang lưu…' : 'Lưu chuyên môn'}
         </Btn>
       }
     >
       <div className="space-y-3 p-4">
         {specialties.length === 0 ? (
-          <p className="text-sm text-slate-400">Chưa có chuyên môn nào. Thêm ở tab Danh mục chuyên môn.</p>
+          <p className="text-sm text-slate-400">
+            Chưa có chuyên môn nào. Thêm ở tab Danh mục chuyên môn.
+          </p>
         ) : null}
         {[...groups].map(([discipline, items]) => (
           <fieldset key={discipline}>
@@ -196,7 +225,9 @@ function CoachSpecialties({ coach, specialties }: { coach: CoachRow; specialties
           </fieldset>
         ))}
         {message ? (
-          <p className={message.ok ? 'text-sm text-emerald-700' : 'text-sm text-rose-700'}>{message.text}</p>
+          <p className={message.ok ? 'text-sm text-emerald-700' : 'text-sm text-rose-700'}>
+            {message.text}
+          </p>
         ) : null}
         <p className="text-xs text-slate-400">
           HLV chỉ được xếp lớp và đặt biểu phí cho những môn có chuyên môn đã gán.
@@ -208,7 +239,10 @@ function CoachSpecialties({ coach, specialties }: { coach: CoachRow; specialties
 
 function CoachRates({ coach, disciplines }: { coach: CoachRow; disciplines: Discipline[] }) {
   const queryClient = useQueryClient()
-  const rates = useQuery({ queryKey: managerKeys.rates(coach.id), queryFn: () => managerApi.rates(coach.id) })
+  const rates = useQuery({
+    queryKey: managerKeys.rates(coach.id),
+    queryFn: () => managerApi.rates(coach.id),
+  })
   const [editing, setEditing] = useState<CoachRate | 'new' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const refresh = () => {
@@ -354,7 +388,9 @@ function RateForm({
         effectiveFrom: form.effectiveFrom,
         ...(form.effectiveTo ? { effectiveTo: form.effectiveTo } : {}),
       }
-      return rate ? managerApi.updateRate(coach.id, rate.id, body) : managerApi.createRate(coach.id, body)
+      return rate
+        ? managerApi.updateRate(coach.id, rate.id, body)
+        : managerApi.createRate(coach.id, body)
     },
     onSuccess: onSaved,
     onError: (err) => setError(errorMessage(err)),
@@ -406,7 +442,12 @@ function RateForm({
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Áp dụng từ">
-            <TextInput type="date" required value={form.effectiveFrom} onChange={set('effectiveFrom')} />
+            <TextInput
+              type="date"
+              required
+              value={form.effectiveFrom}
+              onChange={set('effectiveFrom')}
+            />
           </Field>
           <Field label="Đến ngày" hint="Để trống nếu không giới hạn.">
             <TextInput type="date" value={form.effectiveTo} onChange={set('effectiveTo')} />
@@ -428,8 +469,9 @@ function SpecialtiesTab({
   disciplines: Discipline[]
 }) {
   const queryClient = useQueryClient()
-  const [creating, setCreating] = useState(false)
+  const [editing, setEditing] = useState<Specialty | 'new' | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const { items: pageSpecialties, pager } = usePagination(specialties.data ?? [], 15)
   const usage = new Map<string, number>()
   for (const coach of coaches)
     for (const s of coach.coachProfile?.coachSpecialties ?? [])
@@ -447,7 +489,7 @@ function SpecialtiesTab({
     <Panel
       title="Danh mục chuyên môn"
       actions={
-        <Btn size="sm" tone="primary" onClick={() => setCreating(true)}>
+        <Btn size="sm" tone="primary" onClick={() => setEditing('new')}>
           <Plus className="h-3.5 w-3.5" />
           Thêm chuyên môn
         </Btn>
@@ -461,56 +503,68 @@ function SpecialtiesTab({
           onRetry={() => void specialties.refetch()}
         />
       ) : (
-        <Table>
-          <thead>
-            <tr>
-              <Th>Tên</Th>
-              <Th>Mã</Th>
-              <Th>Môn</Th>
-              <Th>HLV đang có</Th>
-              <Th className="text-right">Thao tác</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {(specialties.data ?? []).length === 0 ? (
-              <EmptyRow colSpan={5}>Chưa có chuyên môn.</EmptyRow>
-            ) : (
-              (specialties.data ?? []).map((s) => {
-                const used = usage.get(s.id) ?? 0
-                return (
-                  <tr key={s.id}>
-                    <Td>
-                      <div className="font-medium text-slate-900">{s.name}</div>
-                      {s.description ? <div className="text-xs text-slate-400">{s.description}</div> : null}
-                    </Td>
-                    <Td className="font-mono text-xs">{s.code}</Td>
-                    <Td>{s.discipline?.name ?? '—'}</Td>
-                    <Td className="tabular-nums">{used}</Td>
-                    <Td className="text-right">
-                      <Btn
-                        size="sm"
-                        tone="danger"
-                        disabled={used > 0 || remove.isPending}
-                        title={used > 0 ? 'Đang có HLV dùng chuyên môn này' : undefined}
-                        onClick={() => window.confirm(`Xóa chuyên môn ${s.name}?`) && remove.mutate(s.id)}
-                      >
-                        Xóa
-                      </Btn>
-                    </Td>
-                  </tr>
-                )
-              })
-            )}
-          </tbody>
-        </Table>
+        <>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Tên</Th>
+                <Th>Mã</Th>
+                <Th>Môn</Th>
+                <Th>HLV đang có</Th>
+                <Th className="text-right">Thao tác</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {(specialties.data ?? []).length === 0 ? (
+                <EmptyRow colSpan={5}>Chưa có chuyên môn.</EmptyRow>
+              ) : (
+                pageSpecialties.map((s) => {
+                  const used = usage.get(s.id) ?? 0
+                  return (
+                    <tr key={s.id}>
+                      <Td>
+                        <div className="font-medium text-slate-900">{s.name}</div>
+                        {s.description ? (
+                          <div className="text-xs text-slate-400">{s.description}</div>
+                        ) : null}
+                      </Td>
+                      <Td className="font-mono text-xs">{s.code}</Td>
+                      <Td>{s.discipline?.name ?? '—'}</Td>
+                      <Td className="tabular-nums">{used}</Td>
+                      <Td className="whitespace-nowrap text-right">
+                        <Btn size="sm" tone="ghost" onClick={() => setEditing(s)}>
+                          Sửa
+                        </Btn>
+                        <Btn
+                          size="sm"
+                          tone="danger"
+                          disabled={used > 0 || remove.isPending}
+                          title={used > 0 ? 'Đang có HLV dùng chuyên môn này' : undefined}
+                          onClick={() =>
+                            window.confirm(`Xóa chuyên môn ${s.name}?`) && remove.mutate(s.id)
+                          }
+                        >
+                          Xóa
+                        </Btn>
+                      </Td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </Table>
+          <Pagination pager={pager} />
+        </>
       )}
-      {creating ? (
+      {editing ? (
         <SpecialtyForm
+          specialty={editing === 'new' ? null : editing}
           disciplines={disciplines}
-          onClose={() => setCreating(false)}
+          onClose={() => setEditing(null)}
           onSaved={() => {
-            setCreating(false)
+            setEditing(null)
             void queryClient.invalidateQueries({ queryKey: managerKeys.specialties })
+            void queryClient.invalidateQueries({ queryKey: managerKeys.coaches })
           }}
         />
       ) : null}
@@ -519,38 +573,49 @@ function SpecialtiesTab({
 }
 
 function SpecialtyForm({
+  specialty,
   disciplines,
   onClose,
   onSaved,
 }: {
+  specialty: Specialty | null
   disciplines: Discipline[]
   onClose: () => void
   onSaved: () => void
 }) {
-  const [form, setForm] = useState({ disciplineId: disciplines[0]?.id ?? '', code: '', name: '', description: '' })
+  const [form, setForm] = useState({
+    disciplineId: specialty?.disciplineId ?? disciplines[0]?.id ?? '',
+    code: specialty?.code ?? '',
+    name: specialty?.name ?? '',
+    description: specialty?.description ?? '',
+  })
   const [error, setError] = useState<string | null>(null)
   const set = (key: keyof typeof form) => (event: { target: { value: string } }) =>
     setForm((current) => ({ ...current, [key]: event.target.value }))
   const save = useMutation({
-    mutationFn: () =>
-      managerApi.createSpecialty({
+    mutationFn: () => {
+      const body = {
         disciplineId: form.disciplineId,
         code: form.code.trim().toUpperCase(),
         name: form.name.trim(),
         ...(form.description.trim() ? { description: form.description.trim() } : {}),
-      }),
+      }
+      return specialty
+        ? managerApi.updateSpecialty(specialty.id, body)
+        : managerApi.createSpecialty(body)
+    },
     onSuccess: onSaved,
     onError: (err) => setError(errorMessage(err)),
   })
   return (
     <Modal
-      title="Thêm chuyên môn"
+      title={specialty ? `Sửa ${specialty.name}` : 'Thêm chuyên môn'}
       onClose={onClose}
       footer={
         <>
           <Btn onClick={onClose}>Hủy</Btn>
           <Btn tone="primary" type="submit" form="specialty-form" disabled={save.isPending}>
-            {save.isPending ? 'Đang lưu…' : 'Thêm'}
+            {save.isPending ? 'Đang lưu…' : specialty ? 'Lưu' : 'Thêm'}
           </Btn>
         </>
       }
@@ -563,8 +628,16 @@ function SpecialtyForm({
         }}
         className="space-y-3"
       >
-        <Field label="Môn">
-          <SelectInput required value={form.disciplineId} onChange={set('disciplineId')}>
+        <Field
+          label="Môn"
+          hint={specialty ? 'Không đổi được môn của chuyên môn đã tạo.' : undefined}
+        >
+          <SelectInput
+            required
+            disabled={!!specialty}
+            value={form.disciplineId}
+            onChange={set('disciplineId')}
+          >
             {disciplines.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.name}
@@ -573,7 +646,13 @@ function SpecialtyForm({
           </SelectInput>
         </Field>
         <Field label="Tên chuyên môn">
-          <TextInput required maxLength={150} placeholder="Kỹ thuật phòng thủ" value={form.name} onChange={set('name')} />
+          <TextInput
+            required
+            maxLength={150}
+            placeholder="Kỹ thuật phòng thủ"
+            value={form.name}
+            onChange={set('name')}
+          />
         </Field>
         <Field label="Mã" hint="Viết liền, không dấu, không trùng. Ví dụ BOX_DEFENSE.">
           <TextInput
@@ -590,5 +669,45 @@ function SpecialtyForm({
         <FormError>{error}</FormError>
       </form>
     </Modal>
+  )
+}
+
+function CoachSlots({ coach }: { coach: CoachRow }) {
+  const slots = useQuery({
+    queryKey: managerKeys.coachSlots(coach.id),
+    queryFn: () => managerApi.coachSlots(coach.id),
+  })
+  const rows = slots.data ?? []
+  return (
+    <Panel title="Khung giờ rảnh dạy 1-1 sắp tới">
+      {slots.isLoading || slots.isError ? (
+        <StateMessage
+          loading={slots.isLoading}
+          error={slots.isError ? errorMessage(slots.error) : null}
+          onRetry={() => void slots.refetch()}
+        />
+      ) : rows.length === 0 ? (
+        <p className="px-4 py-6 text-center text-sm text-slate-400">
+          HLV chưa mở khung giờ trống nào.
+        </p>
+      ) : (
+        <ul className="grid gap-1.5 p-4 sm:grid-cols-2">
+          {rows.slice(0, 20).map((slot) => (
+            <li
+              key={slot.id}
+              className="rounded border border-slate-200 px-3 py-1.5 text-sm tabular-nums text-slate-700"
+            >
+              {formatTime(slot.startTime)}–{formatTime(slot.endTime)}{' '}
+              <span className="text-slate-400">{formatDate(slot.startTime)}</span>
+            </li>
+          ))}
+          {rows.length > 20 ? (
+            <li className="text-xs text-slate-400 sm:col-span-2">
+              và {rows.length - 20} khung giờ khác.
+            </li>
+          ) : null}
+        </ul>
+      )}
+    </Panel>
   )
 }

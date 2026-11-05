@@ -3,7 +3,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus } from 'lucide-react'
 import { managerApi, managerKeys } from '../api/manager-api'
 import type { CoachRow, Discipline, GymClass, Room, Schedule } from '../types/manager.types'
-import { errorMessage, formatDay, formatTime, vnClock, vnDay, vnInstant, addDaysToDay } from '../lib/format'
+import {
+  errorMessage,
+  formatDay,
+  formatTime,
+  vnClock,
+  vnDay,
+  vnInstant,
+  addDaysToDay,
+} from '../lib/format'
 import {
   Btn,
   EmptyRow,
@@ -21,7 +29,9 @@ import {
   TextArea,
   TextInput,
   Th,
+  Pagination,
 } from '../components/manager-ui'
+import { usePagination } from '../lib/use-pagination'
 
 const DEFAULT_CAPACITY = 10
 
@@ -32,7 +42,10 @@ export function ManagerClassesPage() {
   const classes = useQuery({ queryKey: managerKeys.classes, queryFn: managerApi.classes })
   const rooms = useQuery({ queryKey: managerKeys.rooms, queryFn: managerApi.rooms })
   const coaches = useQuery({ queryKey: managerKeys.coaches, queryFn: managerApi.coaches })
-  const disciplines = useQuery({ queryKey: managerKeys.disciplines, queryFn: managerApi.disciplines })
+  const disciplines = useQuery({
+    queryKey: managerKeys.disciplines,
+    queryFn: managerApi.disciplines,
+  })
   const [editingSchedule, setEditingSchedule] = useState<Schedule | 'new' | null>(null)
   const [editingClass, setEditingClass] = useState<GymClass | 'new' | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -56,8 +69,11 @@ export function ManagerClassesPage() {
 
   const scheduleRows = schedules.data ?? []
   const classRows = classes.data ?? []
+  // Page the flat list first, then group the page by day so headers never split oddly.
+  const schedulePage = usePagination(scheduleRows, 20)
+  const classPage = usePagination(classRows, 15)
   const groups = new Map<string, Schedule[]>()
-  for (const s of scheduleRows) {
+  for (const s of schedulePage.items) {
     const day = vnDay(s.startTime)
     groups.set(day, [...(groups.get(day) ?? []), s])
   }
@@ -69,7 +85,11 @@ export function ManagerClassesPage() {
         description="Loại lớp nhóm và thời khóa biểu sắp diễn ra."
         actions={
           tab === 'schedules' ? (
-            <Btn tone="primary" onClick={() => setEditingSchedule('new')} disabled={classRows.length === 0}>
+            <Btn
+              tone="primary"
+              onClick={() => setEditingSchedule('new')}
+              disabled={classRows.length === 0}
+            >
               <Plus className="h-4 w-4" />
               Xếp lịch
             </Btn>
@@ -102,67 +122,77 @@ export function ManagerClassesPage() {
               onRetry={() => void schedules.refetch()}
             />
           ) : (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Giờ</Th>
-                  <Th>Lớp</Th>
-                  <Th>Phòng</Th>
-                  <Th>HLV</Th>
-                  <Th>Đã đặt</Th>
-                  <Th className="text-right">Thao tác</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {scheduleRows.length === 0 ? (
-                  <EmptyRow colSpan={6}>Chưa có lịch nào sắp diễn ra.</EmptyRow>
-                ) : (
-                  [...groups].flatMap(([day, items]) => [
-                    <tr key={day}>
-                      <td colSpan={6} className="bg-slate-50 px-4 py-1.5 text-xs font-medium text-slate-500">
-                        {formatDay(day)}
-                      </td>
-                    </tr>,
-                    ...items.map((s) => (
-                      <tr key={s.id}>
-                        <Td className="whitespace-nowrap tabular-nums">
-                          {formatTime(s.startTime)}–{formatTime(s.endTime)}
-                        </Td>
-                        <Td>
-                          <div className="font-medium text-slate-900">{s.class?.name}</div>
-                          <div className="text-xs text-slate-400">{s.class?.discipline?.name}</div>
-                        </Td>
-                        <Td>{s.room?.name}</Td>
-                        <Td>{s.coach?.fullName}</Td>
-                        <Td className="tabular-nums">
-                          {s.currentEnrolled}/{s.capacity}
-                          {s.status === 'FULL' ? <Pill tone="amber">Đầy</Pill> : null}
-                        </Td>
-                        <Td className="whitespace-nowrap text-right">
-                          <Btn
-                            size="sm"
-                            tone="ghost"
-                            disabled={s.currentEnrolled > 0}
-                            title={s.currentEnrolled > 0 ? 'Đã có hội viên đặt chỗ' : undefined}
-                            onClick={() => setEditingSchedule(s)}
-                          >
-                            Sửa
-                          </Btn>
-                          <Btn
-                            size="sm"
-                            tone="danger"
-                            disabled={removeSchedule.isPending}
-                            onClick={() => window.confirm('Xóa lịch này?') && removeSchedule.mutate(s.id)}
-                          >
-                            Xóa
-                          </Btn>
-                        </Td>
-                      </tr>
-                    )),
-                  ])
-                )}
-              </tbody>
-            </Table>
+            <>
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>Giờ</Th>
+                    <Th>Lớp</Th>
+                    <Th>Phòng</Th>
+                    <Th>HLV</Th>
+                    <Th>Đã đặt</Th>
+                    <Th className="text-right">Thao tác</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {scheduleRows.length === 0 ? (
+                    <EmptyRow colSpan={6}>Chưa có lịch nào sắp diễn ra.</EmptyRow>
+                  ) : (
+                    [...groups].flatMap(([day, items]) => [
+                      <tr key={day}>
+                        <td
+                          colSpan={6}
+                          className="bg-slate-50 px-4 py-1.5 text-xs font-medium text-slate-500"
+                        >
+                          {formatDay(day)}
+                        </td>
+                      </tr>,
+                      ...items.map((s) => (
+                        <tr key={s.id}>
+                          <Td className="whitespace-nowrap tabular-nums">
+                            {formatTime(s.startTime)}–{formatTime(s.endTime)}
+                          </Td>
+                          <Td>
+                            <div className="font-medium text-slate-900">{s.class?.name}</div>
+                            <div className="text-xs text-slate-400">
+                              {s.class?.discipline?.name}
+                            </div>
+                          </Td>
+                          <Td>{s.room?.name}</Td>
+                          <Td>{s.coach?.fullName}</Td>
+                          <Td className="tabular-nums">
+                            {s.currentEnrolled}/{s.capacity}
+                            {s.status === 'FULL' ? <Pill tone="amber">Đầy</Pill> : null}
+                          </Td>
+                          <Td className="whitespace-nowrap text-right">
+                            <Btn
+                              size="sm"
+                              tone="ghost"
+                              disabled={s.currentEnrolled > 0}
+                              title={s.currentEnrolled > 0 ? 'Đã có hội viên đặt chỗ' : undefined}
+                              onClick={() => setEditingSchedule(s)}
+                            >
+                              Sửa
+                            </Btn>
+                            <Btn
+                              size="sm"
+                              tone="danger"
+                              disabled={removeSchedule.isPending}
+                              onClick={() =>
+                                window.confirm('Xóa lịch này?') && removeSchedule.mutate(s.id)
+                              }
+                            >
+                              Xóa
+                            </Btn>
+                          </Td>
+                        </tr>
+                      )),
+                    ])
+                  )}
+                </tbody>
+              </Table>
+              <Pagination pager={schedulePage.pager} />
+            </>
           )}
         </Panel>
       ) : (
@@ -174,42 +204,47 @@ export function ManagerClassesPage() {
               onRetry={() => void classes.refetch()}
             />
           ) : (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Tên lớp</Th>
-                  <Th>Môn</Th>
-                  <Th>Mô tả</Th>
-                  <Th className="text-right">Thao tác</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {classRows.length === 0 ? (
-                  <EmptyRow colSpan={4}>Chưa có loại lớp nào.</EmptyRow>
-                ) : (
-                  classRows.map((c) => (
-                    <tr key={c.id}>
-                      <Td className="font-medium text-slate-900">{c.name}</Td>
-                      <Td>{c.discipline?.name}</Td>
-                      <Td className="max-w-[360px] text-slate-500">{c.description}</Td>
-                      <Td className="whitespace-nowrap text-right">
-                        <Btn size="sm" tone="ghost" onClick={() => setEditingClass(c)}>
-                          Sửa
-                        </Btn>
-                        <Btn
-                          size="sm"
-                          tone="danger"
-                          disabled={removeClass.isPending}
-                          onClick={() => window.confirm(`Xóa lớp ${c.name}?`) && removeClass.mutate(c.id)}
-                        >
-                          Xóa
-                        </Btn>
-                      </Td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </Table>
+            <>
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>Tên lớp</Th>
+                    <Th>Môn</Th>
+                    <Th>Mô tả</Th>
+                    <Th className="text-right">Thao tác</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {classRows.length === 0 ? (
+                    <EmptyRow colSpan={4}>Chưa có loại lớp nào.</EmptyRow>
+                  ) : (
+                    classPage.items.map((c) => (
+                      <tr key={c.id}>
+                        <Td className="font-medium text-slate-900">{c.name}</Td>
+                        <Td>{c.discipline?.name}</Td>
+                        <Td className="max-w-[360px] text-slate-500">{c.description}</Td>
+                        <Td className="whitespace-nowrap text-right">
+                          <Btn size="sm" tone="ghost" onClick={() => setEditingClass(c)}>
+                            Sửa
+                          </Btn>
+                          <Btn
+                            size="sm"
+                            tone="danger"
+                            disabled={removeClass.isPending}
+                            onClick={() =>
+                              window.confirm(`Xóa lớp ${c.name}?`) && removeClass.mutate(c.id)
+                            }
+                          >
+                            Xóa
+                          </Btn>
+                        </Td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </Table>
+              <Pagination pager={classPage.pager} />
+            </>
           )}
         </Panel>
       )}
@@ -277,9 +312,13 @@ function ScheduleForm({
   const gymClass = classes.find((c) => c.id === form.classId)
   const room = rooms.find((r) => r.id === form.roomId)
   const eligible = coaches.filter((coach) =>
-    (coach.coachProfile?.coachSpecialties ?? []).some((s) => s.specialty.disciplineId === gymClass?.disciplineId),
+    (coach.coachProfile?.coachSpecialties ?? []).some(
+      (s) => s.specialty.disciplineId === gymClass?.disciplineId,
+    ),
   )
-  const coachId = eligible.some((c) => c.id === form.coachId) ? form.coachId : (eligible[0]?.id ?? '')
+  const coachId = eligible.some((c) => c.id === form.coachId)
+    ? form.coachId
+    : (eligible[0]?.id ?? '')
 
   const save = useMutation({
     mutationFn: () => {
@@ -291,7 +330,9 @@ function ScheduleForm({
         endTime: vnInstant(form.day, form.end),
         capacity: Number(form.capacity),
       }
-      return schedule ? managerApi.updateSchedule(schedule.id, body) : managerApi.createSchedule(body)
+      return schedule
+        ? managerApi.updateSchedule(schedule.id, body)
+        : managerApi.createSchedule(body)
     },
     onSuccess: onSaved,
     onError: (err) => setError(errorMessage(err)),
@@ -300,7 +341,8 @@ function ScheduleForm({
     event.preventDefault()
     if (!coachId) return setError('Chưa có HLV nào có chuyên môn cho môn của lớp này.')
     if (form.end <= form.start) return setError('Giờ kết thúc phải sau giờ bắt đầu.')
-    if (new Date(vnInstant(form.day, form.start)) <= new Date()) return setError('Chỉ xếp được lịch trong tương lai.')
+    if (new Date(vnInstant(form.day, form.start)) <= new Date())
+      return setError('Chỉ xếp được lịch trong tương lai.')
     if (room && Number(form.capacity) > room.capacity)
       return setError(`Phòng ${room.name} chỉ chứa tối đa ${room.capacity} người.`)
     setError(null)
@@ -334,7 +376,9 @@ function ScheduleForm({
           <SelectInput
             required
             value={coachId}
-            onChange={(event) => setForm((current) => ({ ...current, coachId: event.target.value }))}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, coachId: event.target.value }))
+            }
           >
             {eligible.length === 0 ? <option value="">Không có HLV phù hợp</option> : null}
             {eligible.map((coach) => (
@@ -354,7 +398,10 @@ function ScheduleForm({
               ))}
             </SelectInput>
           </Field>
-          <Field label="Sĩ số tối đa" hint={room ? `Phòng chứa tối đa ${room.capacity}.` : undefined}>
+          <Field
+            label="Sĩ số tối đa"
+            hint={room ? `Phòng chứa tối đa ${room.capacity}.` : undefined}
+          >
             <TextInput
               type="number"
               required

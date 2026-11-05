@@ -40,6 +40,10 @@ import {
   ManagerFacilitiesPage,
   ManagerMembersPage,
   ManagerReportsPage,
+  ManagerExercisesPage,
+  ManagerPosPage,
+  ManagerBookingsPage,
+  ManagerAttendancesPage,
 } from "@/features/manager";
 import { mondayInVietnam } from "@/lib/date";
 import {
@@ -175,6 +179,10 @@ export const router = createBrowserRouter([
           { path: "facilities", element: <ManagerFacilitiesPage /> },
           { path: "members", element: <ManagerMembersPage /> },
           { path: "reports", element: <ManagerReportsPage /> },
+          { path: "exercises", element: <ManagerExercisesPage /> },
+          { path: "pos", element: <ManagerPosPage /> },
+          { path: "bookings", element: <ManagerBookingsPage /> },
+          { path: "attendances", element: <ManagerAttendancesPage /> },
         ],
       },
     ],

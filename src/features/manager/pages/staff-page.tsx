@@ -20,7 +20,9 @@ import {
   Td,
   TextInput,
   Th,
+  Pagination,
 } from '../components/manager-ui'
+import { usePagination } from '../lib/use-pagination'
 
 type Filter = 'ALL' | StaffRole
 
@@ -34,7 +36,9 @@ export function ManagerStaffPage() {
 
   const toggle = useMutation({
     mutationFn: (user: UserRow) =>
-      user.isActive ? managerApi.disableStaff(user.id) : managerApi.updateStaff(user.id, { isActive: true }),
+      user.isActive
+        ? managerApi.disableStaff(user.id)
+        : managerApi.updateStaff(user.id, { isActive: true }),
     onSuccess: () => {
       setActionError(null)
       void queryClient.invalidateQueries({ queryKey: managerKeys.staff })
@@ -53,6 +57,8 @@ export function ManagerStaffPage() {
         (user.phone ?? '').includes(term)),
   )
 
+  const { items: pageRows, pager } = usePagination(visible, 15, `${filter}|${term}`)
+
   return (
     <>
       <PageHeader
@@ -70,8 +76,16 @@ export function ManagerStaffPage() {
         onChange={setFilter}
         items={[
           { value: 'ALL', label: 'Tất cả', count: rows.length },
-          { value: 'RECEPTIONIST', label: 'Lễ tân', count: rows.filter((u) => u.role === 'RECEPTIONIST').length },
-          { value: 'COACH', label: 'Huấn luyện viên', count: rows.filter((u) => u.role === 'COACH').length },
+          {
+            value: 'RECEPTIONIST',
+            label: 'Lễ tân',
+            count: rows.filter((u) => u.role === 'RECEPTIONIST').length,
+          },
+          {
+            value: 'COACH',
+            label: 'Huấn luyện viên',
+            count: rows.filter((u) => u.role === 'COACH').length,
+          },
         ]}
       />
       <Panel
@@ -95,55 +109,62 @@ export function ManagerStaffPage() {
             onRetry={() => void staff.refetch()}
           />
         ) : (
-          <Table>
-            <thead>
-              <tr>
-                <Th>Họ tên</Th>
-                <Th>Vai trò</Th>
-                <Th>Liên hệ</Th>
-                <Th>Ngày tạo</Th>
-                <Th>Trạng thái</Th>
-                <Th className="text-right">Thao tác</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {visible.length === 0 ? (
-                <EmptyRow colSpan={6}>Không có nhân viên phù hợp.</EmptyRow>
-              ) : (
-                visible.map((user) => (
-                  <tr key={user.id}>
-                    <Td className="font-medium text-slate-900">{user.fullName}</Td>
-                    <Td>{roleLabel[user.role]}</Td>
-                    <Td>
-                      <div>{user.email}</div>
-                      <div className="text-xs text-slate-400">{user.phone}</div>
-                    </Td>
-                    <Td>{formatDate(user.createdAt)}</Td>
-                    <Td>{user.isActive ? <Pill tone="green">Đang làm</Pill> : <Pill>Đã khóa</Pill>}</Td>
-                    <Td className="whitespace-nowrap text-right">
-                      <Btn size="sm" tone="ghost" onClick={() => setEditing(user)}>
-                        Sửa
-                      </Btn>
-                      <Btn
-                        size="sm"
-                        tone={user.isActive ? 'danger' : 'secondary'}
-                        disabled={toggle.isPending}
-                        onClick={() => {
-                          if (
-                            !user.isActive ||
-                            window.confirm(`Khóa tài khoản ${user.fullName}? Người này sẽ bị đăng xuất ngay.`)
-                          )
-                            toggle.mutate(user)
-                        }}
-                      >
-                        {user.isActive ? 'Khóa' : 'Mở khóa'}
-                      </Btn>
-                    </Td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </Table>
+          <>
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Họ tên</Th>
+                  <Th>Vai trò</Th>
+                  <Th>Liên hệ</Th>
+                  <Th>Ngày tạo</Th>
+                  <Th>Trạng thái</Th>
+                  <Th className="text-right">Thao tác</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {visible.length === 0 ? (
+                  <EmptyRow colSpan={6}>Không có nhân viên phù hợp.</EmptyRow>
+                ) : (
+                  pageRows.map((user) => (
+                    <tr key={user.id}>
+                      <Td className="font-medium text-slate-900">{user.fullName}</Td>
+                      <Td>{roleLabel[user.role]}</Td>
+                      <Td>
+                        <div>{user.email}</div>
+                        <div className="text-xs text-slate-400">{user.phone}</div>
+                      </Td>
+                      <Td>{formatDate(user.createdAt)}</Td>
+                      <Td>
+                        {user.isActive ? <Pill tone="green">Đang làm</Pill> : <Pill>Đã khóa</Pill>}
+                      </Td>
+                      <Td className="whitespace-nowrap text-right">
+                        <Btn size="sm" tone="ghost" onClick={() => setEditing(user)}>
+                          Sửa
+                        </Btn>
+                        <Btn
+                          size="sm"
+                          tone={user.isActive ? 'danger' : 'secondary'}
+                          disabled={toggle.isPending}
+                          onClick={() => {
+                            if (
+                              !user.isActive ||
+                              window.confirm(
+                                `Khóa tài khoản ${user.fullName}? Người này sẽ bị đăng xuất ngay.`,
+                              )
+                            )
+                              toggle.mutate(user)
+                          }}
+                        >
+                          {user.isActive ? 'Khóa' : 'Mở khóa'}
+                        </Btn>
+                      </Td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </Table>
+            <Pagination pager={pager} />
+          </>
         )}
       </Panel>
       {editing ? (
@@ -160,7 +181,15 @@ export function ManagerStaffPage() {
   )
 }
 
-function StaffForm({ user, onClose, onSaved }: { user: UserRow | null; onClose: () => void; onSaved: () => void }) {
+function StaffForm({
+  user,
+  onClose,
+  onSaved,
+}: {
+  user: UserRow | null
+  onClose: () => void
+  onSaved: () => void
+}) {
   const [form, setForm] = useState({
     fullName: user?.fullName ?? '',
     email: user?.email ?? '',
@@ -216,7 +245,13 @@ function StaffForm({ user, onClose, onSaved }: { user: UserRow | null; onClose: 
           <TextInput required maxLength={150} value={form.fullName} onChange={set('fullName')} />
         </Field>
         <Field label="Email" hint={user ? 'Email không đổi được.' : undefined}>
-          <TextInput type="email" required disabled={!!user} value={form.email} onChange={set('email')} />
+          <TextInput
+            type="email"
+            required
+            disabled={!!user}
+            value={form.email}
+            onChange={set('email')}
+          />
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Số điện thoại">
@@ -229,7 +264,10 @@ function StaffForm({ user, onClose, onSaved }: { user: UserRow | null; onClose: 
             </SelectInput>
           </Field>
         </div>
-        <Field label={user ? 'Mật khẩu mới' : 'Mật khẩu'} hint={user ? 'Để trống nếu không đổi. Ít nhất 8 ký tự.' : 'Ít nhất 8 ký tự.'}>
+        <Field
+          label={user ? 'Mật khẩu mới' : 'Mật khẩu'}
+          hint={user ? 'Để trống nếu không đổi. Ít nhất 8 ký tự.' : 'Ít nhất 8 ký tự.'}
+        >
           <TextInput
             type="password"
             autoComplete="new-password"

@@ -286,3 +286,163 @@ export interface MemberSubscription {
   plan?: { id: string; name: string } | null
   assignedCoach?: { id: string; fullName: string } | null
 }
+
+export type PaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'CARD'
+export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'ATTENDED'
+
+export interface DisciplinePayload {
+  code: string
+  name: string
+  description?: string
+}
+
+export interface CoachSlot {
+  id: string
+  coachId: string
+  startTime: string
+  endTime: string
+  isBooked: boolean
+}
+
+export interface CreateMemberPayload {
+  email: string
+  password: string
+  fullName: string
+  phone: string
+}
+
+export interface MemberProfilePayload {
+  fullName?: string
+  phone?: string
+  fitnessGoals?: string
+  medicalHistory?: string
+  heightCm?: number
+}
+
+export interface InbodyLog {
+  id: string
+  userId: string
+  measuredById: string | null
+  heightCm: string | number
+  weightKg: string | number
+  muscleMassKg: string | number | null
+  bodyFatPct: string | number | null
+  bmi: string | number | null
+  visceralFatLevel: number | null
+  notes: string | null
+  measuredAt: string
+}
+
+export interface InbodyPayload {
+  userId: string
+  heightCm: number
+  weightKg: number
+  muscleMassKg?: number
+  bodyFatPct?: number
+  bmi?: number
+  visceralFatLevel?: number
+  notes?: string
+}
+
+export interface ExerciseKnowledge {
+  id: string
+  title: string
+  category: string
+  instructions: string
+}
+
+export interface TemplateExercise {
+  id: string
+  sets: number | null
+  reps: number | null
+  unit: string | null
+  weightKg: string | number | null
+  restSeconds: number | null
+  orderIndex: number
+  exercise?: ExerciseKnowledge
+}
+
+export interface WorkoutTemplate {
+  id: string
+  templateCode: string
+  disciplineCode: string
+  title: string
+  weekNumber: number
+  sessionOrder: number
+  description: string | null
+  exercises: TemplateExercise[]
+}
+
+export interface WorkoutPlan {
+  id: string
+  memberId: string
+  coachId: string
+  bookingId: string | null
+  templateId: string | null
+  sessionOrder: number | null
+  title: string
+  notes: string | null
+  createdAt: string
+  exercises: TemplateExercise[]
+}
+
+export interface Booking {
+  id: string
+  subscriptionId: string
+  bookingType: 'GROUP_CLASS' | 'PERSONAL_TRAINING'
+  disciplineId: string | null
+  scheduleId: string | null
+  coachAvailabilityId: string | null
+  memberId: string
+  status: BookingStatus
+  bookedAt: string
+  cancelledAt: string | null
+  isLateCancellation: boolean | null
+  cancellationReason: string | null
+  schedule?: (Schedule & { class?: GymClass }) | null
+  coachAvailability?: CoachSlot | null
+  attendance?: { id: string; status: string; checkInTime: string } | null
+}
+
+export interface Invoice {
+  id: string
+  invoiceCode: string
+  subscriptionId: string
+  amount: string | number
+  baseAmount: string | number | null
+  ptAmount: string | number | null
+  paymentMethod: string
+  status: string
+  type: 'SUBSCRIPTION_NEW' | 'PT_ADDON' | 'DROP_IN' | string
+  transactionRef: string | null
+  createdAt: string
+  subscription?: { userId: string; planId: string } | null
+}
+
+export interface SalePayload {
+  memberId: string
+  planId: string
+  coachId?: string
+  paymentMethod: PaymentMethod
+  transactionRef?: string
+}
+
+export interface Attendance {
+  id: string
+  bookingId: string | null
+  memberId: string
+  checkInTime: string
+  status: string
+  checkinType: string
+  towelIssued: boolean | null
+  notes: string | null
+}
+
+export interface GateCheckinResult {
+  attendanceId: string
+  assignedLocker: string | null
+  towelIssued: boolean | null
+  checkinTime: string
+  repeated?: boolean
+  lockerAssignment?: { id: string; locker: { lockerNumber: string } } | null
+}

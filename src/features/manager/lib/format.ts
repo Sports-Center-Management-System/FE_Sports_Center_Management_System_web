@@ -2,9 +2,24 @@ import { ApiError } from '@/lib/api'
 
 const TZ = 'Asia/Ho_Chi_Minh'
 
-const dateFmt = new Intl.DateTimeFormat('vi-VN', { timeZone: TZ, day: '2-digit', month: '2-digit', year: 'numeric' })
-const timeFmt = new Intl.DateTimeFormat('vi-VN', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false })
-const isoDayFmt = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' })
+const dateFmt = new Intl.DateTimeFormat('vi-VN', {
+  timeZone: TZ,
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+})
+const timeFmt = new Intl.DateTimeFormat('vi-VN', {
+  timeZone: TZ,
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+})
+const isoDayFmt = new Intl.DateTimeFormat('en-CA', {
+  timeZone: TZ,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
 
 export const formatDate = (value?: string | null) => (value ? dateFmt.format(new Date(value)) : '—')
 export const formatTime = (value?: string | null) => (value ? timeFmt.format(new Date(value)) : '—')
@@ -20,7 +35,8 @@ export const formatDay = (value?: string | null) =>
   value ? dayOnly(value).split('-').reverse().join('/') : '—'
 
 /** "2026-10-12" + "06:00" in Vietnam time → ISO instant for the API. */
-export const vnInstant = (day: string, time: string) => new Date(`${day}T${time}:00+07:00`).toISOString()
+export const vnInstant = (day: string, time: string) =>
+  new Date(`${day}T${time}:00+07:00`).toISOString()
 /** HH:mm of an instant in Vietnam time, for <input type="time">. */
 export const vnClock = (value: string) => formatTime(value)
 
@@ -68,6 +84,33 @@ const messages: Record<string, string> = {
   SUBSCRIPTION_NOT_FREEZABLE: 'Chỉ đóng băng được gói đang hiệu lực.',
   SUBSCRIPTION_NOT_FROZEN: 'Gói này không ở trạng thái đóng băng.',
   USER_NOT_FOUND: 'Không tìm thấy người dùng.',
+  COACH_REQUIRED: 'Gói có buổi PT, cần chọn HLV.',
+  COACH_NOT_APPLICABLE: 'Gói không có buổi PT, không chọn HLV.',
+  COACH_RATE_NOT_CONFIGURED: 'HLV chưa có biểu phí hiệu lực cho môn này.',
+  PLAN_DISABLED: 'Gói đã ngừng bán.',
+  PLAN_DISCIPLINE_REQUIRED: 'Gói chưa gắn môn.',
+  TRIAL_ALREADY_USED: 'Hội viên đã dùng gói Trial của môn này.',
+  VIP_PLAN_REQUIRED: 'Chỉ bán được gói VIP ở mục này.',
+  SUBSCRIPTION_NOT_RENEWABLE: 'Gói Trial và Drop-in không gia hạn được.',
+  UNFREEZE_BEFORE_RENEWAL: 'Cần mở lại gói trước khi gia hạn.',
+  INVALID_PT_SUBSCRIPTION: 'Chỉ bán thêm PT cho gói đang hiệu lực và đã có HLV.',
+  CLASS_FULL_OR_CLOSED: 'Lớp đã đầy hoặc đã đóng.',
+  MEMBER_SCHEDULE_OVERLAP: 'Hội viên đã có lịch khác trùng giờ.',
+  NO_VALID_SUBSCRIPTION_OR_QUOTA: 'Hội viên không có gói hợp lệ hoặc đã hết buổi.',
+  QUOTA_EXHAUSTED: 'Hội viên đã hết buổi trong gói.',
+  PT_SLOT_UNAVAILABLE: 'Khung giờ PT này không còn trống.',
+  SESSION_ALREADY_STARTED: 'Buổi tập đã bắt đầu, không hủy được.',
+  SESSION_UNAVAILABLE: 'Buổi tập không còn khả dụng.',
+  BOOKING_ALREADY_PROCESSED: 'Lượt đặt này đã được xử lý.',
+  GATE_ACCESS_DENIED: 'Hội viên không có gói hiệu lực hôm nay.',
+  ALREADY_CHECKED_IN: 'Hội viên đã vào cổng hôm nay.',
+  NO_AVAILABLE_LOCKER: 'Khu này đã hết tủ trống.',
+  RETURN_OVERNIGHT_LOCKER_FIRST: 'Hội viên cần trả tủ của hôm trước trước.',
+  LOCKER_ALREADY_RETURNED: 'Tủ đã được trả.',
+  INBODY_EDIT_WINDOW_EXPIRED: 'Chỉ sửa được kết quả InBody trong 24 giờ sau khi đo.',
+  INVALID_FILE_TYPE: 'Ảnh phải là JPG, PNG, WEBP hoặc GIF.',
+  FILE_TOO_LARGE: 'Ảnh tối đa 3 MB.',
+  REQUEST_NOT_PENDING: 'Đơn không còn ở trạng thái chờ duyệt.',
 }
 
 export function errorMessage(error: unknown): string {
@@ -111,10 +154,28 @@ export const cancellationStatusLabel: Record<string, string> = {
   PENDING: 'Chờ duyệt',
   APPROVED: 'Đã duyệt',
   REJECTED: 'Từ chối',
-  CANCELLED: 'HLV rút lại',
+  CANCELLED: 'Đã hủy đơn',
 }
 export const roleLabel: Record<string, string> = {
   COACH: 'Huấn luyện viên',
   RECEPTIONIST: 'Lễ tân',
   MEMBER: 'Hội viên',
+}
+export const paymentMethodLabel: Record<string, string> = {
+  CASH: 'Tiền mặt',
+  BANK_TRANSFER: 'Chuyển khoản',
+  CARD: 'Thẻ',
+  MOCK: 'Thanh toán online',
+  FREE: 'Miễn phí',
+}
+export const invoiceTypeLabel: Record<string, string> = {
+  SUBSCRIPTION_NEW: 'Gói mới',
+  PT_ADDON: 'Thêm buổi PT',
+  DROP_IN: 'Vé lẻ',
+}
+export const bookingStatusLabel: Record<string, string> = {
+  PENDING: 'Chờ xác nhận',
+  CONFIRMED: 'Đã đặt',
+  CANCELLED: 'Đã hủy',
+  ATTENDED: 'Đã tham gia',
 }

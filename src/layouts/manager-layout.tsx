@@ -1,10 +1,13 @@
 import React, { useEffect } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { io } from 'socket.io-client'
 import {
   BarChart3,
+  BookOpen,
   Building2,
+  CalendarCheck,
+  DoorOpen,
+  ReceiptText,
   CalendarClock,
   CalendarDays,
   ClipboardCheck,
@@ -17,29 +20,47 @@ import {
   UsersRound,
 } from 'lucide-react'
 import { useAuth } from '@/context/auth-context'
-import { apiOrigin, readTokens } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { managerApi, managerKeys } from '@/features/manager/api/manager-api'
+import { connectRealtime } from '@/features/manager/lib/realtime'
 
-const navLinks = [
-  { label: 'Tổng quan', path: '/portal/manager/dashboard', icon: LayoutDashboard },
-  { label: 'Nhân sự', path: '/portal/manager/staff', icon: UserCog },
-  { label: 'Ca trực lễ tân', path: '/portal/manager/staff-shifts', icon: CalendarClock },
-  { label: 'HLV & biểu phí', path: '/portal/manager/coaches', icon: Dumbbell },
-  { label: 'Duyệt hủy ca', path: '/portal/manager/penalties', icon: ClipboardCheck, badge: true },
-  { label: 'Gói tập', path: '/portal/manager/plans', icon: Package },
-  { label: 'Lớp & lịch', path: '/portal/manager/classes', icon: CalendarDays },
-  { label: 'Cơ sở vật chất', path: '/portal/manager/facilities', icon: Building2 },
-  { label: 'Hội viên', path: '/portal/manager/members', icon: UsersRound },
-  { label: 'Báo cáo', path: '/portal/manager/reports', icon: BarChart3 },
+const navGroups = [
+  {
+    label: 'Quản trị',
+    links: [
+      { label: 'Tổng quan', path: '/portal/manager/dashboard', icon: LayoutDashboard },
+      { label: 'Nhân sự', path: '/portal/manager/staff', icon: UserCog },
+      { label: 'Ca trực lễ tân', path: '/portal/manager/staff-shifts', icon: CalendarClock },
+      { label: 'HLV & biểu phí', path: '/portal/manager/coaches', icon: Dumbbell },
+      {
+        label: 'Duyệt hủy ca',
+        path: '/portal/manager/penalties',
+        icon: ClipboardCheck,
+        badge: true,
+      },
+      { label: 'Môn & gói tập', path: '/portal/manager/plans', icon: Package },
+      { label: 'Lớp & lịch', path: '/portal/manager/classes', icon: CalendarDays },
+      { label: 'Cơ sở vật chất', path: '/portal/manager/facilities', icon: Building2 },
+      { label: 'Bài tập & giáo án', path: '/portal/manager/exercises', icon: BookOpen },
+      { label: 'Báo cáo', path: '/portal/manager/reports', icon: BarChart3 },
+    ],
+  },
+  {
+    label: 'Vận hành quầy',
+    links: [
+      { label: 'Hội viên & InBody', path: '/portal/manager/members', icon: UsersRound },
+      { label: 'Bán hàng & hóa đơn', path: '/portal/manager/pos', icon: ReceiptText },
+      { label: 'Lịch đặt chỗ', path: '/portal/manager/bookings', icon: CalendarCheck },
+      { label: 'Cổng & điểm danh', path: '/portal/manager/attendances', icon: DoorOpen },
+    ],
+  },
 ]
 
 function useCancellationRealtime() {
   const queryClient = useQueryClient()
   useEffect(() => {
-    const token = readTokens()?.accessToken
-    if (!token) return
-    const socket = io(`${apiOrigin()}/realtime`, { path: '/socket.io', auth: { token } })
+    const socket = connectRealtime()
+    if (!socket) return
     const refresh = () => {
       void queryClient.invalidateQueries({ queryKey: managerKeys.cancellations })
       void queryClient.invalidateQueries({ queryKey: managerKeys.summary })
@@ -56,24 +77,33 @@ function useCancellationRealtime() {
 function NavItems({ pending, onNavigate }: { pending: number; onNavigate?: () => void }) {
   return (
     <>
-      {navLinks.map(({ label, path, icon: Icon, badge }) => (
-        <NavLink
-          key={path}
-          to={path}
-          onClick={onNavigate}
-          className={({ isActive }) =>
-            cn(
-              'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm',
-              isActive ? 'bg-emerald-50 font-medium text-[#007461]' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
-            )
-          }
-        >
-          <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
-          <span className="flex-1">{label}</span>
-          {badge && pending > 0 ? (
-            <span className="rounded bg-rose-600 px-1.5 text-xs font-medium tabular-nums text-white">{pending}</span>
-          ) : null}
-        </NavLink>
+      {navGroups.map((group) => (
+        <div key={group.label} className="mb-3">
+          <p className="mb-1 px-3 text-xs text-slate-400">{group.label}</p>
+          {group.links.map(({ label, path, icon: Icon, badge }) => (
+            <NavLink
+              key={path}
+              to={path}
+              onClick={onNavigate}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm',
+                  isActive
+                    ? 'bg-emerald-50 font-medium text-[#007461]'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
+                )
+              }
+            >
+              <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
+              <span className="flex-1">{label}</span>
+              {badge && pending > 0 ? (
+                <span className="rounded bg-rose-600 px-1.5 text-xs font-medium tabular-nums text-white">
+                  {pending}
+                </span>
+              ) : null}
+            </NavLink>
+          ))}
+        </div>
       ))}
     </>
   )
@@ -136,7 +166,10 @@ export const ManagerLayout: React.FC = () => {
             <span className="block text-xs text-slate-500">Quản lý trung tâm</span>
           </span>
         </NavLink>
-        <nav aria-label="Điều hướng quản lý" className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
+        <nav
+          aria-label="Điều hướng quản lý"
+          className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto"
+        >
           <NavItems pending={pending} />
         </nav>
         {footer}
