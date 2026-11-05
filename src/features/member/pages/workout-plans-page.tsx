@@ -11,7 +11,6 @@ import {
   ChevronRight,
   Calendar,
   Filter,
-  Clock,
   Target,
   ShieldCheck,
 } from 'lucide-react';
@@ -830,7 +829,7 @@ export const WorkoutPlansPage: React.FC = () => {
 
         return (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 sm:p-6 overflow-y-auto"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-3 sm:p-6 overflow-y-auto"
             onMouseDown={(e) => {
               if (e.target === e.currentTarget) setSelectedPlan(null);
             }}
@@ -838,15 +837,15 @@ export const WorkoutPlansPage: React.FC = () => {
             <div
               role="dialog"
               aria-modal="true"
-              className="flex w-full max-w-3xl max-h-[92vh] flex-col overflow-hidden rounded-[2.5rem] bg-white border border-slate-200 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+              className="flex w-full max-w-5xl max-h-[94vh] flex-col overflow-hidden rounded-[2.5rem] bg-white border border-slate-200 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
             >
-              {/* Header with athletic dark gradient & glow */}
-              <div className="shrink-0 border-b border-slate-800 p-6 sm:p-8 bg-gradient-to-br from-slate-950 via-[#07171a] to-[#041d1a] text-white relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+              {/* Header: compact, sleek & high-contrast */}
+              <div className="shrink-0 border-b border-slate-800 px-6 py-4 sm:px-8 sm:py-5 bg-gradient-to-r from-slate-950 via-[#0a1f22] to-slate-950 text-white relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
                 <div className="relative z-10 flex items-start justify-between gap-4">
-                  <div className="min-w-0 space-y-3">
-                    {/* Top Badges */}
+                  <div className="min-w-0 space-y-2">
+                    {/* Top Badges & Meta */}
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 text-xs font-black uppercase tracking-wider">
                         {selectedPlan.template?.disciplineCode || 'Giáo án cá nhân 1-1'}
@@ -860,41 +859,28 @@ export const WorkoutPlansPage: React.FC = () => {
                         <Calendar className="w-3.5 h-3.5 text-slate-400" />
                         Lập ngày {vietnamDate(selectedPlan.createdAt)}
                       </span>
+                      {/* Coach badge */}
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-slate-900/90 border border-slate-800 text-xs">
+                        <div className="w-4 h-4 rounded-md bg-emerald-500 text-slate-950 text-[10px] font-black flex items-center justify-center shrink-0">
+                          {modalCoachName.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="text-slate-400 font-medium text-[11px]">HLV:</span>
+                        <span className="font-extrabold text-emerald-300 text-xs">{modalCoachName}</span>
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      </div>
                     </div>
 
                     {/* Plan Title */}
-                    <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight tracking-tight">
+                    <h2 className="text-xl sm:text-2xl font-black text-white leading-tight tracking-tight">
                       {selectedPlan.title}
                     </h2>
 
-                    {/* Coach attribution - PROMINENT ACTUAL COACH NAME */}
-                    <div className="inline-flex items-center gap-3 p-2.5 pr-4 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-inner">
-                      <div className="w-9 h-9 rounded-xl bg-emerald-500 text-slate-950 text-sm font-black flex items-center justify-center shrink-0 shadow-md">
-                        {modalCoachName.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-extrabold text-slate-400 block uppercase tracking-wider">
-                          Huấn luyện viên phụ trách
-                        </span>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-sm font-black text-emerald-300">
-                            {modalCoachName}
-                          </span>
-                          <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Session Notes / Target Callout */}
+                    {/* Compact Session Target / Notes */}
                     {selectedPlan.notes && (
-                      <div className="p-3.5 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 text-xs text-emerald-200 space-y-1">
-                        <div className="flex items-center gap-1.5 font-bold text-emerald-400 uppercase tracking-wide text-[10px]">
-                          <Target className="w-3.5 h-3.5" />
-                          <span>Mục tiêu buổi tập:</span>
-                        </div>
-                        <p className="leading-relaxed font-semibold italic pl-5 text-emerald-100">
-                          "{selectedPlan.notes}"
-                        </p>
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-950/60 border border-emerald-500/30 text-xs text-emerald-200 max-w-2xl">
+                        <Target className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span className="font-bold text-emerald-300 shrink-0">Mục tiêu:</span>
+                        <span className="truncate italic text-emerald-100">"{selectedPlan.notes}"</span>
                       </div>
                     )}
                   </div>
@@ -908,29 +894,18 @@ export const WorkoutPlansPage: React.FC = () => {
                     <X className="w-5 h-5" />
                   </button>
                 </div>
-
-                {/* Quick Summary Stats Ribbon */}
-                <div className="grid grid-cols-3 gap-2 pt-4 mt-4 border-t border-slate-800/80 text-center">
-                  <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Tổng bài tập</span>
-                    <span className="text-sm font-black text-white">{exercisesCount} bài</span>
-                  </div>
-                  <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Tổng khối lượng</span>
-                    <span className="text-sm font-black text-emerald-400">{totalSets} hiệp</span>
-                  </div>
-                  <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-800">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Hình thức</span>
-                    <span className="text-sm font-black text-amber-300">Kèm 1-1</span>
-                  </div>
-                </div>
               </div>
 
-              {/* Body: Exercise Matrix */}
-              <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-4 bg-slate-50/60">
-                <div className="flex items-center justify-between text-xs font-black text-slate-500 uppercase tracking-wider pb-1">
-                  <span>Chi tiết danh mục động tác ({exercisesCount})</span>
-                  <span className="text-slate-400 font-semibold normal-case">Thực hiện theo thứ tự 01 → {exercisesCount}</span>
+              {/* Body: High-prominence Exercise Matrix */}
+              <div className="flex-1 overflow-y-auto p-5 sm:p-8 space-y-4 bg-slate-50/70">
+                <div className="flex items-center justify-between text-xs font-black text-slate-600 uppercase tracking-wider pb-1">
+                  <span className="flex items-center gap-2">
+                    <Dumbbell className="w-4 h-4 text-emerald-600" />
+                    <span>Danh sách bài tập ({exercisesCount} bài • {totalSets} hiệp)</span>
+                  </span>
+                  <span className="text-slate-400 font-semibold normal-case hidden sm:inline">
+                    Thực hiện theo thứ tự 01 → {exercisesCount}
+                  </span>
                 </div>
 
                 {selectedPlan.exercises?.map((ex, idx) => {
@@ -944,69 +919,108 @@ export const WorkoutPlansPage: React.FC = () => {
                       className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/90 shadow-xs space-y-4 hover:border-emerald-300 hover:shadow-md transition-all"
                     >
                       {/* Exercise Header */}
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start justify-between gap-4">
                         <div className="flex items-start gap-3.5 min-w-0">
-                          <span className="w-9 h-9 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white font-mono text-xs font-black flex items-center justify-center shrink-0 shadow-md">
+                          <span className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-slate-950 text-emerald-400 font-mono text-base font-black flex items-center justify-center shrink-0 shadow-md ring-2 ring-emerald-500/20">
                             {String(idx + 1).padStart(2, '0')}
                           </span>
                           <div className="min-w-0">
-                            <h4 className="text-base font-black text-slate-900 leading-snug">
+                            <h4 className="text-lg sm:text-xl font-black text-slate-950 leading-snug">
                               {primary}
                             </h4>
                             {secondary && (
-                              <p className="text-xs font-semibold text-slate-400 mt-0.5">
+                              <p className="text-xs sm:text-sm font-semibold text-slate-400 mt-0.5">
                                 {secondary}
                               </p>
                             )}
+                            <div className="flex items-center gap-2 mt-2 flex-wrap">
+                              {meta.muscleVi && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-teal-50 text-teal-800 text-xs font-bold border border-teal-200/80">
+                                  🎯 {meta.muscleVi}
+                                </span>
+                              )}
+                              {meta.equipmentVi && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200">
+                                  🏋️ {meta.equipmentVi}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
 
-                        <span className="rounded-xl bg-slate-100 border border-slate-200 px-3 py-1 text-[11px] font-black text-slate-700 shrink-0 uppercase tracking-wide">
+                        <span className="rounded-xl bg-slate-100 border border-slate-200 px-3.5 py-1.5 text-xs font-black text-slate-700 shrink-0 uppercase tracking-wide">
                           {translateCategory(ex.exercise?.category)}
                         </span>
                       </div>
 
-                      {/* Dose Matrix Pills */}
-                      <div className="flex flex-wrap items-center gap-2 text-xs">
-                        <span className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 font-black border border-emerald-200/80 shadow-2xs">
-                          {ex.sets || 3} hiệp
-                        </span>
-                        <span className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-800 font-extrabold border border-slate-200">
-                          {ex.reps || 10} {unitStr}
-                        </span>
-                        {ex.weightKg !== null && ex.weightKg !== undefined && Number(ex.weightKg) > 0 && (
-                          <span className="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-900 font-black border border-amber-200 flex items-center gap-1 shadow-2xs">
-                            <span>🏋️</span>
-                            <span>Mức tạ: {ex.weightKg} kg</span>
+                      {/* Dose Matrix (Hiệp, Lần, Tạ, Nghỉ) - 4 BIG PROMINENT TILES */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 pt-1">
+                        <div className="p-3 sm:p-3.5 rounded-2xl bg-emerald-50/90 border border-emerald-200/90 text-center">
+                          <span className="text-[10px] sm:text-[11px] font-black text-emerald-700 uppercase tracking-wider block">
+                            Số hiệp
                           </span>
-                        )}
-                        <span className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 font-semibold border border-slate-200 flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5 text-slate-400" />
-                          <span>Nghỉ {ex.restSeconds || 60}s</span>
-                        </span>
-                        {meta.muscleVi && (
-                          <span className="px-3 py-1.5 rounded-xl bg-teal-50 text-teal-800 text-xs font-bold border border-teal-200">
-                            🎯 {meta.muscleVi}
+                          <span className="text-2xl sm:text-3xl font-black text-emerald-950 block mt-0.5">
+                            {ex.sets || 3}
                           </span>
-                        )}
+                        </div>
+
+                        <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+                          <span className="text-[10px] sm:text-[11px] font-black text-slate-500 uppercase tracking-wider block">
+                            Số lần / Hiệp
+                          </span>
+                          <span className="text-2xl sm:text-3xl font-black text-slate-900 block mt-0.5">
+                            {ex.reps || 10}{' '}
+                            <span className="text-sm font-bold text-slate-500">{unitStr}</span>
+                          </span>
+                        </div>
+
+                        <div className="p-3 sm:p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200/90 text-center">
+                          <span className="text-[10px] sm:text-[11px] font-black text-amber-700 uppercase tracking-wider block">
+                            Mức tạ
+                          </span>
+                          <span className="text-2xl sm:text-3xl font-black text-amber-950 block mt-0.5">
+                            {ex.weightKg !== null && ex.weightKg !== undefined && Number(ex.weightKg) > 0 ? (
+                              <>
+                                {ex.weightKg}{' '}
+                                <span className="text-sm font-bold text-amber-700">kg</span>
+                              </>
+                            ) : (
+                              <span className="text-base sm:text-lg font-bold text-amber-800/70">
+                                Bodyweight
+                              </span>
+                            )}
+                          </span>
+                        </div>
+
+                        <div className="p-3 sm:p-3.5 rounded-2xl bg-sky-50/90 border border-sky-200/90 text-center">
+                          <span className="text-[10px] sm:text-[11px] font-black text-sky-700 uppercase tracking-wider block">
+                            Nghỉ giữa hiệp
+                          </span>
+                          <span className="text-2xl sm:text-3xl font-black text-sky-950 block mt-0.5">
+                            {ex.restSeconds || 60}{' '}
+                            <span className="text-sm font-bold text-sky-700">giây</span>
+                          </span>
+                        </div>
                       </div>
 
                       {/* Instructions / Technique Guide */}
                       {meta.instructionsText && (
-                        <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/60 text-xs text-slate-600 leading-relaxed">
-                          <span className="font-bold text-slate-700 block mb-0.5">Hướng dẫn kỹ thuật:</span>
-                          <p>{meta.instructionsText}</p>
+                        <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs sm:text-sm text-slate-700 leading-relaxed">
+                          <span className="font-extrabold text-slate-900 block mb-1">
+                            💡 Hướng dẫn kỹ thuật:
+                          </span>
+                          <p className="font-medium text-slate-600">{meta.instructionsText}</p>
                         </div>
                       )}
 
                       {/* Coach Personalized Feedback Callout */}
                       {ex.coachFeedback && (
-                        <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50/60 border border-emerald-200 text-xs text-emerald-950 space-y-1.5 shadow-2xs">
+                        <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50/60 border border-emerald-200 text-xs sm:text-sm text-emerald-950 space-y-1 shadow-2xs">
                           <div className="font-black flex items-center gap-1.5 text-emerald-900">
                             <MessageSquare className="w-4 h-4 text-emerald-700 shrink-0" />
                             <span>Lời dặn riêng từ HLV {modalCoachName}:</span>
                           </div>
-                          <p className="leading-relaxed pl-5 font-semibold text-emerald-950 text-xs italic">
+                          <p className="leading-relaxed pl-5 font-bold text-emerald-950 italic">
                             "{ex.coachFeedback}"
                           </p>
                         </div>
@@ -1039,7 +1053,7 @@ export const WorkoutPlansPage: React.FC = () => {
       {/* ========================================================= */}
       {selectedTemplate && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 sm:p-6 overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-3 sm:p-6 overflow-y-auto"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) setSelectedTemplate(null);
           }}
@@ -1047,12 +1061,12 @@ export const WorkoutPlansPage: React.FC = () => {
           <div
             role="dialog"
             aria-modal="true"
-            className="flex w-full max-w-3xl max-h-[92vh] flex-col overflow-hidden rounded-[2.5rem] bg-white border border-slate-200 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+            className="flex w-full max-w-5xl max-h-[94vh] flex-col overflow-hidden rounded-[2.5rem] bg-white border border-slate-200 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
           >
             {/* Header */}
-            <div className="shrink-0 border-b border-slate-800 p-6 sm:p-8 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white relative">
+            <div className="shrink-0 border-b border-slate-800 px-6 py-4 sm:px-8 sm:py-5 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 text-white relative">
               <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0 space-y-2.5">
+                <div className="min-w-0 space-y-2">
                   <div className="flex items-center gap-2">
                     <span className="rounded-xl bg-slate-800 text-slate-300 px-3 py-1 text-xs font-bold border border-slate-700">
                       Tuần {selectedTemplate.weekNumber}
@@ -1062,7 +1076,7 @@ export const WorkoutPlansPage: React.FC = () => {
                     </span>
                   </div>
 
-                  <h2 className="text-2xl sm:text-3xl font-black text-white leading-snug">
+                  <h2 className="text-xl sm:text-2xl font-black text-white leading-snug">
                     {selectedTemplate.title}
                   </h2>
 
@@ -1084,9 +1098,9 @@ export const WorkoutPlansPage: React.FC = () => {
             </div>
 
             {/* Body */}
-            <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-4 bg-slate-50/60">
-              <div className="text-xs font-black text-slate-500 uppercase tracking-wider pb-1">
-                Danh sách bài tập chuẩn ({selectedTemplate.exercises?.length || 0})
+            <div className="flex-1 overflow-y-auto p-5 sm:p-8 space-y-4 bg-slate-50/70">
+              <div className="text-xs font-black text-slate-600 uppercase tracking-wider pb-1">
+                Danh sách bài tập chuẩn ({selectedTemplate.exercises?.length || 0} bài)
               </div>
 
               {selectedTemplate.exercises?.map((ex, idx) => {
@@ -1097,52 +1111,100 @@ export const WorkoutPlansPage: React.FC = () => {
                 return (
                   <div
                     key={ex.id || idx}
-                    className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/90 shadow-xs space-y-3.5 hover:bg-white transition-all"
+                    className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/90 shadow-xs space-y-4 hover:border-emerald-300 transition-all"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3 min-w-0">
-                        <span className="w-8 h-8 rounded-2xl bg-slate-900 text-white font-mono text-xs font-black flex items-center justify-center shrink-0 shadow-xs">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3.5 min-w-0">
+                        <span className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-slate-900 text-emerald-400 font-mono text-base font-black flex items-center justify-center shrink-0 shadow-md">
                           {String(idx + 1).padStart(2, '0')}
                         </span>
                         <div className="min-w-0">
-                          <h4 className="text-base font-black text-slate-900">
+                          <h4 className="text-lg sm:text-xl font-black text-slate-950">
                             {primary}
                           </h4>
                           {secondary && (
-                            <p className="text-xs font-medium text-slate-400">
+                            <p className="text-xs sm:text-sm font-semibold text-slate-400 mt-0.5">
                               {secondary}
                             </p>
                           )}
+                          <div className="flex items-center gap-2 mt-2 flex-wrap">
+                            {meta.muscleVi && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-teal-50 text-teal-800 text-xs font-bold border border-teal-200/80">
+                                🎯 {meta.muscleVi}
+                              </span>
+                            )}
+                            {meta.equipmentVi && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200">
+                                🏋️ {meta.equipmentVi}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
 
-                      <span className="rounded-xl bg-slate-100 border border-slate-200 px-3 py-1 text-[10px] font-black text-slate-700 shrink-0 uppercase">
+                      <span className="rounded-xl bg-slate-100 border border-slate-200 px-3.5 py-1.5 text-xs font-black text-slate-700 shrink-0 uppercase">
                         {translateCategory(ex.exercise?.category)}
                       </span>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 text-xs">
-                      <span className="px-3 py-1 rounded-xl bg-emerald-50 text-emerald-800 font-extrabold border border-emerald-200">
-                        {ex.sets || 3} hiệp
-                      </span>
-                      <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-800 font-extrabold border border-slate-200">
-                        {ex.reps || 10} {unitStr}
-                      </span>
-                      {ex.weightKg !== null && ex.weightKg !== undefined && Number(ex.weightKg) > 0 && (
-                        <span className="px-3 py-1 rounded-xl bg-amber-50 text-amber-800 font-extrabold border border-amber-200">
-                          Tạ: {ex.weightKg} kg
+                    {/* Dose Matrix (Hiệp, Lần, Tạ, Nghỉ) */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 pt-1">
+                      <div className="p-3 sm:p-3.5 rounded-2xl bg-emerald-50/90 border border-emerald-200/90 text-center">
+                        <span className="text-[10px] sm:text-[11px] font-black text-emerald-700 uppercase tracking-wider block">
+                          Số hiệp
                         </span>
-                      )}
-                      <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-600 font-semibold border border-slate-200 flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5 text-slate-400" />
-                        Nghỉ {ex.restSeconds || 60}s
-                      </span>
-                      {meta.muscleVi && (
-                        <span className="px-3 py-1 rounded-xl bg-teal-50 text-teal-800 text-xs font-bold border border-teal-200">
-                          🎯 {meta.muscleVi}
+                        <span className="text-2xl sm:text-3xl font-black text-emerald-950 block mt-0.5">
+                          {ex.sets || 3}
                         </span>
-                      )}
+                      </div>
+
+                      <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+                        <span className="text-[10px] sm:text-[11px] font-black text-slate-500 uppercase tracking-wider block">
+                          Số lần / Hiệp
+                        </span>
+                        <span className="text-2xl sm:text-3xl font-black text-slate-900 block mt-0.5">
+                          {ex.reps || 10}{' '}
+                          <span className="text-sm font-bold text-slate-500">{unitStr}</span>
+                        </span>
+                      </div>
+
+                      <div className="p-3 sm:p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200/90 text-center">
+                        <span className="text-[10px] sm:text-[11px] font-black text-amber-700 uppercase tracking-wider block">
+                          Mức tạ
+                        </span>
+                        <span className="text-2xl sm:text-3xl font-black text-amber-950 block mt-0.5">
+                          {ex.weightKg !== null && ex.weightKg !== undefined && Number(ex.weightKg) > 0 ? (
+                            <>
+                              {ex.weightKg}{' '}
+                              <span className="text-sm font-bold text-amber-700">kg</span>
+                            </>
+                          ) : (
+                            <span className="text-base sm:text-lg font-bold text-amber-800/70">
+                              Bodyweight
+                            </span>
+                          )}
+                        </span>
+                      </div>
+
+                      <div className="p-3 sm:p-3.5 rounded-2xl bg-sky-50/90 border border-sky-200/90 text-center">
+                        <span className="text-[10px] sm:text-[11px] font-black text-sky-700 uppercase tracking-wider block">
+                          Nghỉ giữa hiệp
+                        </span>
+                        <span className="text-2xl sm:text-3xl font-black text-sky-950 block mt-0.5">
+                          {ex.restSeconds || 60}{' '}
+                          <span className="text-sm font-bold text-sky-700">giây</span>
+                        </span>
+                      </div>
                     </div>
+
+                    {meta.instructionsText && (
+                      <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs sm:text-sm text-slate-700 leading-relaxed">
+                        <span className="font-extrabold text-slate-900 block mb-1">
+                          💡 Hướng dẫn kỹ thuật:
+                        </span>
+                        <p className="font-medium text-slate-600">{meta.instructionsText}</p>
+                      </div>
+                    )}
                   </div>
                 );
               })}
