@@ -1,5 +1,5 @@
 import { Navigate, createBrowserRouter } from "react-router";
-import { PublicLayout, MemberLayout, CoachLayout, ReceptionistLayout } from "@/layouts";
+import { PublicLayout, MemberLayout, CoachLayout, ReceptionistLayout, ManagerLayout } from "@/layouts";
 import { LoginPage, NotFoundPage } from "@/features/auth";
 import { PublicPlansPage, MockPaymentPage } from "@/features/public";
 import { PlansPage, QuotePage } from "@/features/plans";
@@ -29,6 +29,22 @@ import {
   CoachRequestsPage,
   CoachProfilePage,
 } from "@/features/coach-portal";
+import {
+  ManagerDashboardPage,
+  ManagerStaffPage,
+  ManagerStaffShiftsPage,
+  ManagerCoachesPage,
+  ManagerPenaltiesPage,
+  ManagerPlansPage,
+  ManagerClassesPage,
+  ManagerFacilitiesPage,
+  ManagerMembersPage,
+  ManagerReportsPage,
+  ManagerExercisesPage,
+  ManagerPosPage,
+  ManagerBookingsPage,
+  ManagerAttendancesPage,
+} from "@/features/manager";
 import { mondayInVietnam } from "@/lib/date";
 import {
   MemberGuard,
@@ -167,6 +183,35 @@ export const router = createBrowserRouter([
     ],
   },
   { path: "/desk", element: <Navigate to="/portal/desk" replace /> },
+
+  // 4. CENTER MANAGER PORTAL
+  {
+    path: "/portal/manager",
+    element: <StaffGuard roles={["CENTER_MANAGER"]} />,
+    errorElement: <PortalErrorFallback />,
+    children: [
+      {
+        element: <ManagerLayout />,
+        children: [
+          { index: true, element: <Navigate to="/portal/manager/dashboard" replace /> },
+          { path: "dashboard", element: <ManagerDashboardPage /> },
+          { path: "staff", element: <ManagerStaffPage /> },
+          { path: "staff-shifts", element: <ManagerStaffShiftsPage /> },
+          { path: "coaches", element: <ManagerCoachesPage /> },
+          { path: "penalties", element: <ManagerPenaltiesPage /> },
+          { path: "plans", element: <ManagerPlansPage /> },
+          { path: "classes", element: <ManagerClassesPage /> },
+          { path: "facilities", element: <ManagerFacilitiesPage /> },
+          { path: "members", element: <ManagerMembersPage /> },
+          { path: "reports", element: <ManagerReportsPage /> },
+          { path: "exercises", element: <ManagerExercisesPage /> },
+          { path: "pos", element: <ManagerPosPage /> },
+          { path: "bookings", element: <ManagerBookingsPage /> },
+          { path: "attendances", element: <ManagerAttendancesPage /> },
+        ],
+      },
+    ],
+  },
 
   // 5. 404 Catch-all
   { path: "404", element: <NotFoundPage /> },
