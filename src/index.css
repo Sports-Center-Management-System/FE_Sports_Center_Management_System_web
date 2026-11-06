@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -101,7 +101,7 @@
     --coach-completed-bg: #f8fafc;
     --coach-completed-text: #64748b;
 
-    font-family: 'DM Sans', system-ui, sans-serif;
+    font-family: 'Merriweather', 'Lora', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
     color: #18302e;
     background: #f5f7f4;
     font-synthesis: none;
@@ -130,6 +130,7 @@
   }
 
   html, body, #root {
+    font-family: 'Merriweather', 'Lora', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
     height: 100%;
     width: 100%;
     margin: 0;
@@ -194,7 +195,7 @@ p {
 h1,
 h2,
 h3 {
-  font-family: Manrope, system-ui, sans-serif;
+  font-family: 'Merriweather', 'Lora', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
   line-height: 1.2;
 }
 h1 {
@@ -228,7 +229,7 @@ small {
   margin-bottom: 0.55rem;
 }
 .brand {
-  font-family: Manrope, sans-serif;
+  font-family: 'Merriweather', 'Lora', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
   font-size: 1.25rem;
   font-weight: 800;
   letter-spacing: -0.07em;
@@ -393,13 +394,13 @@ small {
   margin-top: auto;
 }
 .price {
-  font-family: Manrope, sans-serif;
+  font-family: 'Merriweather', 'Lora', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
   font-weight: 800;
   font-size: 1.6rem;
   color: #104e45;
 }
 .price small {
-  font-family: 'DM Sans', sans-serif;
+  font-family: inherit;
   font-weight: 500;
   font-size: 0.8rem;
 }

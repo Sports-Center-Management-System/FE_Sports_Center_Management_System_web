@@ -62,12 +62,8 @@ export const CoachMembersPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900">
-            Học Viên Của Tôi
-          </h1>
-          <p className="text-xs font-semibold text-slate-500 mt-0.5">
-            Quản lý danh sách hội viên VIP được chỉ định kèm cặp, theo dõi thể trạng và đo InBody
-          </p>
+          
+       
         </div>
 
         <Button

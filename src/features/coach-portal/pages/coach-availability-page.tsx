@@ -11,7 +11,6 @@ import {
   Loader2,
   Search,
   X,
-  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { coachPortalApi } from '../api/coach-portal-api';
@@ -127,9 +126,7 @@ export const CoachAvailabilityPage: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">
             Khung Giờ Rảnh PT
           </h1>
-          <p className="text-xs sm:text-sm font-semibold text-slate-500 mt-1">
-            Quản lý danh sách các ca mở rảnh để học viên có thể đặt lịch tập kèm 1-1 với bạn
-          </p>
+        
         </div>
 
         <div className="flex items-center gap-2.5 self-start sm:self-auto shrink-0">
@@ -153,53 +150,7 @@ export const CoachAvailabilityPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Overview Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-        <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-2xs flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block">
-              Tổng số ca đã mở
-            </span>
-            <div className="text-2xl font-black text-slate-900 tabular-nums">
-              {slots.length}{' '}
-              <span className="text-xs font-bold text-slate-400">ca</span>
-            </div>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
-            <Calendar className="h-5 w-5" />
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/50 p-4 shadow-2xs flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-[11px] font-black text-emerald-700 uppercase tracking-wider block">
-              Ca còn trống
-            </span>
-            <div className="text-2xl font-black text-emerald-950 tabular-nums">
-              {unbookedCount}{' '}
-              <span className="text-xs font-bold text-emerald-700">ca sẵn sàng</span>
-            </div>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-            <CheckCircle2 className="h-5 w-5" />
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-blue-200/80 bg-blue-50/50 p-4 shadow-2xs flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-[11px] font-black text-blue-700 uppercase tracking-wider block">
-              Đã có học viên đặt
-            </span>
-            <div className="text-2xl font-black text-blue-950 tabular-nums">
-              {bookedCount}{' '}
-              <span className="text-xs font-bold text-blue-700">ca đã nhận</span>
-            </div>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-            <Users className="h-5 w-5" />
-          </div>
-        </div>
-      </div>
+     
 
       {/* 3. Filter Bar & Search */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">

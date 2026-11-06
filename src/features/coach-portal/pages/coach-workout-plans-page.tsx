@@ -1472,9 +1472,7 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                       <h4 className="text-sm font-extrabold text-slate-900 dark:text-slate-100">
                         Kho Bài Tập Chuẩn
                       </h4>
-                      <p className="text-[11px] text-slate-400">
-                        Bấm "+ Thêm" để đưa động tác vào giáo án học viên
-                      </p>
+               
                     </div>
 
                     <span className="text-xs font-bold px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200/70 shrink-0">
@@ -1665,8 +1663,8 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                             </div>
 
                             <div className="flex items-center justify-between gap-2 text-[10px] text-slate-500 dark:text-slate-400 pt-1.5 border-t border-slate-100 dark:border-slate-700/60 min-w-0">
-                              <span className="truncate flex-1 min-w-0">🎯 {meta.muscleVi}</span>
-                              <span className="truncate flex-1 min-w-0 text-right">🏋️ {meta.equipmentVi}</span>
+                              <span className="truncate flex-1 min-w-0"> {meta.muscleVi}</span>
+                              <span className="truncate flex-1 min-w-0 text-right"> {meta.equipmentVi}</span>
                             </div>
                           </div>
                         );
@@ -1684,7 +1682,7 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
                         <label className="text-xs font-extrabold text-slate-900 dark:text-slate-100">
-                          Học viên thụ hưởng <span className="text-rose-500">*</span>
+                          Chọn học viên  <span className="text-rose-500">*</span>
                         </label>
                         {editingPlanId && (
                           <span className="text-[10px] font-semibold text-slate-400 italic">
@@ -1701,7 +1699,7 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                         <option value="">-- Chọn học viên nhận giáo án --</option>
                         {members.map((m) => (
                           <option key={m.id} value={m.user?.id || m.id}>
-                            {m.user?.fullName || m.user?.email || 'Học viên'} ({m.user?.phone || 'Chưa có SĐT'})
+                            {m.user?.fullName || m.user?.email || 'Học viên'} 
                           </option>
                         ))}
                       </select>
