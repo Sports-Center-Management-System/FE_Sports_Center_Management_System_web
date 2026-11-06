@@ -7,9 +7,6 @@ import {
   AlertCircle,
   Loader2,
   Plus,
-  Sun,
-  Sunset,
-  Coffee,
   Check,
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
@@ -283,8 +280,8 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
                     : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
                 }`}
               >
-                <Sun className="h-3.5 w-3.5" />
-                Ca Sáng (05h – 12h)
+             
+                Ca Sáng 
               </button>
               <button
                 type="button"
@@ -295,8 +292,8 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
                     : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
                 }`}
               >
-                <Coffee className="h-3.5 w-3.5" />
-                Ca Chiều (12h – 17h)
+               
+                Ca Chiều 
               </button>
               <button
                 type="button"
@@ -307,8 +304,8 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
                     : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
                 }`}
               >
-                <Sunset className="h-3.5 w-3.5" />
-                Ca Tối (17h – 21h)
+                
+                Ca Tối 
               </button>
             </div>
 
@@ -351,7 +348,7 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
                     </div>
 
                     <div className="flex items-center justify-between text-[11px] font-medium text-slate-500">
-                      <span>1 tiếng</span>
+     
                       {isPresetPast && (
                         <span className="text-[10px] text-slate-400 font-bold">
                           Đã qua giờ

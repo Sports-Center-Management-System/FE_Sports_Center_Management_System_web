@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Users,
@@ -12,15 +12,23 @@ import { Button } from '@/components/ui/button';
 import { coachPortalApi } from '../api/coach-portal-api';
 import { InbodyLogModal } from '../components/inbody-log-modal';
 import type { AssignedMemberItem } from '../types/coach-portal.types';
+import { TablePagination } from '@/components/common/table-pagination';
+
+const ITEMS_PER_PAGE = 10;
 
 export const CoachMembersPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [inbodyModalData, setInbodyModalData] = useState<{
     memberId: string;
     memberName: string;
   } | null>(null);
 
   const [selectedMember, setSelectedMember] = useState<AssignedMemberItem | null>(null);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const selectedMemberId = selectedMember?.user?.id || selectedMember?.id;
   const { data: memberAttendances = [] } = useQuery({
@@ -38,6 +46,11 @@ export const CoachMembersPage: React.FC = () => {
     queryKey: ['coach', 'members', searchTerm],
     queryFn: () => coachPortalApi.getAssignedMembers(searchTerm.trim() || undefined),
   });
+
+  const paginatedMembers = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return members.slice(start, start + ITEMS_PER_PAGE);
+  }, [members, currentPage]);
 
   const sanitizeText = (val: unknown, fallback: string | null = null): string | null => {
     if (val === null || val === undefined) return fallback;
@@ -128,8 +141,9 @@ export const CoachMembersPage: React.FC = () => {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
               <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
                 <tr>
                   <th className="py-4 px-5">Học viên</th>
@@ -140,7 +154,7 @@ export const CoachMembersPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
-                {members.map((item) => {
+                {paginatedMembers.map((item) => {
                   const user = item?.user || ({} as any);
                   const memberName = sanitizeText(user.fullName, 'Học viên') || 'Học viên';
                   const memberPhone = sanitizeText(user.phone);
@@ -256,7 +270,17 @@ export const CoachMembersPage: React.FC = () => {
               </tbody>
             </table>
           </div>
-        )}
+
+          {/* Table Pagination */}
+          <TablePagination
+            currentPage={currentPage}
+            totalItems={members.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
+            itemName="học viên"
+          />
+        </>
+      )}
       </div>
 
       {/* 4. Member Profile Details Modal */}

@@ -6,9 +6,6 @@ import {
   Plus,
   CalendarDays,
   CalendarRange,
-  Users,
-  Clock,
-  Dumbbell,
 } from 'lucide-react';
 import { coachPortalApi } from '../api/coach-portal-api';
 import { AttendanceModal } from '../components/attendance-modal';
@@ -299,69 +296,7 @@ export const CoachSchedulePage: React.FC = () => {
       </div>
 
       {/* 2. STATS KPI CARDS */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Tổng ca dạy
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold">
-              <CalendarDays className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            {stats.totalSessions} <span className="text-xs font-semibold text-slate-400">ca</span>
-          </div>
-          <p className="text-[11px] text-slate-500 font-medium mt-1">Trong tuần được chọn</p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Dạy kèm PT 1-1
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
-              <Dumbbell className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            {stats.totalPt} <span className="text-xs font-semibold text-slate-400">ca</span>
-          </div>
-          <p className="text-[11px] text-emerald-700 font-medium mt-1">
-            {stats.ptStudentsCount} học viên riêng
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Lớp tập nhóm
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
-              <Users className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            {stats.totalGroup} <span className="text-xs font-semibold text-slate-400">lớp</span>
-          </div>
-          <p className="text-[11px] text-slate-500 font-medium mt-1">Lịch trung tâm phân công</p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Thời lượng dạy
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold">
-              <Clock className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            {stats.totalHours} <span className="text-xs font-semibold text-slate-400">giờ</span>
-          </div>
-          <p className="text-[11px] text-slate-500 font-medium mt-1">Tổng giờ đứng lớp thực tế</p>
-        </div>
-      </div>
+ 
 
       {/* 3. FILTER CHIPS & VIEW MODE SWITCHER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">

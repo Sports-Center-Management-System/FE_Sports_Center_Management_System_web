@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ShieldAlert,
@@ -11,10 +11,15 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { coachPortalApi } from '../api/coach-portal-api';
+import { TablePagination } from '@/components/common/table-pagination';
+
+const ITEMS_PER_PAGE = 10;
 
 export const CoachRequestsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'REQUESTS' | 'PENALTIES'>('REQUESTS');
+  const [reqPage, setReqPage] = useState<number>(1);
+  const [penPage, setPenPage] = useState<number>(1);
   const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -37,6 +42,16 @@ export const CoachRequestsPage: React.FC = () => {
     queryKey: ['coach', 'penalties'],
     queryFn: () => coachPortalApi.getMyPenalties(),
   });
+
+  const paginatedRequests = useMemo(() => {
+    const start = (reqPage - 1) * ITEMS_PER_PAGE;
+    return requests.slice(start, start + ITEMS_PER_PAGE);
+  }, [requests, reqPage]);
+
+  const paginatedPenalties = useMemo(() => {
+    const start = (penPage - 1) * ITEMS_PER_PAGE;
+    return penalties.slice(start, start + ITEMS_PER_PAGE);
+  }, [penalties, penPage]);
 
   const isCurrentLoading = activeTab === 'REQUESTS' ? isReqLoading : isPenLoading;
   const isCurrentRefetching = activeTab === 'REQUESTS' ? isReqRefetching : isPenRefetching;
@@ -208,8 +223,9 @@ export const CoachRequestsPage: React.FC = () => {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
                 <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
                   <tr>
                     <th className="py-4 px-5">Thời gian gửi</th>
@@ -221,7 +237,7 @@ export const CoachRequestsPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
-                  {requests.map((req) => {
+                  {paginatedRequests.map((req) => {
                     const isPending = req.status === 'PENDING';
                     const isApproved = req.status === 'APPROVED';
                     const isCancelled = req.status === 'CANCELLED';
@@ -233,7 +249,7 @@ export const CoachRequestsPage: React.FC = () => {
                             {new Date(req.createdAt).toLocaleDateString('vi-VN')}
                           </span>
                           <span className="text-[11px] text-slate-400 font-mono block">
-                            {new Date(req.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} · #{req.id.slice(0, 8)}
+                            {new Date(req.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} 
                           </span>
                         </td>
 
@@ -316,7 +332,17 @@ export const CoachRequestsPage: React.FC = () => {
                 </tbody>
               </table>
             </div>
-          )}
+
+            {/* Table Pagination */}
+            <TablePagination
+              currentPage={reqPage}
+              totalItems={requests.length}
+              itemsPerPage={ITEMS_PER_PAGE}
+              onPageChange={setReqPage}
+              itemName="đơn hủy"
+            />
+          </>
+        )}
         </div>
       )}
 
@@ -337,8 +363,9 @@ export const CoachRequestsPage: React.FC = () => {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
                 <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
                   <tr>
                     <th className="py-4 px-5">Kỳ đánh giá</th>
@@ -349,7 +376,7 @@ export const CoachRequestsPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
-                  {penalties.map((item) => (
+                  {paginatedPenalties.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
                       <td className="py-4 px-5 whitespace-nowrap">
                         <span className="font-bold text-slate-900 dark:text-slate-100 block">
@@ -397,7 +424,17 @@ export const CoachRequestsPage: React.FC = () => {
                 </tbody>
               </table>
             </div>
-          )}
+
+            {/* Table Pagination */}
+            <TablePagination
+              currentPage={penPage}
+              totalItems={penalties.length}
+              itemsPerPage={ITEMS_PER_PAGE}
+              onPageChange={setPenPage}
+              itemName="bản ghi kỷ luật"
+            />
+          </>
+        )}
         </div>
       )}
     </div>

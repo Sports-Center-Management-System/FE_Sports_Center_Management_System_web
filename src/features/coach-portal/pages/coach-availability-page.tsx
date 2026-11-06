@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Clock,
@@ -10,16 +10,22 @@ import {
   Loader2,
   Search,
   X,
+  CalendarCheck2,
+  UserCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { coachPortalApi } from '../api/coach-portal-api';
 import { CreateSlotModal } from '../components/create-slot-modal';
+import { TablePagination } from '@/components/common/table-pagination';
+
+const ITEMS_PER_PAGE = 10;
 
 export const CoachAvailabilityPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState<boolean>(false);
   const [filter, setFilter] = useState<'ALL' | 'UNBOOKED' | 'BOOKED'>('ALL');
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
   const {
     data: slots = [],
@@ -45,6 +51,11 @@ export const CoachAvailabilityPage: React.FC = () => {
     [slots]
   );
   const bookedCount = useMemo(() => slots.filter((s) => s.isBooked).length, [slots]);
+
+  // Reset to page 1 on filter or search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, searchTerm]);
 
   // Format date helper
   const formatDateVi = (iso: string) => {
@@ -117,50 +128,110 @@ export const CoachAvailabilityPage: React.FC = () => {
       .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
   }, [slots, filter, searchTerm]);
 
+  // Paginated slots
+  const paginatedSlots = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredAndSortedSlots.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredAndSortedSlots, currentPage]);
+
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-6 pb-12">
-      {/* 1. Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">
-            Khung Giờ Rảnh PT
-          </h1>
-        
+    <div className="w-full max-w-7xl mx-auto space-y-6 pb-20">
+      {/* 1. Header Studio Hero */}
+      <div className="p-6 sm:p-8 rounded-3xl bg-slate-950 text-white shadow-xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-slate-950 flex items-center justify-center shrink-0 font-black shadow-md">
+            <Clock className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              Khung Giờ Rảnh PT
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-300 font-medium mt-0.5">
+              Mở ca trực và quản lý các khung giờ sẵn sàng đón học viên đăng ký tập kèm 1-1
+            </p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2.5 self-start sm:self-auto shrink-0">
-          <Button
-            variant="outline"
+        <div className="flex items-center gap-2.5 self-start md:self-auto shrink-0">
+          <button
+            type="button"
             onClick={() => void refetch()}
             disabled={isLoading || isRefetching}
-            className="text-xs font-bold border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-2xs h-9"
+            className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700 text-xs font-bold transition shadow-xs cursor-pointer flex items-center gap-2"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isRefetching ? 'animate-spin' : ''}`} />
             <span>Làm mới</span>
-          </Button>
+          </button>
 
-          <Button
+          <button
+            type="button"
             onClick={() => setIsCreateOpen(true)}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black gap-1.5 shadow-sm shadow-emerald-600/30 h-9 px-4 cursor-pointer"
+            className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs sm:text-sm shadow-md transition active:scale-95 cursor-pointer flex items-center gap-2"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-4 w-4 stroke-[3]" />
             <span>Mở khung giờ rảnh</span>
-          </Button>
+          </button>
         </div>
       </div>
 
-     
+      {/* 2. KPI Metrics Bar */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Tổng số ca mở
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold">
+              <Clock className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-2 text-3xl font-black text-slate-900 tracking-tight">
+            {slots.length} <span className="text-xs font-semibold text-slate-400">ca</span>
+          </div>
+          <p className="text-[11px] text-slate-500 font-medium mt-1">Toàn bộ ca trực rảnh đã tạo</p>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Ca đang mở
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+              <CalendarCheck2 className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-2 text-3xl font-black text-slate-900 tracking-tight">
+            {unbookedCount} <span className="text-xs font-semibold text-slate-400">ca</span>
+          </div>
+          <p className="text-[11px] text-emerald-700 font-medium mt-1">Sẵn sàng nhận học viên đặt lịch</p>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Đã có người đặt
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
+              <UserCheck className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-2 text-3xl font-black text-slate-900 tracking-tight">
+            {bookedCount} <span className="text-xs font-semibold text-slate-400">ca</span>
+          </div>
+          <p className="text-[11px] text-blue-700 font-medium mt-1">Đã có học viên đăng ký tập kèm</p>
+        </div>
+      </div>
 
       {/* 3. Filter Bar & Search */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
         {/* Status Filter Tabs */}
-        <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-slate-100/80 border border-slate-200/60 self-start sm:self-auto">
+        <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-white border border-slate-200 shadow-2xs self-start sm:self-auto">
           <button
             type="button"
             onClick={() => setFilter('ALL')}
-            className={`rounded-xl px-3.5 py-1.5 text-xs font-black transition-all cursor-pointer ${
+            className={`rounded-xl px-4 py-1.5 text-xs font-black transition-all cursor-pointer ${
               filter === 'ALL'
-                ? 'bg-slate-900 text-white shadow-xs'
+                ? 'bg-slate-950 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -169,7 +240,7 @@ export const CoachAvailabilityPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setFilter('UNBOOKED')}
-            className={`rounded-xl px-3.5 py-1.5 text-xs font-black transition-all cursor-pointer ${
+            className={`rounded-xl px-4 py-1.5 text-xs font-black transition-all cursor-pointer ${
               filter === 'UNBOOKED'
                 ? 'bg-emerald-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -180,7 +251,7 @@ export const CoachAvailabilityPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setFilter('BOOKED')}
-            className={`rounded-xl px-3.5 py-1.5 text-xs font-black transition-all cursor-pointer ${
+            className={`rounded-xl px-4 py-1.5 text-xs font-black transition-all cursor-pointer ${
               filter === 'BOOKED'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -192,19 +263,19 @@ export const CoachAvailabilityPage: React.FC = () => {
 
         {/* Search by date or time */}
         <div className="relative max-w-xs w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Tìm theo ngày (vd: Thứ sáu, 06/11)..."
-            className="w-full rounded-xl border border-slate-200 bg-white pl-8 pr-7 py-1.5 text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-hidden transition-all shadow-2xs"
+            className="w-full rounded-2xl border border-slate-200 bg-white pl-9 pr-8 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-hidden transition-all shadow-2xs"
           />
           {searchTerm && (
             <button
               type="button"
               onClick={() => setSearchTerm('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -242,19 +313,20 @@ export const CoachAvailabilityPage: React.FC = () => {
         <div className="rounded-3xl border border-slate-200/90 bg-white shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
-              <thead className="bg-slate-50/90 border-b border-slate-200 text-[11px] font-black uppercase text-slate-500 tracking-wider">
+              <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-black uppercase text-slate-500 tracking-wider">
                 <tr>
                   <th className="py-3.5 px-4 text-center w-12">#</th>
                   <th className="py-3.5 px-4">Ngày tập</th>
                   <th className="py-3.5 px-4">Khung giờ</th>
                   <th className="py-3.5 px-4">Thời lượng</th>
                   <th className="py-3.5 px-4">Trạng thái</th>
-                  <th className="py-3.5 px-4">Mô tả </th>
+                  <th className="py-3.5 px-4">Mô tả</th>
                   <th className="py-3.5 px-4 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
-                {filteredAndSortedSlots.map((slot, index) => {
+                {paginatedSlots.map((slot, index) => {
+                  const globalIndex = (currentPage - 1) * ITEMS_PER_PAGE + index + 1;
                   const durationText = calculateDuration(slot.startTime, slot.endTime);
                   const isPast = new Date(slot.startTime).getTime() <= Date.now();
                   const canDelete = !slot.isBooked && !slot.isEmergencyCancelled && !isPast;
@@ -274,32 +346,24 @@ export const CoachAvailabilityPage: React.FC = () => {
                     >
                       {/* 1. Index */}
                       <td className="py-3.5 px-4 text-center text-slate-400 font-mono text-[11px] font-bold">
-                        {String(index + 1).padStart(2, '0')}
+                        {String(globalIndex).padStart(2, '0')}
                       </td>
 
                       {/* 2. Date */}
                       <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-2.5">
-                       
-                          <div>
-                            <div className="font-extrabold text-slate-900 capitalize leading-snug">
-                              {formatDateVi(slot.startTime)}
-                            </div>
-                            <div className="text-[11px] text-slate-400 font-semibold mt-0.5">
-                              {formatDateFull(slot.startTime)}
-                            </div>
-                          </div>
+                        <div className="font-extrabold text-slate-900 capitalize leading-snug">
+                          {formatDateVi(slot.startTime)}
+                        </div>
+                        <div className="text-[11px] text-slate-400 font-semibold mt-0.5 font-mono">
+                          {formatDateFull(slot.startTime)}
                         </div>
                       </td>
 
                       {/* 3. Time slot */}
                       <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-1.5 font-black text-slate-900 font-mono text-sm tracking-tight">
-                        
-                          <span>
-                            {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
-                          </span>
-                        </div>
+                        <span className="font-black text-slate-900 font-mono text-sm tracking-tight">
+                          {formatTime(slot.startTime)} – {formatTime(slot.endTime)}
+                        </span>
                       </td>
 
                       {/* 4. Duration */}
@@ -387,11 +451,14 @@ export const CoachAvailabilityPage: React.FC = () => {
             </table>
           </div>
 
-          {/* Table Footer info */}
-          <div className="py-3 px-5 border-t border-slate-100 bg-slate-50/60 flex items-center justify-between text-xs text-slate-400 font-semibold">
-            <span>Hiển thị {filteredAndSortedSlots.length} ca rảnh</span>
-            <span>Sắp xếp theo thứ tự ngày giờ</span>
-          </div>
+          {/* Table Pagination */}
+          <TablePagination
+            currentPage={currentPage}
+            totalItems={filteredAndSortedSlots.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
+            itemName="ca rảnh"
+          />
         </div>
       )}
 
