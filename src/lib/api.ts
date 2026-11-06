@@ -1,6 +1,7 @@
 import type { Tokens, User } from './types'
 import { resolveBackendConfig } from './backend-config'
 const key = 'sportscenter.member.tokens'
+const SESSION_MARKER = 'sportscenter.active_tab_session'
 const { apiBaseUrl, socketOrigin } = resolveBackendConfig(
   import.meta.env.VITE_API_BASE_URL,
   import.meta.env.DEV,
@@ -16,6 +17,11 @@ export class ApiError extends Error {
 }
 export function readTokens(): Tokens | null {
   try {
+    // If browser/tab was closed, active session marker is wiped -> auto logout
+    if (!sessionStorage.getItem(SESSION_MARKER)) {
+      clearTokens()
+      return null
+    }
     const value = localStorage.getItem(key)
     if (value) {
       const parsed = JSON.parse(value) as Tokens
@@ -32,19 +38,25 @@ export function readTokens(): Tokens | null {
   }
 }
 export function saveTokens(tokens: Tokens, user?: User | null) {
-  localStorage.setItem(key, JSON.stringify(tokens))
-  localStorage.setItem('access_token', tokens.accessToken)
-  localStorage.setItem('refresh_token', tokens.refreshToken)
-  if (user) {
-    localStorage.setItem('auth_user', JSON.stringify(user))
-  }
+  try {
+    localStorage.setItem(key, JSON.stringify(tokens))
+    localStorage.setItem('access_token', tokens.accessToken)
+    localStorage.setItem('refresh_token', tokens.refreshToken)
+    if (user) {
+      localStorage.setItem('auth_user', JSON.stringify(user))
+    }
+    sessionStorage.setItem(SESSION_MARKER, 'true')
+  } catch {}
   window.dispatchEvent(new Event('session-changed'))
 }
 export function clearTokens() {
-  localStorage.removeItem(key)
-  localStorage.removeItem('access_token')
-  localStorage.removeItem('refresh_token')
-  localStorage.removeItem('auth_user')
+  try {
+    localStorage.removeItem(key)
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('refresh_token')
+    localStorage.removeItem('auth_user')
+    sessionStorage.removeItem(SESSION_MARKER)
+  } catch {}
   window.dispatchEvent(new Event('session-changed'))
 }
 export function apiOrigin() {

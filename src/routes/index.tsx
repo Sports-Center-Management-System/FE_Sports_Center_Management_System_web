@@ -55,6 +55,7 @@ import {
 } from "./route-elements";
 
 export const router = createBrowserRouter([
+  // 1. PUBLIC ROUTES (wrapped in PublicLayout with public header)
   {
     path: "/",
     element: <PublicLayout />,
@@ -85,6 +86,7 @@ export const router = createBrowserRouter([
           </div>
         ),
       },
+      // 2. MEMBER PORTAL
       {
         path: "portal/member",
         element: (
@@ -115,6 +117,8 @@ export const router = createBrowserRouter([
           { path: "lockers", element: <LockersPage /> },
         ],
       },
+
+      // 3. COACH PORTAL (/portal/coach and /coach)
       {
         path: "portal/coach",
         element: <StaffGuard roles={["COACH"]} />,
@@ -134,10 +138,28 @@ export const router = createBrowserRouter([
           },
         ],
       },
-      { path: "404", element: <NotFoundPage /> },
-      { path: "*", element: <NotFoundPage /> },
+      {
+        path: "coach",
+        element: <StaffGuard roles={["COACH"]} />,
+        errorElement: <PortalErrorFallback />,
+        children: [
+          {
+            element: <CoachLayout />,
+            children: [
+              { index: true, element: <Navigate to="/coach/schedule" replace /> },
+              { path: "schedule", element: <CoachSchedulePage /> },
+              { path: "availability", element: <CoachAvailabilityPage /> },
+              { path: "members", element: <CoachMembersPage /> },
+              { path: "workout-plans", element: <CoachWorkoutPlansPage /> },
+              { path: "requests", element: <CoachRequestsPage /> },
+              { path: "profile", element: <CoachProfilePage /> },
+            ],
+          },
+        ],
+      },
     ],
   },
+
   // Front-desk pages render their own full-screen layout, so they sit outside PublicLayout.
   {
     path: "/portal/desk",
@@ -160,6 +182,9 @@ export const router = createBrowserRouter([
       },
     ],
   },
+  { path: "/desk", element: <Navigate to="/portal/desk" replace /> },
+
+  // 4. CENTER MANAGER PORTAL
   {
     path: "/portal/manager",
     element: <StaffGuard roles={["CENTER_MANAGER"]} />,
@@ -187,6 +212,10 @@ export const router = createBrowserRouter([
       },
     ],
   },
+
+  // 5. 404 Catch-all
+  { path: "404", element: <NotFoundPage /> },
+  { path: "*", element: <NotFoundPage /> },
 ]);
 
 export default router;

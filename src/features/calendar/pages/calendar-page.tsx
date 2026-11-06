@@ -35,6 +35,7 @@ export const CalendarPage: React.FC = () => {
   // URL Query Parameters
   const weekParam = searchParams.get('week')
   const disciplineParam = searchParams.get('disciplineId') || 'all'
+  const slotIdParam = searchParams.get('slotId')
 
   // State
   const [currentWeek, setCurrentWeek] = useState<string>(() => {
@@ -117,6 +118,20 @@ export const CalendarPage: React.FC = () => {
     return () => window.clearTimeout(requestId)
   }, [loadCalendar])
 
+  // Auto-open modal if slotId is provided in URL params (e.g. redirected from Coaches screen)
+  useEffect(() => {
+    if (!slotIdParam || !calendarData?.ptSlots) return
+    const foundSlot = calendarData.ptSlots.find((s) => s.id === slotIdParam)
+    if (foundSlot) {
+      const booking = calendarData.bookings?.find(
+        (b) =>
+          b.coachAvailabilityId === foundSlot.id &&
+          ['CONFIRMED', 'PENDING'].includes(b.status),
+      )
+      setSelectedEvent({ type: 'PT_SLOT', data: foundSlot, booking })
+    }
+  }, [slotIdParam, calendarData])
+
   // Handlers for Header Navigation & Filters
   const handleWeekChange = (direction: 'prev' | 'next') => {
     const offset = direction === 'next' ? 1 : -1
@@ -129,6 +144,11 @@ export const CalendarPage: React.FC = () => {
     const thisMonday = getMondayOfWeek()
     setCurrentWeek(thisMonday)
     updateUrlParams(thisMonday, selectedDisciplineId)
+  }
+
+  const handleSelectWeek = (newWeekMonday: string) => {
+    setCurrentWeek(newWeekMonday)
+    updateUrlParams(newWeekMonday, selectedDisciplineId)
   }
 
   const handleDisciplineChange = (discId: string) => {
@@ -194,6 +214,7 @@ export const CalendarPage: React.FC = () => {
         currentWeek={currentWeek}
         onWeekChange={handleWeekChange}
         onGoToCurrentWeek={handleGoToCurrentWeek}
+        onSelectWeek={handleSelectWeek}
         selectedDisciplineId={selectedDisciplineId}
         onDisciplineChange={handleDisciplineChange}
         disciplines={disciplines}
@@ -220,7 +241,7 @@ export const CalendarPage: React.FC = () => {
             </button>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          <div className="flex-1 flex flex-col min-h-[600px]">
             <CalendarGrid
               currentWeek={currentWeek}
               schedules={calendarData?.schedules || []}
@@ -242,6 +263,9 @@ export const CalendarPage: React.FC = () => {
           onCancelBooking={handleCancelBooking}
           subscriptions={calendarData?.subscriptions || []}
           disciplines={disciplines}
+          days={calendarData?.days || []}
+          bookings={calendarData?.bookings || []}
+          onSelectEvent={(event) => setSelectedEvent(event)}
         />
       )}
     </div>

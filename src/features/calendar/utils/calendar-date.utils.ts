@@ -83,8 +83,8 @@ export const formatRangeLabel = (mondayYMD: string): string => {
   return `${start.dayNumber}/${start.monthNumber} - ${end.dayNumber}/${end.monthNumber}/${end.date.getFullYear()}`
 }
 
-export const CALENDAR_START_HOUR = 5 // 05:00, allowing 05:45 sessions to be visible
-export const CALENDAR_END_HOUR = 21 // The final visible boundary is 21:00
+export const CALENDAR_START_HOUR = 5 // 05:00, allowing early morning sessions to be visible
+export const CALENDAR_END_HOUR = 23 // Synchronized with coach calendar: visible boundary up to 23:00
 export const HOUR_HEIGHT_PX = 68 // Height in px for 1 hour row
 export const BOOKING_SLOT_DURATION_MS = 60 * 60 * 1000
 
@@ -103,9 +103,16 @@ export const formatBookingSlotRange = (startAt: string): string => {
  */
 export const calculateEventPosition = (
   startAt: string,
+  endAt?: string,
 ): { top: number; height: number } => {
   const start = new Date(startAt)
-  const end = new Date(getBookingSlotEndAt(startAt))
+  let end = endAt ? new Date(endAt) : new Date(getBookingSlotEndAt(startAt))
+
+  // Guard against invalid or non-positive duration; preserve multi-hour shifts (e.g. 06:00 - 10:00)
+  const durationMs = end.getTime() - start.getTime()
+  if (isNaN(durationMs) || durationMs <= 0) {
+    end = new Date(start.getTime() + BOOKING_SLOT_DURATION_MS)
+  }
 
   const startHour = start.getHours() + start.getMinutes() / 60
   const endHour = end.getHours() + end.getMinutes() / 60

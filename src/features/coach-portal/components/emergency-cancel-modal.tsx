@@ -1,6 +1,17 @@
 import React, { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, X, Loader2, ShieldAlert, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  AlertTriangle,
+  X,
+  Loader2,
+  ShieldAlert,
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  RotateCcw,
+  Info,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { coachPortalApi } from '../api/coach-portal-api';
 
@@ -26,10 +37,32 @@ export const EmergencyCancelModal: React.FC<EmergencyCancelModalProps> = ({
   const [internalNote, setInternalNote] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
+  const [successText, setSuccessText] = useState<string>('');
+  const [hasConflict, setHasConflict] = useState<boolean>(false);
 
+  // Fetch coach's cancellation requests to see if one already exists for this session
+  const {
+    data: cancellationRequests = [],
+    isLoading: isLoadingRequests,
+    refetch: refetchRequests,
+  } = useQuery({
+    queryKey: ['coach', 'cancellation-requests'],
+    queryFn: () => coachPortalApi.getMyCancellationRequests(),
+    enabled: isOpen,
+  });
+
+  const pendingRequest = cancellationRequests.find((r) => {
+    if (r.status !== 'PENDING') return false;
+    if (scheduleId && r.scheduleId === scheduleId) return true;
+    if (bookingId && r.bookingId === bookingId) return true;
+    return false;
+  });
+
+  const isPendingExists = Boolean(pendingRequest) || hasConflict;
   const isReasonValid = reasonMessage.trim().length >= 20;
 
-  const mutation = useMutation({
+  // Mutation to submit new cancellation request
+  const submitMutation = useMutation({
     mutationFn: async () => {
       if (!isReasonValid) {
         throw new Error('Lời nhắn xin lỗi học viên phải có tối thiểu 20 ký tự.');
@@ -43,6 +76,7 @@ export const EmergencyCancelModal: React.FC<EmergencyCancelModalProps> = ({
     },
     onSuccess: async () => {
       setIsSuccess(true);
+      setSuccessText('Đã gửi yêu cầu thành công! Yêu cầu đang ở trạng thái Chờ duyệt bởi Ban Quản Lý / Lễ tân.');
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['coach', 'today-schedule'] }),
         queryClient.invalidateQueries({ queryKey: ['coach', 'multi-day-schedule'] }),
@@ -57,30 +91,107 @@ export const EmergencyCancelModal: React.FC<EmergencyCancelModalProps> = ({
     },
     onError: (err: any) => {
       const msg = err.response?.data?.message || err.message || 'Lỗi khi gửi yêu cầu hủy lịch';
-      setErrorMessage(typeof msg === 'string' ? msg : JSON.stringify(msg));
+      const msgStr = typeof msg === 'string' ? msg : JSON.stringify(msg);
+      if (msgStr.includes('CANCELLATION_REQUEST_EXISTS')) {
+        setHasConflict(true);
+        void refetchRequests();
+        setErrorMessage(null);
+      } else {
+        setErrorMessage(msgStr);
+      }
+    },
+  });
+
+  // Mutation to cancel / withdraw the pending request (PUT /api/v1/cancellation-requests/:id/cancel)
+  const withdrawMutation = useMutation({
+    mutationFn: async () => {
+      let targetId = pendingRequest?.id;
+      if (!targetId) {
+        const latest = await coachPortalApi.getMyCancellationRequests();
+        const found = latest.find((r) => {
+          if (r.status !== 'PENDING') return false;
+          if (scheduleId && r.scheduleId === scheduleId) return true;
+          if (bookingId && r.bookingId === bookingId) return true;
+          return false;
+        });
+        if (!found?.id) {
+          throw new Error('Không tìm thấy mã đơn xin nghỉ để hủy.');
+        }
+        targetId = found.id;
+      }
+      return coachPortalApi.withdrawCancellationRequest(targetId);
+    },
+    onSuccess: async () => {
+      setIsSuccess(true);
+      setSuccessText('Đã hủy yêu cầu xin nghỉ thành công! Ca dạy của bạn tiếp tục được giữ nguyên trạng thái xác nhận.');
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['coach', 'cancellation-requests'] }),
+        queryClient.invalidateQueries({ queryKey: ['coach', 'today-schedule'] }),
+        queryClient.invalidateQueries({ queryKey: ['coach', 'multi-day-schedule'] }),
+      ]);
+      setTimeout(() => {
+        setIsSuccess(false);
+        setHasConflict(false);
+        setReasonMessage('');
+        setInternalNote('');
+        onClose();
+      }, 2000);
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.message || err.message || 'Lỗi khi hủy yêu cầu';
+      const formatted =
+        msg === 'REQUEST_NOT_PENDING'
+          ? 'Yêu cầu này đã được xử lý hoặc không thể rút lại.'
+          : msg === 'REQUEST_ALREADY_REVIEWED'
+          ? 'Đơn đã được Lễ tân/Quản lý duyệt ngay trước đó.'
+          : typeof msg === 'string'
+          ? msg
+          : JSON.stringify(msg);
+      setErrorMessage(formatted);
     },
   });
 
   if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden relative z-10"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-rose-100 px-6 py-4 bg-rose-50/70">
+        <div
+          className={`flex items-center justify-between border-b px-6 py-4 ${
+            isPendingExists ? 'border-amber-100 bg-amber-50/70' : 'border-rose-100 bg-rose-50/70'
+          }`}
+        >
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-rose-600 text-white flex items-center justify-center">
-              <AlertTriangle className="h-4 w-4" />
+            <div
+              className={`h-8 w-8 rounded-lg text-white flex items-center justify-center ${
+                isPendingExists ? 'bg-amber-500' : 'bg-rose-600'
+              }`}
+            >
+              {isPendingExists ? <Clock className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
             </div>
             <div>
-              <h3 className="text-base font-bold text-rose-950">Báo Hủy Lịch Dạy Khẩn Cấp</h3>
-              <p className="text-xs text-rose-700">Quy trình phê duyệt 2 tầng & Bảo vệ quyền lợi hội viên</p>
+              <h3 className={`text-base font-bold ${isPendingExists ? 'text-amber-950' : 'text-rose-950'}`}>
+                {isPendingExists ? 'Yêu Cầu Xin Nghỉ Đang Chờ Duyệt' : 'Báo Hủy Lịch Dạy Khẩn Cấp'}
+              </h3>
+              <p className={`text-xs ${isPendingExists ? 'text-amber-700' : 'text-rose-700'}`}>
+                {isPendingExists
+                  ? 'Hiện bạn đang xin nghỉ ca này'
+                  : 'Quy trình phê duyệt 2 tầng & Bảo vệ quyền lợi hội viên'}
+              </p>
             </div>
           </div>
           <button
             onClick={onClose}
             type="button"
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition-colors"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition-colors cursor-pointer"
           >
             <X className="h-5 w-5" />
           </button>
@@ -91,13 +202,83 @@ export const EmergencyCancelModal: React.FC<EmergencyCancelModalProps> = ({
           {isSuccess ? (
             <div className="text-center py-8 space-y-3">
               <CheckCircle2 className="h-12 w-12 text-emerald-600 mx-auto animate-bounce" />
-              <h4 className="text-base font-bold text-slate-900">Đã gửi yêu cầu thành công!</h4>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Yêu cầu đã chuyển sang trạng thái PENDING để Center Manager / Lễ tân phê duyệt. 
-                Học viên sẽ được hoàn 100% lượt tập ngay sau khi duyệt.
+              <h4 className="text-base font-bold text-slate-900">Thao tác thành công!</h4>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+                {successText || 'Dữ liệu đã được cập nhật thành công.'}
               </p>
             </div>
+          ) : isPendingExists ? (
+            /* TRƯỜNG HỢP: ĐÃ CÓ REQUEST HỦY / CANCELLATION_REQUEST_EXISTS */
+            <div className="space-y-4">
+              {errorMessage && (
+                <div className="flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-800">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+
+              {/* Target Session Info */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 space-y-1">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  Ca dạy:
+                </span>
+                <p className="text-sm font-bold text-slate-900">{sessionTitle}</p>
+                <p className="text-xs text-emerald-700 font-semibold">{sessionTime}</p>
+              </div>
+
+              {/* Ô BÁO: Hiện bạn đang xin nghỉ ca này */}
+              <div className="rounded-2xl border-2 border-amber-300 bg-amber-50/90 p-4 space-y-3 shadow-xs">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-8 w-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0">
+                      <Clock className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-extrabold text-amber-950">
+                        Hiện bạn đang xin nghỉ ca này
+                      </h4>
+                      <span className="inline-block mt-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 text-[10px] font-black uppercase">
+                        Trạng thái: Đang chờ duyệt
+                      </span>
+                    </div>
+                  </div>
+                  {pendingRequest?.createdAt && (
+                    <span className="text-[11px] text-amber-800 font-medium">
+                      {new Date(pendingRequest.createdAt).toLocaleTimeString('vi-VN', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}{' '}
+                      ({new Date(pendingRequest.createdAt).toLocaleDateString('vi-VN')})
+                    </span>
+                  )}
+                </div>
+
+                {pendingRequest?.reasonMessage && (
+                  <div className="rounded-xl bg-white/90 border border-amber-200 p-3 space-y-1 text-xs">
+                    <span className="text-slate-500 text-[10px] font-bold block uppercase tracking-wider">
+                      Lời nhắn gửi học viên:
+                    </span>
+                    <p className="italic text-slate-800 font-medium leading-relaxed">
+                      "{pendingRequest.reasonMessage}"
+                    </p>
+                    {pendingRequest.internalNote && (
+                      <p className="text-[11px] text-slate-600 pt-1.5 border-t border-slate-100">
+                        <strong>Ghi chú nội bộ:</strong> {pendingRequest.internalNote}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="text-[11px] text-amber-900 leading-relaxed bg-amber-100/70 p-2.5 rounded-xl border border-amber-200/80 flex items-start gap-2">
+                  <Info className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+                  <span>
+                    Nếu bạn đã thu xếp được công việc hoặc trước đó bấm nhầm, bạn có thể <strong>hủy yêu cầu</strong> này ngay bây giờ. Lịch dạy và học viên sẽ được giữ nguyên mà không bị tính vi phạm.
+                  </span>
+                </div>
+              </div>
+            </div>
           ) : (
+            /* TRƯỜNG HỢP: FORM NỘP ĐƠN HỦY KHẨN CẤP MỚI */
             <>
               {errorMessage && (
                 <div className="flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-800">
@@ -119,9 +300,9 @@ export const EmergencyCancelModal: React.FC<EmergencyCancelModalProps> = ({
               <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900">
                 <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
                 <div className="space-y-1">
-                  <p className="font-bold">Quy tắc nghiệp vụ Mục 6.5:</p>
+                  <p className="font-bold">Lưu ý khi gửi yêu cầu:</p>
                   <p className="text-[11px] leading-relaxed text-amber-800">
-                    HLV không thể tự hủy trực tiếp. Yêu cầu sẽ tạo bản ghi chờ duyệt. 100% học viên bị ảnh hưởng sẽ được hệ thống hoàn đủ 01 lượt tập (không phụ thuộc mốc 2 giờ).
+                    HLV không thể tự hủy trực tiếp. Yêu cầu sẽ tạo bản ghi chờ duyệt. 100% học viên bị ảnh hưởng sẽ được hệ thống hoàn đủ 01 lượt tập.
                   </p>
                 </div>
               </div>
@@ -182,23 +363,41 @@ export const EmergencyCancelModal: React.FC<EmergencyCancelModalProps> = ({
               type="button"
               variant="outline"
               onClick={onClose}
-              disabled={mutation.isPending}
-              className="text-xs font-semibold"
+              disabled={submitMutation.isPending || withdrawMutation.isPending}
+              className="text-xs font-semibold cursor-pointer"
             >
               Đóng
             </Button>
-            <Button
-              type="button"
-              onClick={() => mutation.mutate()}
-              disabled={!isReasonValid || mutation.isPending}
-              className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold gap-1.5 disabled:opacity-50"
-            >
-              {mutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              <span>Gửi đơn xin hủy khẩn cấp</span>
-            </Button>
+
+            {isPendingExists ? (
+              <Button
+                type="button"
+                onClick={() => withdrawMutation.mutate()}
+                disabled={withdrawMutation.isPending || isLoadingRequests}
+                className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold gap-1.5 shadow-xs cursor-pointer"
+              >
+                {withdrawMutation.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RotateCcw className="h-3.5 w-3.5" />
+                )}
+                <span>Hủy yêu cầu xin nghỉ</span>
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                onClick={() => submitMutation.mutate()}
+                disabled={!isReasonValid || submitMutation.isPending}
+                className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold gap-1.5 disabled:opacity-50 shadow-xs cursor-pointer"
+              >
+                {submitMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                <span>Gửi đơn xin hủy khẩn cấp</span>
+              </Button>
+            )}
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

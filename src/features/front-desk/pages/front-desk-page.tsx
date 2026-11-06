@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import { Link } from "react-router";
-import { ReceiptText, RefreshCw, ScanLine, UsersRound, Volume2, VolumeX } from "lucide-react";
+import { AlertTriangle, ReceiptText, RefreshCw, ScanLine, UsersRound, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CancellationModal } from "../components/cancellation-modal";
+import { OnBehalfCancellationModal } from "../components/on-behalf-cancellation-modal";
 import {
   getLockerZones,
   getUpcomingClasses,
@@ -38,6 +39,7 @@ export const FrontDeskPage: React.FC = () => {
   const [requests, setRequests] = useState<CancellationRequest[]>([]);
   const [checkins, setCheckins] = useState<CheckinRow[]>([]);
   const [selected, setSelected] = useState<CancellationRequest | null>(null);
+  const [isOnBehalfOpen, setIsOnBehalfOpen] = useState(false);
   const [scheduleLoading, setScheduleLoading] = useState(true);
   const [lockerLoading, setLockerLoading] = useState(true);
   const [requestsLoading, setRequestsLoading] = useState(true);
@@ -244,6 +246,15 @@ export const FrontDeskPage: React.FC = () => {
           <Link to="/portal/desk/gate-checkin" className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-[#008b74] px-3.5 text-xs font-bold text-white shadow-xs hover:bg-[#007461] transition-colors"><ScanLine className="h-4 w-4" />Check-in cổng</Link>
           <Link to="/portal/desk/pos" className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 hover:text-slate-900 transition-colors"><ReceiptText className="h-4 w-4" />Bán vé & PT</Link>
           <Link to="/portal/desk/members" className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 hover:text-slate-900 transition-colors"><UsersRound className="h-4 w-4" />Hội viên</Link>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setIsOnBehalfOpen(true)}
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 text-xs font-bold text-rose-700 shadow-xs hover:bg-rose-100 hover:text-rose-900 transition-colors"
+          >
+            <AlertTriangle className="h-4 w-4 text-rose-600" />
+            <span>Nộp đơn hủy thay HLV</span>
+          </Button>
           <span className={`rounded-xl px-2.5 py-1 text-xs font-semibold ${realtimeStatus === "connected" ? "bg-emerald-50 text-[#008b74] border border-emerald-200/70" : "bg-amber-50 text-amber-800 border border-amber-200/70"}`}>{realtimeStatus === "connected" ? "Realtime đang hoạt động" : realtimeStatus === "connecting" ? "Đang kết nối..." : "Mất kết nối realtime"}</span>
           <Button type="button" variant="outline" onClick={() => void toggleSound()} title={soundEnabled ? "Tắt âm báo" : "Bật âm báo"} aria-label={soundEnabled ? "Tắt âm báo" : "Bật âm báo"} className="h-9 w-9 p-0 rounded-xl border-slate-200">{soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}</Button>
           <Button type="button" variant="outline" onClick={refresh} title="Tải lại dữ liệu" aria-label="Tải lại dữ liệu" className="h-9 w-9 p-0 rounded-xl border-slate-200"><RefreshCw className="h-4 w-4" /></Button>
@@ -266,6 +277,18 @@ export const FrontDeskPage: React.FC = () => {
         </div>
       </div>
       {selected && <CancellationModal request={selected} onClose={closeModal} onReviewed={handleReviewed} onStale={() => void loadRequests()} />}
+      {isOnBehalfOpen && (
+        <OnBehalfCancellationModal
+          onClose={() => setIsOnBehalfOpen(false)}
+          onCreated={(newReq) => {
+            setIsOnBehalfOpen(false);
+            setNotice(
+              `Đã nộp đơn hủy ca khẩn cấp thay HLV thành công (Mã: #${newReq.id.slice(0, 8)}). Đơn đang chờ quản lý phê duyệt.`
+            );
+            void loadRequests();
+          }}
+        />
+      )}
     </div>
   );
 };

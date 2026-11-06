@@ -1,18 +1,24 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ShieldAlert,
   Clock,
   CheckCircle2,
   XCircle,
   RefreshCw,
+  RotateCcw,
+  Loader2,
+  AlertCircle,
   Info,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { coachPortalApi } from '../api/coach-portal-api';
 
 export const CoachRequestsPage: React.FC = () => {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'REQUESTS' | 'PENALTIES'>('REQUESTS');
+  const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const {
     data: requests = [],
@@ -34,6 +40,49 @@ export const CoachRequestsPage: React.FC = () => {
     queryFn: () => coachPortalApi.getMyPenalties(),
   });
 
+  const withdrawMutation = useMutation({
+    mutationFn: (id: string) => coachPortalApi.withdrawCancellationRequest(id),
+    onSuccess: async () => {
+      setActionMessage({
+        type: 'success',
+        text: 'Đã rút lại yêu cầu hủy lịch thành công. Lịch dạy của bạn vẫn được bảo toàn nguyên vẹn.',
+      });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['coach', 'cancellation-requests'] }),
+        queryClient.invalidateQueries({ queryKey: ['coach', 'today-schedule'] }),
+        queryClient.invalidateQueries({ queryKey: ['coach', 'multi-day-schedule'] }),
+      ]);
+      setTimeout(() => setActionMessage(null), 5000);
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.message || err.message || 'Lỗi khi rút lại yêu cầu hủy';
+      const formatted =
+        msg === 'CANNOT_CANCEL_NON_PENDING_REQUEST'
+          ? 'Chỉ có thể rút yêu cầu khi đơn đang ở trạng thái Chờ duyệt.'
+          : msg === 'REQUEST_ALREADY_REVIEWED'
+          ? 'Yêu cầu này đã được Quản lý duyệt hoặc từ chối trước đó.'
+          : typeof msg === 'string'
+          ? msg
+          : JSON.stringify(msg);
+      setActionMessage({ type: 'error', text: formatted });
+      setTimeout(() => setActionMessage(null), 5000);
+    },
+    onSettled: () => {
+      setWithdrawingId(null);
+    },
+  });
+
+  const handleWithdraw = (id: string) => {
+    if (
+      window.confirm(
+        'Bạn có chắc chắn muốn rút lại yêu cầu hủy lịch này? Ca dạy / hẹn PT sẽ tiếp tục được giữ nguyên trạng thái CONFIRMED.'
+      )
+    ) {
+      setWithdrawingId(id);
+      withdrawMutation.mutate(id);
+    }
+  };
+
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 pb-12">
       {/* Header */}
@@ -42,8 +91,8 @@ export const CoachRequestsPage: React.FC = () => {
           <h1 className="text-2xl font-black tracking-tight text-white">
             Đơn Hủy Khẩn Cấp & Kỷ Luật
           </h1>
-          <p className="text-xs text-white mt-0.5">
-            Theo dõi tiến trình phê duyệt và hệ thống hỗ trợ ra quyết định kỷ luật
+          <p className="text-xs text-slate-500 mt-0.5">
+            Theo dõi tiến trình phê duyệt và các thông tin kỷ luật liên quan đến ca dạy
           </p>
         </div>
 
@@ -65,7 +114,20 @@ export const CoachRequestsPage: React.FC = () => {
         </Button>
       </div>
 
-        {/* Tabs */}
+      {/* Policy Explainer Banner */}
+      <div className="flex items-start gap-3 rounded-2xl border border-amber-200/90 bg-amber-50/70 p-4 text-xs text-amber-950 shadow-xs">
+        <Info className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+        <div className="space-y-1">
+          <p className="font-bold">Quy trình xử lý yêu cầu Hủy lịch khẩn cấp:</p>
+          <p className="text-[11px] leading-relaxed text-amber-900">
+            • <strong>Quản lý Trung Tâm:</strong> Trực tiếp duyệt trên hệ thống Dashboard.<br />
+            • <strong>Lễ tân trực quầy:</strong> Hỗ trợ phê duyệt khi Quản lý vắng mặt.<br />
+            • <strong>Quyền lợi học viên:</strong> 100% học viên bị ảnh hưởng đều được tự động hoàn lại 01 lượt tập đầy đủ.
+          </p>
+        </div>
+      </div>
+
+      {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
         <button
           onClick={() => setActiveTab('REQUESTS')}
@@ -99,6 +161,23 @@ export const CoachRequestsPage: React.FC = () => {
       {/* TAB 1: Cancellation Requests */}
       {activeTab === 'REQUESTS' && (
         <div className="space-y-4">
+          {actionMessage && (
+            <div
+              className={`flex items-center gap-2.5 rounded-xl p-3.5 text-xs font-semibold animate-in fade-in duration-200 ${
+                actionMessage.type === 'success'
+                  ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+                  : 'bg-rose-50 border border-rose-200 text-rose-800'
+              }`}
+            >
+              {actionMessage.type === 'success' ? (
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+              ) : (
+                <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+              )}
+              <span>{actionMessage.text}</span>
+            </div>
+          )}
+
           {isReqLoading ? (
             <div className="py-20 text-center space-y-3">
               <RefreshCw className="h-8 w-8 text-emerald-600 animate-spin mx-auto" />
@@ -146,6 +225,11 @@ export const CoachRequestsPage: React.FC = () => {
                           <CheckCircle2 className="h-3.5 w-3.5" />
                           Đã phê duyệt (Đã hoàn buổi cho học viên)
                         </span>
+                      ) : req.status === 'CANCELLED' ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 border border-slate-300 px-3 py-1 text-xs font-bold text-slate-600">
+                          <RotateCcw className="h-3.5 w-3.5 text-slate-500" />
+                          Đã rút yêu cầu
+                        </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 border border-rose-200 px-3 py-1 text-xs font-bold text-rose-800">
                           <XCircle className="h-3.5 w-3.5" />
@@ -186,6 +270,34 @@ export const CoachRequestsPage: React.FC = () => {
                           </p>
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* Action for Coach: Withdraw Pending Request */}
+                  {req.status === 'PENDING' && (
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-3 border-t border-slate-100 bg-slate-50/50 -mx-5 -mb-5 px-5 py-3 rounded-b-2xl">
+                      <p className="text-[11px] text-slate-500">
+                        * Bạn có thể rút lại đơn trước khi Quản lý duyệt. Lịch dạy sẽ tiếp tục giữ nguyên.
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleWithdraw(req.id)}
+                        disabled={withdrawingId === req.id}
+                        className="text-xs font-bold text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300 gap-1.5 shadow-none self-end sm:self-auto"
+                      >
+                        {withdrawingId === req.id ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            <span>Đang xử lý...</span>
+                          </>
+                        ) : (
+                          <>
+                            <RotateCcw className="h-3.5 w-3.5" />
+                            <span>Rút yêu cầu hủy</span>
+                          </>
+                        )}
+                      </Button>
                     </div>
                   )}
                 </div>

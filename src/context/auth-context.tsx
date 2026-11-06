@@ -33,6 +33,9 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 function getInitialUser(): AuthUser | null {
   try {
+    if (!sessionStorage.getItem('sportscenter.active_tab_session')) {
+      return null;
+    }
     const storedUser = localStorage.getItem("auth_user");
     if (storedUser) {
       return JSON.parse(storedUser) as AuthUser;

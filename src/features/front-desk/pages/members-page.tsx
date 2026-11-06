@@ -2,10 +2,10 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import {
   ArrowLeft, CalendarDays, CreditCard, Pencil, ScanLine,
-  RefreshCw, UserRound, UsersRound, X,
+  RefreshCw, UserRound, UsersRound, X, UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { EditMemberModal, SubscriptionStatusModal } from "../components/member-modals";
+import { CreateMemberModal, EditMemberModal, SubscriptionStatusModal } from "../components/member-modals";
 import { InbodyPanel } from "../components/inbody-panel";
 import { PosMemberSearch } from "../components/pos-member-search";
 import { formatVnd } from "../lib/currency";
@@ -59,6 +59,7 @@ export const MembersPage: React.FC = () => {
   const [invoicesError, setInvoicesError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [creatingMember, setCreatingMember] = useState(false);
   const [statusTarget, setStatusTarget] = useState<PosSubscription | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const requestVersionRef = useRef(0);
@@ -207,9 +208,20 @@ export const MembersPage: React.FC = () => {
           </h1>
           <p className="text-xs text-white mt-0.5">Hồ sơ cá nhân, lịch sử tập luyện, gói cước và chỉ số InBody</p>
         </div>
-        <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-[#008b74] border border-emerald-200/70 self-start sm:self-auto">
-          Hồ sơ & Lịch sử
-        </span>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <Button
+            type="button"
+            variant="mint"
+            onClick={() => setCreatingMember(true)}
+            className="text-xs font-bold gap-1.5 shadow-sm"
+          >
+            <UserPlus className="h-4 w-4" />
+            <span>Đăng ký hội viên mới</span>
+          </Button>
+          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-[#008b74] border border-emerald-200/70">
+            Hồ sơ & Lịch sử
+          </span>
+        </div>
       </div>
 
       {notice && (
@@ -223,6 +235,19 @@ export const MembersPage: React.FC = () => {
 
       <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
         <aside className="min-w-0 self-start rounded-2xl md:rounded-3xl border border-slate-200/90 bg-white p-5 shadow-xs lg:sticky lg:top-5">
+          <div className="mb-4 flex items-center justify-between pb-3 border-b border-slate-100">
+            <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Hội viên</span>
+            <Button
+              size="sm"
+              variant="outline"
+              type="button"
+              onClick={() => setCreatingMember(true)}
+              className="h-8 text-xs font-bold text-emerald-700 border-emerald-300 hover:bg-emerald-50 gap-1 shadow-none"
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              <span>Đăng ký mới</span>
+            </Button>
+          </div>
           <PosMemberSearch selected={selected} onSelect={chooseMember} disabled={editing || Boolean(statusTarget)} placeholder="SĐT, họ tên hoặc email" inputMode="text" minimumLength={2} resultsClassName="max-h-[60vh]" showEmail />
         </aside>
 
@@ -333,6 +358,16 @@ export const MembersPage: React.FC = () => {
       </div>
       {editing && profile && <EditMemberModal member={profile} onClose={() => setEditing(false)} onSaved={onProfileSaved} />}
       {statusTarget && <SubscriptionStatusModal subscription={statusTarget} onClose={() => setStatusTarget(null)} onSaved={onStatusSaved} />}
+      {creatingMember && (
+        <CreateMemberModal
+          onClose={() => setCreatingMember(false)}
+          onCreated={(newMember) => {
+            setCreatingMember(false);
+            chooseMember(newMember);
+            setNotice(`Đăng ký thành công hội viên mới: ${newMember.fullName} (${newMember.email})`);
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -18,6 +18,14 @@ export interface MemberProfileUpdate {
   medicalHistory: string;
 }
 
+export interface CreateMemberPayload {
+  email: string;
+  password: string;
+  fullName: string;
+  phone: string;
+  avatarUrl?: string;
+}
+
 export type MemberInvoice = Omit<PosInvoice, "paymentMethod"> & {
   paymentMethod: string;
   subscription: { userId: string; planId: string };

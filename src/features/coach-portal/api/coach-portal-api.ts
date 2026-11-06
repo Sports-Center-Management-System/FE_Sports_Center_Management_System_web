@@ -14,6 +14,9 @@ import type {
   ExerciseKnowledgeItem,
   WorkoutPlanItem,
   CreateWorkoutPlanPayload,
+  WorkoutTemplateItem,
+  BookingWorkoutPlan,
+  UpdateSessionWorkoutPlanPayload,
   CoachRateItem,
   EquipmentItem,
   StudentBookingItem,
@@ -29,11 +32,13 @@ export const coachPortalApi = {
     // Collect all bookings that need member info
     const bookingsToHydrate: StudentBookingItem[] = [];
     (data.classes || []).forEach((c) => {
+      c.bookings = (c.bookings || []).filter((b) => b.status !== 'CANCELLED');
       (c.bookings || []).forEach((b) => {
         if (!b.member?.fullName && b.memberId) bookingsToHydrate.push(b);
       });
     });
     (data.pt || []).forEach((p) => {
+      p.bookings = (p.bookings || []).filter((b) => b.status !== 'CANCELLED');
       (p.bookings || []).forEach((b) => {
         if (!b.member?.fullName && b.memberId) bookingsToHydrate.push(b);
       });
@@ -84,47 +89,31 @@ export const coachPortalApi = {
     const mySlots = Array.isArray(mySlotsRes.data) ? mySlotsRes.data : [];
     const allSchedules = Array.isArray(schedulesRes.data) ? schedulesRes.data : [];
 
-    // Collect all memberIds needing hydration
-    const memberIdSet = new Set<string>();
-    rawBookings.forEach((b: any) => {
-      if (b.memberId && !b.member?.fullName) memberIdSet.add(b.memberId);
-    });
+    // Populate user map from today's schedule bookings without firing N+1 requests
+    const userMap = new Map<string, any>();
     (todayData.classes || []).forEach((c) => {
       (c.bookings || []).forEach((b) => {
-        if (b.memberId && !b.member?.fullName) memberIdSet.add(b.memberId);
+        if (b.memberId && b.member?.fullName) userMap.set(b.memberId, b.member);
       });
     });
     (todayData.pt || []).forEach((p) => {
       (p.bookings || []).forEach((b) => {
-        if (b.memberId && !b.member?.fullName) memberIdSet.add(b.memberId);
+        if (b.memberId && b.member?.fullName) userMap.set(b.memberId, b.member);
       });
     });
-
-    // Hydrate users in parallel
-    const userMap = new Map<string, any>();
-    if (memberIdSet.size > 0) {
-      await Promise.all(
-        [...memberIdSet].map(async (mId) => {
-          try {
-            const uRes = await apiClient.get(`/users/${mId}`);
-            userMap.set(mId, uRes.data);
-          } catch {
-            // ignore
-          }
-        })
-      );
-    }
 
     const formatMember = (mId?: string, fallbackMember?: any) => {
       if (fallbackMember?.fullName) return fallbackMember;
       if (mId && userMap.has(mId)) {
-        const u = userMap.get(mId);
+        return userMap.get(mId);
+      }
+      if (mId) {
         return {
-          id: u.id,
-          fullName: u.fullName,
-          phone: u.phone,
-          avatarUrl: u.avatarUrl,
-          memberProfile: u.memberProfile,
+          id: mId,
+          fullName: fallbackMember?.fullName || 'Học viên',
+          phone: fallbackMember?.phone,
+          avatarUrl: fallbackMember?.avatarUrl,
+          memberProfile: fallbackMember?.memberProfile,
         };
       }
       return fallbackMember || null;
@@ -158,7 +147,7 @@ export const coachPortalApi = {
 
     const resolvedCoachId = coachUserId || (() => {
       try {
-        const stored = localStorage.getItem('auth_user');
+        const stored = sessionStorage.getItem('auth_user') || localStorage.getItem('auth_user');
         if (stored) return JSON.parse(stored)?.id;
       } catch {
         return undefined;
@@ -166,30 +155,40 @@ export const coachPortalApi = {
       return undefined;
     })();
 
-    // 2. Process all future open center schedules assigned to this coach
-    allSchedules.forEach((s: any) => {
-      if (resolvedCoachId && s.coachId !== resolvedCoachId && s.coach?.id !== resolvedCoachId) return;
-      if (!sessionsMap.has(`class-${s.id}`)) {
-        sessionsMap.set(`class-${s.id}`, {
-          id: s.id,
-          type: 'GROUP_CLASS',
-          scheduleId: s.id,
-          title: s.class?.name || 'Lớp tập nhóm',
-          disciplineId: s.class?.disciplineId,
-          disciplineName: s.class?.discipline?.name || s.class?.name,
-          roomName: s.room?.name || (s.room?.roomNumber ? `Phòng ${s.room.roomNumber}` : undefined),
-          startTime: s.startTime,
-          endTime: s.endTime,
-          status: s.status || 'OPEN',
-          currentEnrolled: s.currentEnrolled || 0,
-          capacity: s.capacity || s.room?.capacity || 20,
-          bookings: [],
-          isEmergencyCancelled: s.status === 'CANCELLED',
-        });
-      }
-    });
+    // 2. Process all future center schedules STRICTLY assigned to this coach
+    if (resolvedCoachId) {
+      allSchedules.forEach((s: any) => {
+        const isAssignedToMe =
+          s.coachId === resolvedCoachId ||
+          s.coach?.id === resolvedCoachId ||
+          s.coach?.userId === resolvedCoachId ||
+          s.coach?.user?.id === resolvedCoachId;
+
+        if (!isAssignedToMe) return;
+
+        if (!sessionsMap.has(`class-${s.id}`)) {
+          sessionsMap.set(`class-${s.id}`, {
+            id: s.id,
+            type: 'GROUP_CLASS',
+            scheduleId: s.id,
+            title: s.class?.name || 'Lớp tập nhóm',
+            disciplineId: s.class?.disciplineId,
+            disciplineName: s.class?.discipline?.name || s.class?.name,
+            roomName: s.room?.name || (s.room?.roomNumber ? `Phòng ${s.room.roomNumber}` : undefined),
+            startTime: s.startTime,
+            endTime: s.endTime,
+            status: s.status || 'OPEN',
+            currentEnrolled: s.currentEnrolled || 0,
+            capacity: s.capacity || s.room?.capacity || 20,
+            bookings: [],
+            isEmergencyCancelled: s.status === 'CANCELLED',
+          });
+        }
+      });
+    }
 
     // 3. Process PT slots from mySlots
+    const mySlotIds = new Set(mySlots.map((slot) => slot.id));
     mySlots.forEach((slot) => {
       const key = `pt-${slot.id}`;
       sessionsMap.set(key, {
@@ -231,8 +230,10 @@ export const coachPortalApi = {
       });
     });
 
-    // 5. Merge bookings across all dates
+    // 5. Merge bookings across all dates STRICTLY for this coach's sessions
     rawBookings.forEach((b: any) => {
+      // Skip cancelled bookings as they are released from schedule and cannot be attended
+      if (b.status === 'CANCELLED') return;
       const studentBooking: StudentBookingItem = {
         id: b.id,
         bookingType: b.bookingType,
@@ -244,6 +245,11 @@ export const coachPortalApi = {
       };
 
       if (b.bookingType === 'PERSONAL_TRAINING' && b.coachAvailabilityId) {
+        // Only attach if this availability slot belongs to this coach
+        if (!mySlotIds.has(b.coachAvailabilityId) && !sessionsMap.has(`pt-${b.coachAvailabilityId}`)) {
+          return;
+        }
+
         const key = `pt-${b.coachAvailabilityId}`;
         const existing = sessionsMap.get(key);
         const startTime = b.coachAvailability?.startTime || existing?.startTime;
@@ -279,31 +285,13 @@ export const coachPortalApi = {
       } else if (b.bookingType === 'GROUP_CLASS' && b.scheduleId) {
         const key = `class-${b.scheduleId}`;
         const existing = sessionsMap.get(key);
-        const startTime = b.schedule?.startTime || existing?.startTime;
-        const endTime = b.schedule?.endTime || existing?.endTime;
-        if (startTime && endTime) {
-          if (existing) {
-            if (!existing.bookings.some((x) => x.id === b.id)) {
-              existing.bookings.push(studentBooking);
-            }
-            existing.currentEnrolled = existing.bookings.length;
-          } else {
-            sessionsMap.set(key, {
-              id: b.scheduleId,
-              type: 'GROUP_CLASS',
-              scheduleId: b.scheduleId,
-              title: b.schedule?.class?.name || 'Lớp tập nhóm',
-              disciplineId: b.disciplineId,
-              disciplineName: b.schedule?.class?.name,
-              roomName: b.schedule?.room?.name,
-              startTime,
-              endTime,
-              status: 'CONFIRMED',
-              currentEnrolled: 1,
-              capacity: b.schedule?.capacity || 20,
-              bookings: [studentBooking],
-            });
+        // STRICT: Only append bookings to classes that already belong to this coach!
+        // Never inject other coaches' group classes!
+        if (existing) {
+          if (!existing.bookings.some((x) => x.id === b.id)) {
+            existing.bookings.push(studentBooking);
           }
+          existing.currentEnrolled = existing.bookings.length;
         }
       }
     });
@@ -487,6 +475,40 @@ export const coachPortalApi = {
     return res.data;
   },
 
+  // Lộ trình khung 12 buổi mẫu & Giáo án theo ca PT (M14 & M14.1)
+  getWorkoutTemplates: async (discipline?: string): Promise<WorkoutTemplateItem[]> => {
+    const res = await apiClient.get<WorkoutTemplateItem[]>('/workout-templates', {
+      params: discipline ? { discipline } : undefined,
+    });
+    return res.data;
+  },
+
+  assignWorkoutTemplate: async (payload: {
+    bookingId: string;
+    templateCode?: string;
+    sessionOrder?: number;
+  }): Promise<BookingWorkoutPlan> => {
+    const res = await apiClient.post<BookingWorkoutPlan>('/workout-plans/assign-template', payload);
+    return res.data;
+  },
+
+  getWorkoutPlanByBooking: async (bookingId: string): Promise<BookingWorkoutPlan | null> => {
+    try {
+      const res = await apiClient.get<BookingWorkoutPlan>(`/bookings/${bookingId}/workout-plan`);
+      return res.data;
+    } catch {
+      return null;
+    }
+  },
+
+  updateSessionWorkoutPlan: async (
+    planId: string,
+    payload: UpdateSessionWorkoutPlanPayload
+  ): Promise<BookingWorkoutPlan> => {
+    const res = await apiClient.put<BookingWorkoutPlan>(`/workout-plans/${planId}`, payload);
+    return res.data;
+  },
+
   // Hủy lịch khẩn cấp & Chế tài kỷ luật DSS
   requestEmergencyCancel: async (
     payload: CancellationRequestPayload
@@ -500,6 +522,16 @@ export const coachPortalApi = {
 
   getMyCancellationRequests: async (): Promise<CancellationRequestItem[]> => {
     const res = await apiClient.get<CancellationRequestItem[]>('/cancellation-requests');
+    return res.data;
+  },
+
+  withdrawCancellationRequest: async (
+    id: string
+  ): Promise<CancellationRequestItem> => {
+    const res = await apiClient.put<CancellationRequestItem>(
+      `/cancellation-requests/${id}/cancel`,
+      {}
+    );
     return res.data;
   },
 

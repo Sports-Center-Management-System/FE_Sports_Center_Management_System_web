@@ -44,7 +44,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         beMessage = err.message;
       }
 
-      if (
+      if (err instanceof AxiosError && (err.code === "ECONNABORTED" || err.message?.includes("timeout"))) {
+        setErrorMessage("Máy chủ đang khởi động lại từ trạng thái nghỉ (Render free-tier cold start). Vui lòng đợi vài giây và bấm Đăng nhập lại.");
+      } else if (
         beMessage === "INVALID_CREDENTIALS" ||
         (typeof beMessage === "string" && beMessage.includes("INVALID_CREDENTIALS"))
       ) {
@@ -151,6 +153,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           Tài khoản kiểm thử nhanh (Demo):
         </p>
         <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => handleQuickFill("coach.alex@sportscenter.com")}
+            className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 transition-colors cursor-pointer shadow-xs"
+          >
+            HLV (Coach Alex)
+          </button>
           <button
             type="button"
             onClick={() => handleQuickFill("member.john@example.com")}

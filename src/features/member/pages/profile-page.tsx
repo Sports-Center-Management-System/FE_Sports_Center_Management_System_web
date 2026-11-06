@@ -20,7 +20,9 @@ import {
   Trash2,
   CreditCard,
   Activity,
-  Award,
+  Calendar,
+  Check,
+  Flame,
 } from "lucide-react";
 import { useSession } from "@/auth/session-context";
 import { StateMessage } from "@/components/feedback/state-message";
@@ -39,21 +41,32 @@ import { profileApiService } from "../services/profile-api.service";
 // ==========================================
 // 1. CONSTANTS & SUGGESTIONS
 // ==========================================
-const FITNESS_GOAL_SUGGESTIONS = [
-  "Tăng 2kg cơ bắp",
-  "Giảm 3kg mỡ thừa",
-  "Cải thiện sức bền tim mạch",
-  "Uốn dẻo Yoga & giải tỏa stress",
-  "Luyện Boxing tăng phản xạ",
-  "Duy trì vóc dáng săn chắc",
+const FITNESS_GOAL_CATEGORIES = [
+  { label: "Tăng 2kg cơ bắp", category: "Tăng cơ", icon: "💪" },
+  { label: "Giảm 3kg mỡ thừa", category: "Giảm mỡ", icon: "🔥" },
+  { label: "Cải thiện sức bền tim mạch", category: "Cardio", icon: "⚡" },
+  { label: "Uốn dẻo Yoga & giải tỏa stress", category: "Yoga", icon: "🧘" },
+  { label: "Luyện Boxing tăng phản xạ", category: "Boxing", icon: "🥊" },
+  { label: "Duy trì vóc dáng săn chắc", category: "Duy trì", icon: "✨" },
 ];
 
 const MEDICAL_SUGGESTIONS = [
   "Không có bệnh lý nền, sức khỏe tốt",
   "Đau mỏi vai gáy do ngồi văn phòng",
   "Khớp gối cần tránh bài tập quá nặng",
-  "Huyết áp ổn định, tập cardio nhẹ",
+  "Huyết áp ổn định, tập cardio nhẹ nhàng",
 ];
+
+// Calculate BMI interpretation
+function getBmiInterpretation(bmi?: number | string | null): { text: string; color: string } {
+  if (!bmi) return { text: "Chưa đo", color: "text-slate-400" };
+  const val = Number(bmi);
+  if (Number.isNaN(val)) return { text: "Chưa đo", color: "text-slate-400" };
+  if (val < 18.5) return { text: "Thiếu cân", color: "text-sky-500" };
+  if (val < 23) return { text: "Chuẩn thể hình", color: "text-emerald-500" };
+  if (val < 25) return { text: "Tiền thừa cân", color: "text-amber-500" };
+  return { text: "Cần giảm mỡ", color: "text-rose-500" };
+}
 
 // ==========================================
 // 2. SUBCOMPONENT: PROFILE HEADER (HERO & AVATAR)
@@ -87,11 +100,28 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   const displayName = liveFullName || profile.fullName || "Hội viên Sports Center";
   const displayPhone = livePhone !== undefined ? livePhone : profile.phone;
   const displayGender = liveGender || profile.gender || "MALE";
-  const displayHeight = liveHeightCm !== undefined ? liveHeightCm : profile.heightCm;
-  const displayGoals = liveFitnessGoals !== undefined ? liveFitnessGoals : profile.fitnessGoals;
+  const displayHeight = liveHeightCm !== undefined && liveHeightCm !== ""
+    ? liveHeightCm
+    : (profile.heightCm ?? profile.memberProfile?.heightCm);
+  const displayGoals = liveFitnessGoals !== undefined && liveFitnessGoals !== ""
+    ? liveFitnessGoals
+    : (profile.fitnessGoals ?? profile.memberProfile?.fitnessGoals);
+
+  const heightNum = displayHeight ? Number(displayHeight) : null;
+  const weightNum = profile.weightKg ?? profile.memberProfile?.weightKg ?? null;
+  const bmiVal = profile.bmi ?? profile.memberProfile?.bmi ?? (
+    heightNum && weightNum && heightNum > 0
+      ? Number((Number(weightNum) / Math.pow(heightNum / 100, 2)).toFixed(1))
+      : null
+  );
+  const bmiInfo = getBmiInterpretation(bmiVal);
 
   const genderInfo = getGenderLabel(displayGender);
   const hasAvatar = Boolean(displayAvatar && displayAvatar.trim() && !imgError);
+
+  const activeSub = profile.subscriptions && profile.subscriptions.length > 0
+    ? profile.subscriptions[0]
+    : null;
 
   const handleApplyAvatar = () => {
     if (onAvatarChange) onAvatarChange(tempUrl.trim());
@@ -107,19 +137,21 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   };
 
   return (
-    <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-slate-900 to-[#07191d] text-white p-6 sm:p-8 shadow-xl border border-slate-800/80 mb-6">
-      <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-10 left-1/4 w-72 h-72 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-slate-950 via-[#071618] to-[#041d1a] text-white p-6 sm:p-9 shadow-2xl border border-emerald-950/60 mb-6">
+      {/* Background athletic atmospheric glows */}
+      <div className="absolute top-0 right-0 w-[450px] h-[450px] bg-emerald-500/12 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute -bottom-16 -left-10 w-96 h-96 bg-teal-600/10 rounded-full blur-[110px] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(#059669_1px,transparent_1px)] [background-size:24px_24px] opacity-[0.04] pointer-events-none" />
 
-      <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6">
-        {/* Avatar Trigger with camera & Initials fallback */}
+      <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-7">
+        {/* Avatar Trigger with camera & ring */}
         <div className="relative shrink-0 group">
           <div
             className={cn(
-              "w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden flex items-center justify-center transition-all duration-300 shadow-2xl",
+              "w-28 h-28 sm:w-32 sm:h-32 rounded-3xl overflow-hidden flex items-center justify-center transition-all duration-300 shadow-2xl",
               hasAvatar
-                ? "border-4 border-slate-800 ring-2 ring-emerald-500/40 bg-slate-900"
-                : "border-3 border-dashed border-slate-700 bg-slate-900/90 text-slate-400"
+                ? "border-2 border-emerald-500/40 ring-4 ring-emerald-500/10 bg-slate-900"
+                : "border-2 border-dashed border-emerald-800/60 bg-slate-900/90 text-slate-400"
             )}
           >
             {hasAvatar ? (
@@ -131,11 +163,11 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               />
             ) : (
               <div className="flex flex-col items-center justify-center text-center p-2 select-none">
-                <span className="text-2xl font-black text-emerald-400 mb-1">
+                <span className="text-3xl font-black text-emerald-400 tracking-wider">
                   {getInitials(displayName)}
                 </span>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  Chưa có ảnh
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                  Sports ID
                 </span>
               </div>
             )}
@@ -147,81 +179,105 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               setTempUrl(displayAvatar || "");
               setShowAvatarModal(true);
             }}
-            className="absolute bottom-1 right-1 w-9 h-9 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center justify-center shadow-lg transition-transform hover:scale-110 active:scale-95 cursor-pointer ring-4 ring-slate-900"
+            className="absolute -bottom-2 -right-2 w-9 h-9 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center justify-center shadow-lg transition-all hover:scale-110 active:scale-95 cursor-pointer ring-4 ring-slate-950 font-bold"
             title="Đổi ảnh đại diện"
           >
             <Camera className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Member Details */}
-        <div className="flex-1 text-center md:text-left space-y-3.5">
+        {/* Member Details Header */}
+        <div className="flex-1 text-center md:text-left space-y-4">
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-              <ShieldCheck className="w-3.5 h-3.5" />
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 backdrop-blur-md">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span>
                 {profile.role === "COACH"
                   ? "Huấn luyện viên chính thức"
                   : profile.role === "ADMIN" || profile.role === "CENTER_MANAGER"
-                  ? "Quản trị viên hệ thống"
+                  ? "Ban quản trị hệ thống"
                   : "Hội viên chính thức"}
               </span>
             </span>
+
             <span
               className={cn(
-                "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border",
+                "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border backdrop-blur-md",
                 genderInfo.className
               )}
             >
               <span className="text-xs font-black">{genderInfo.icon}</span>
               <span>Giới tính: {genderInfo.label}</span>
             </span>
+
+            {activeSub && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-amber-500/15 text-amber-300 border border-amber-500/30 backdrop-blur-md">
+                <Flame className="w-3.5 h-3.5 text-amber-400" />
+                <span>Gói: {activeSub.packageTier || "VIP Member"}</span>
+              </span>
+            )}
           </div>
 
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-              {displayName}
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white flex items-center justify-center md:justify-start gap-3">
+              <span>{displayName}</span>
+              <ShieldCheck className="w-6 h-6 text-emerald-400 shrink-0 hidden sm:inline-block" />
             </h1>
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-y-1.5 gap-x-4 text-xs text-slate-400 mt-1.5">
-              <span className="inline-flex items-center gap-1.5">
-                <Mail className="w-3.5 h-3.5 text-slate-500" />
+
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-y-2 gap-x-5 text-xs text-slate-300 mt-2 font-medium">
+              <span className="inline-flex items-center gap-1.5 bg-slate-900/60 px-2.5 py-1 rounded-xl border border-slate-800/80">
+                <Mail className="w-3.5 h-3.5 text-emerald-400" />
                 <span>{profile.email}</span>
               </span>
               {displayPhone && (
-                <span className="inline-flex items-center gap-1.5">
-                  <Phone className="w-3.5 h-3.5 text-slate-500" />
+                <span className="inline-flex items-center gap-1.5 bg-slate-900/60 px-2.5 py-1 rounded-xl border border-slate-800/80">
+                  <Phone className="w-3.5 h-3.5 text-teal-400" />
                   <span>{displayPhone}</span>
                 </span>
               )}
-              {displayHeight && (
-                <span className="inline-flex items-center gap-1.5">
-                  <Ruler className="w-3.5 h-3.5 text-slate-500" />
-                  <span>{displayHeight} cm</span>
+              {heightNum && (
+                <span className="inline-flex items-center gap-1.5 bg-slate-900/60 px-2.5 py-1 rounded-xl border border-slate-800/80">
+                  <Ruler className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>{heightNum} cm</span>
                 </span>
               )}
             </div>
           </div>
 
-          {displayGoals && (
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-800/60 border border-slate-700/60 text-xs text-slate-300">
-              <Target className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span className="font-semibold text-slate-400">Mục tiêu:</span>
-              <span className="text-emerald-300 font-medium truncate max-w-[280px] sm:max-w-md">
-                {displayGoals}
-              </span>
-            </div>
-          )}
+          {/* Athletic Fast-Stats Chips */}
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 pt-1">
+            {bmiVal && (
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800/90 text-xs">
+                <Activity className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span className="text-slate-400 font-medium">BMI:</span>
+                <span className="font-black text-white">{bmiVal}</span>
+                <span className={cn("text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-white/5", bmiInfo.color)}>
+                  {bmiInfo.text}
+                </span>
+              </div>
+            )}
+
+            {displayGoals && (
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-xs text-emerald-200 max-w-full">
+                <Target className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span className="font-semibold text-emerald-400/90">Mục tiêu:</span>
+                <span className="font-bold truncate max-w-[260px] sm:max-w-md">
+                  {displayGoals}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Modal Change Avatar URL */}
       {showAvatarModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-700/80 rounded-3xl p-6 text-white shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-700/90 rounded-3xl p-6 text-white shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <h3 className="text-base font-black flex items-center gap-2">
                 <Camera className="w-4 h-4 text-emerald-400" />
-                <span>Thay đổi ảnh đại diện</span>
+                <span>Cập nhật ảnh đại diện</span>
               </h3>
               <button
                 type="button"
@@ -232,16 +288,38 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               </button>
             </div>
 
+            {/* Quick Preview */}
+            <div className="flex items-center gap-4 p-3 bg-slate-950/70 rounded-2xl border border-slate-800">
+              <div className="w-14 h-14 rounded-2xl overflow-hidden bg-slate-800 border border-slate-700 shrink-0 flex items-center justify-center">
+                {tempUrl.trim() ? (
+                  <img
+                    src={tempUrl.trim()}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = "";
+                    }}
+                  />
+                ) : (
+                  <User className="w-6 h-6 text-slate-500" />
+                )}
+              </div>
+              <div className="text-xs text-slate-400 space-y-0.5 min-w-0">
+                <p className="font-bold text-slate-200">Xem trước ảnh</p>
+                <p className="text-[11px] truncate">Hỗ trợ định dạng .jpg, .png, .webp từ web</p>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <div className="flex items-center gap-1.5 text-xs font-bold text-slate-300">
                 <LinkIcon className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Nhập URL ảnh đại diện</span>
+                <span>Dán đường dẫn ảnh (URL)</span>
               </div>
               <Input
-                placeholder="https://example.com/avatar.jpg"
+                placeholder="https://images.unsplash.com/photo-..."
                 value={tempUrl}
                 onChange={(e) => setTempUrl(e.target.value)}
-                className="h-10 bg-slate-950 border-slate-700 text-xs text-white rounded-xl focus:border-emerald-500"
+                className="h-11 bg-slate-950 border-slate-700 text-xs text-white rounded-xl focus:border-emerald-500"
               />
             </div>
 
@@ -251,7 +329,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 <button
                   type="button"
                   onClick={handleClearAvatar}
-                  className="inline-flex items-center gap-1.5 text-xs text-rose-400 hover:text-rose-300 font-bold cursor-pointer"
+                  className="inline-flex items-center gap-1.5 text-xs text-rose-400 hover:text-rose-300 font-bold cursor-pointer transition-colors"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>Xóa ảnh hiện tại</span>
@@ -266,7 +344,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                   variant="outline"
                   size="sm"
                   onClick={() => setShowAvatarModal(false)}
-                  className="h-9 px-4 rounded-xl border-slate-700 text-slate-300 hover:bg-slate-800 cursor-pointer text-xs"
+                  className="h-9 px-4 rounded-xl border-slate-700 text-slate-300 hover:bg-slate-800 cursor-pointer text-xs font-semibold"
                 >
                   Hủy
                 </Button>
@@ -275,7 +353,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                   variant="mint"
                   size="sm"
                   onClick={handleApplyAvatar}
-                  className="h-9 px-5 rounded-xl bg-[#008b74] hover:bg-emerald-600 text-white font-bold cursor-pointer text-xs"
+                  className="h-9 px-5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black cursor-pointer text-xs"
                 >
                   Xác nhận
                 </Button>
@@ -300,130 +378,190 @@ const MemberStatusOverview: React.FC<MemberStatusOverviewProps> = ({ profile }) 
     ? profile.subscriptions[0]
     : null;
 
-  const hasBodyStats =
-    profile.heightCm || profile.weightKg || profile.bmi || profile.bodyFatPct;
+  const height = profile.heightCm ?? profile.memberProfile?.heightCm;
+  const weight = profile.weightKg ?? profile.memberProfile?.weightKg;
+  const bmi = profile.bmi ?? profile.memberProfile?.bmi;
+  const bodyFat = profile.bodyFatPct ?? profile.memberProfile?.bodyFatPct;
+
+  const hasBodyStats = Boolean(height || weight || bmi || bodyFat);
+  const bmiStatus = getBmiInterpretation(bmi);
+
+  const remainingSessions = activeSub
+    ? (activeSub.remainingPtSessions ?? activeSub.remainingSessions ?? 0)
+    : 0;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-      {/* 1. THẺ HỘI VIÊN & GÓI TẬP HIỆN HÀNH */}
-      <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm space-y-4 flex flex-col justify-between">
+    <div className="space-y-6 mb-6">
+      {/* 1. THẺ HỘI VIÊN & GÓI TẬP HIỆN HÀNH (TRỌN 1 LINE) */}
+      <div className="w-full bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all">
         <div>
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <span className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-800">
-              <CreditCard className="w-4 h-4 text-[#008b74]" />
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+            <span className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-900">
+              <span className="p-1.5 rounded-xl bg-emerald-50 text-[#008b74]">
+                <CreditCard className="w-4 h-4" />
+              </span>
               <span>Gói tập & Thẻ hội viên</span>
             </span>
             {activeSub ? (
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/70">
+              <span className="px-3 py-1 rounded-full text-[11px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200/80">
                 {activeSub.packageTier || "ACTIVE"}
               </span>
             ) : (
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-500">
-                Chưa có gói tập
+              <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-500">
+                Chưa kích hoạt
               </span>
             )}
           </div>
 
-          <div className="pt-3">
+          <div className="pt-4">
             {activeSub ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div>
-                  <h4 className="text-lg font-black text-slate-900">
-                    {activeSub.plan?.name || "Gói tập hội viên"}
+                  <h4 className="text-xl font-black text-slate-950 tracking-tight">
+                    {activeSub.plan?.name || "Gói tập hội viên tiêu chuẩn"}
                   </h4>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    {activeSub.plan?.description || "Quyền lợi tập luyện tại trung tâm"}
+                  <p className="text-xs text-slate-500 mt-1 max-w-2xl">
+                    {activeSub.plan?.description || "Toàn quyền sử dụng tiện ích gym, locker, và các lớp tiêu chuẩn."}
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 space-y-1">
-                    <span className="text-[10px] font-bold text-slate-400 block uppercase">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50/80 to-teal-50/40 border border-emerald-200/80 space-y-1">
+                    <span className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider block">
                       Buổi PT 1:1 còn lại
                     </span>
-                    <span className="text-base font-extrabold text-[#008b74]">
-                      {activeSub.remainingPtSessions ?? activeSub.remainingSessions ?? 0} buổi
-                    </span>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-2xl font-black text-[#008b74]">
+                        {remainingSessions}
+                      </span>
+                      <span className="text-xs font-bold text-emerald-800">buổi tập</span>
+                    </div>
                   </div>
 
-                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 space-y-1">
-                    <span className="text-[10px] font-bold text-slate-400 block uppercase">
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
+                    <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
                       Hạn gói tập
                     </span>
-                    <span className="text-xs font-bold text-slate-700">
-                      {activeSub.endDate ? new Date(activeSub.endDate).toLocaleDateString("vi-VN") : "Đang duy trì"}
+                    <div className="flex items-center gap-2 pt-1">
+                      <Calendar className="w-4 h-4 text-slate-400" />
+                      <span className="text-sm font-black text-slate-800">
+                        {activeSub.endDate
+                          ? new Date(activeSub.endDate).toLocaleDateString("vi-VN")
+                          : "Đang duy trì"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
+                    <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
+                      Huấn luyện viên phụ trách
                     </span>
+                    <div className="flex items-center gap-2 pt-1">
+                      {activeSub.assignedCoach ? (
+                        <>
+                          <div className="w-6 h-6 rounded-full bg-[#008b74] text-white flex items-center justify-center font-bold text-[10px]">
+                            {activeSub.assignedCoach.fullName.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="text-sm font-black text-slate-900 truncate">
+                            {activeSub.assignedCoach.fullName}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-xs font-semibold text-slate-500">
+                          Chưa chỉ định HLV riêng
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-
-                {activeSub.assignedCoach && (
-                  <div className="flex items-center gap-2 p-2 rounded-xl bg-emerald-50/60 border border-emerald-200/60 text-xs">
-                    <Award className="w-3.5 h-3.5 text-[#008b74] shrink-0" />
-                    <span className="text-slate-600">HLV cá nhân:</span>
-                    <span className="font-extrabold text-[#008b74]">
-                      {activeSub.assignedCoach.fullName}
-                    </span>
-                  </div>
-                )}
               </div>
             ) : (
-              <div className="p-4 rounded-2xl bg-slate-50 text-slate-500 text-xs text-center border border-slate-200/80">
-                Bạn chưa đăng ký gói tập nào đang hoạt động.
+              <div className="p-6 rounded-2xl bg-slate-50 text-slate-500 text-xs text-center border border-slate-200/70 space-y-2">
+                <CreditCard className="w-8 h-8 text-slate-300 mx-auto" />
+                <p className="font-semibold text-slate-700">Chưa có gói tập nào đang hoạt động</p>
+                <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
+                  Vui lòng liên hệ quầy dịch vụ hoặc đăng ký gói tập trực tuyến để mở khóa toàn bộ quyền lợi.
+                </p>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* 2. CHỈ SỐ THỂ CHẤT & INBODY */}
-      <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm space-y-4 flex flex-col justify-between">
+      {/* 2. CHỈ SỐ THỂ CHẤT & INBODY (TRỌN 1 LINE) */}
+      <div className="w-full bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all">
         <div>
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <span className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-800">
-              <Activity className="w-4 h-4 text-emerald-600" />
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+            <span className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-900">
+              <span className="p-1.5 rounded-xl bg-teal-50 text-teal-600">
+                <Activity className="w-4 h-4" />
+              </span>
               <span>Chỉ số thể chất & InBody</span>
             </span>
-            <span className="text-[11px] text-slate-400 font-medium">Từ hồ sơ hệ thống</span>
+            <span className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-amber-500" /> Đo định kỳ
+            </span>
           </div>
 
-          <div className="pt-3">
+          <div className="pt-4">
             {hasBodyStats ? (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Chiều cao</span>
-                  <span className="text-sm font-black text-slate-900">
-                    {profile.heightCm ? `${profile.heightCm} cm` : "--"}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 hover:bg-white hover:shadow-xs transition-all">
+                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
+                    Chiều cao
+                  </span>
+                  <span className="text-lg font-black text-slate-900 mt-1 block">
+                    {height ? `${height} cm` : "--"}
                   </span>
                 </div>
-                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Cân nặng</span>
-                  <span className="text-sm font-black text-slate-900">
-                    {profile.weightKg ? `${profile.weightKg} kg` : "--"}
+
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 hover:bg-white hover:shadow-xs transition-all">
+                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
+                    Cân nặng
+                  </span>
+                  <span className="text-lg font-black text-slate-900 mt-1 block">
+                    {weight ? `${weight} kg` : "--"}
                   </span>
                 </div>
-                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Chỉ số BMI</span>
-                  <span className="text-sm font-black text-emerald-700">
-                    {profile.bmi ? `${profile.bmi}` : "--"}
+
+                <div className="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-100 hover:bg-emerald-50 hover:shadow-xs transition-all">
+                  <span className="text-[10px] font-extrabold text-emerald-700/80 uppercase tracking-wider block">
+                    Chỉ số BMI
+                  </span>
+                  <span className="text-lg font-black text-emerald-800 mt-1 block">
+                    {bmi ? `${bmi}` : "--"}
+                  </span>
+                  <span className={cn("text-[10px] font-extrabold block mt-0.5", bmiStatus.color)}>
+                    {bmiStatus.text}
                   </span>
                 </div>
-                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Tỷ lệ mỡ</span>
-                  <span className="text-sm font-black text-amber-600">
-                    {profile.bodyFatPct ? `${profile.bodyFatPct}%` : "--"}
+
+                <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-100 hover:bg-amber-50 hover:shadow-xs transition-all">
+                  <span className="text-[10px] font-extrabold text-amber-700/80 uppercase tracking-wider block">
+                    Tỷ lệ mỡ
+                  </span>
+                  <span className="text-lg font-black text-amber-800 mt-1 block">
+                    {bodyFat ? `${bodyFat}%` : "--"}
+                  </span>
+                  <span className="text-[10px] font-extrabold text-amber-600 block mt-0.5">
+                    Body Fat
                   </span>
                 </div>
               </div>
             ) : (
-              <div className="p-4 rounded-2xl bg-slate-50 text-slate-500 text-xs text-center border border-slate-200/80">
-                Chưa có dữ liệu đo thể chất InBody được ghi nhận.
+              <div className="p-6 rounded-2xl bg-slate-50 text-slate-500 text-xs text-center border border-slate-200/70 space-y-2">
+                <Activity className="w-8 h-8 text-slate-300 mx-auto" />
+                <p className="font-semibold text-slate-700">Chưa có dữ liệu InBody trong hồ sơ</p>
+                <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
+                  Bạn có thể nhập chiều cao ở mẫu bên dưới hoặc đo máy InBody tại quầy thể chất để hệ thống tự động cập nhật.
+                </p>
               </div>
             )}
           </div>
         </div>
 
-        <p className="text-[11px] text-slate-400 pt-1">
-          Các chỉ số InBody được cập nhật khi hội viên thực hiện đo kiểm thể chất định kỳ tại trung tâm.
+        <p className="text-[11px] text-slate-400 pt-3 border-t border-slate-100/80 mt-4 flex items-center justify-between">
+          <span>* Chỉ số InBody hỗ trợ HLV xây dựng khối lượng bài tập chuẩn xác theo thể trạng của bạn.</span>
         </p>
       </div>
     </div>
@@ -464,10 +602,18 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
   const [phone, setPhone] = useState(initialData.phone || "");
   const [gender, setGender] = useState<GenderType>(initialData.gender || "MALE");
   const [heightCm, setHeightCm] = useState<string>(
-    initialData.heightCm ? String(initialData.heightCm) : ""
+    initialData.heightCm
+      ? String(initialData.heightCm)
+      : initialData.memberProfile?.heightCm
+      ? String(initialData.memberProfile.heightCm)
+      : ""
   );
-  const [fitnessGoals, setFitnessGoals] = useState(initialData.fitnessGoals || "");
-  const [medicalHistory, setMedicalHistory] = useState(initialData.medicalHistory || "");
+  const [fitnessGoals, setFitnessGoals] = useState(
+    initialData.fitnessGoals || initialData.memberProfile?.fitnessGoals || ""
+  );
+  const [medicalHistory, setMedicalHistory] = useState(
+    initialData.medicalHistory || initialData.memberProfile?.medicalHistory || ""
+  );
   const [validationError, setValidationError] = useState("");
 
   useEffect(() => {
@@ -487,9 +633,15 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
     setPhone(initialData.phone || "");
     onAvatarChange(initialData.avatarUrl || "");
     setGender(initialData.gender || "MALE");
-    setHeightCm(initialData.heightCm ? String(initialData.heightCm) : "");
-    setFitnessGoals(initialData.fitnessGoals || "");
-    setMedicalHistory(initialData.medicalHistory || "");
+    setHeightCm(
+      initialData.heightCm
+        ? String(initialData.heightCm)
+        : initialData.memberProfile?.heightCm
+        ? String(initialData.memberProfile.heightCm)
+        : ""
+    );
+    setFitnessGoals(initialData.fitnessGoals || initialData.memberProfile?.fitnessGoals || "");
+    setMedicalHistory(initialData.medicalHistory || initialData.memberProfile?.medicalHistory || "");
     setValidationError("");
   };
 
@@ -514,77 +666,79 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* 2-COLUMN BENTO GRID */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* CARD 1: THÔNG TIN CÁ NHÂN & TÀI KHOẢN (7 Cols) */}
-        <div className="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-sm space-y-6">
+      {/* CONTAINERS TRỌN 1 LINE CHO MỖI PHẦN */}
+      <div className="space-y-6">
+        {/* CARD 1: THÔNG TIN CÁ NHÂN & TÀI KHOẢN (TRỌN 1 LINE) */}
+        <div className="w-full bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-xs space-y-6">
           <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
             <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-[#008b74] flex items-center justify-center font-bold shrink-0">
               <User className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-extrabold text-slate-900 tracking-tight">
+              <h3 className="text-base font-black text-slate-900 tracking-tight">
                 Thông tin cá nhân & Tài khoản
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 font-medium">
                 Thông tin định danh hội viên trên toàn bộ hệ sinh thái trung tâm
               </p>
             </div>
           </div>
 
           <div className="space-y-4">
-            {/* Full Name */}
-            <div className="space-y-1.5 text-left">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700 inline-flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Họ và tên</span>
-                  <span className="text-rose-500 font-bold">*</span>
-                </span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Full Name */}
+              <div className="space-y-1.5 text-left">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 inline-flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Họ và tên</span>
+                    <span className="text-rose-500 font-bold">*</span>
+                  </span>
+                </div>
+                <Input
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Nhập họ và tên đầy đủ"
+                  className="h-11 rounded-2xl text-xs font-semibold bg-slate-50/90 border-slate-200 focus:bg-white text-slate-900 focus:border-[#008b74] focus:ring-2 focus:ring-[#008b74]/15 transition-all"
+                />
               </div>
-              <Input
-                required
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Nhập họ và tên đầy đủ"
-                className="h-11 rounded-xl text-xs font-medium bg-slate-50/80 border-slate-200 focus:bg-white text-slate-900 focus:border-[#008b74] focus:ring-2 focus:ring-[#008b74]/15 transition-all"
-              />
+
+              {/* Gender Segmented Control */}
+              <div className="space-y-1.5 text-left">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700">Giới tính</span>
+                  <span className="text-[11px] text-slate-400 font-medium">Hiển thị trên thẻ & hồ sơ</span>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100/80 rounded-2xl border border-slate-200/70">
+                  {[
+                    { id: "MALE" as GenderType, label: "Nam", icon: "♂" },
+                    { id: "FEMALE" as GenderType, label: "Nữ", icon: "♀" },
+                    { id: "OTHER" as GenderType, label: "Khác", icon: "⚧" },
+                  ].map((g) => {
+                    const active = gender === g.id;
+                    return (
+                      <button
+                        key={g.id}
+                        type="button"
+                        onClick={() => setGender(g.id)}
+                        className={cn(
+                          "flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-extrabold transition-all duration-200 cursor-pointer border",
+                          active
+                            ? "!bg-white !text-emerald-800 !border-emerald-300 shadow-xs"
+                            : "!bg-transparent !text-slate-600 !border-transparent hover:!text-slate-900 hover:!bg-white/60"
+                        )}
+                      >
+                        <span className="text-sm font-black">{g.icon}</span>
+                        <span>{g.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
-            {/* Gender Segmented Control */}
-            <div className="space-y-1.5 text-left">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700">Giới tính</span>
-                <span className="text-[11px] text-slate-400 font-medium">Được hiển thị trên thẻ</span>
-              </div>
-              <div className="grid grid-cols-3 gap-1.5 p-1.5 bg-slate-100/90 rounded-2xl border border-slate-200/70">
-                {[
-                  { id: "MALE" as GenderType, label: "Nam", icon: "♂" },
-                  { id: "FEMALE" as GenderType, label: "Nữ", icon: "♀" },
-                  { id: "OTHER" as GenderType, label: "Khác", icon: "⚧" },
-                ].map((g) => {
-                  const active = gender === g.id;
-                  return (
-                    <button
-                      key={g.id}
-                      type="button"
-                      onClick={() => setGender(g.id)}
-                      className={cn(
-                        "flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer border",
-                        active
-                          ? "!bg-white !text-emerald-700 !border-emerald-300 shadow-xs"
-                          : "!bg-transparent !text-slate-600 !border-transparent hover:!text-slate-900 hover:!bg-white/60"
-                      )}
-                    >
-                      <span className="text-sm font-black">{g.icon}</span>
-                      <span>{g.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-1">
               {/* Phone */}
               <div className="space-y-1.5 text-left">
                 <div className="flex items-center justify-between">
@@ -600,7 +754,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="0901234567"
-                  className="h-11 rounded-xl text-xs font-medium bg-slate-50/80 border-slate-200 focus:bg-white text-slate-900 focus:border-[#008b74] focus:ring-2 focus:ring-[#008b74]/15 transition-all"
+                  className="h-11 rounded-2xl text-xs font-semibold bg-slate-50/90 border-slate-200 focus:bg-white text-slate-900 focus:border-[#008b74] focus:ring-2 focus:ring-[#008b74]/15 transition-all"
                 />
               </div>
 
@@ -620,7 +774,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
                   value={heightCm}
                   onChange={(e) => setHeightCm(e.target.value)}
                   placeholder="Ví dụ: 175"
-                  className="h-11 rounded-xl text-xs font-medium bg-slate-50/80 border-slate-200 focus:bg-white text-slate-900 focus:border-[#008b74] focus:ring-2 focus:ring-[#008b74]/15 transition-all"
+                  className="h-11 rounded-2xl text-xs font-semibold bg-slate-50/90 border-slate-200 focus:bg-white text-slate-900 focus:border-[#008b74] focus:ring-2 focus:ring-[#008b74]/15 transition-all"
                 />
               </div>
             </div>
@@ -639,31 +793,31 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
               <Input
                 disabled
                 value={initialData.email}
-                className="h-11 rounded-xl text-xs font-medium bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed"
+                className="h-11 rounded-2xl text-xs font-semibold bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed"
               />
             </div>
           </div>
         </div>
 
-        {/* CARD 2: MỤC TIÊU THỂ HÌNH & SỨC KHỎE (5 Cols) */}
-        <div className="lg:col-span-5 bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-sm space-y-6">
+        {/* CARD 2: MỤC TIÊU THỂ HÌNH & SỨC KHỎE (TRỌN 1 LINE) */}
+        <div className="w-full bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-xs space-y-6">
           <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
             <div className="w-10 h-10 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center font-bold shrink-0">
               <Target className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-extrabold text-slate-900 tracking-tight">
+              <h3 className="text-base font-black text-slate-900 tracking-tight">
                 Mục tiêu & Thể lực
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 font-medium">
                 Hồ sơ thể chất phục vụ xây dựng giáo án HLV
               </p>
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Fitness Goals */}
-            <div className="space-y-2 text-left">
+            <div className="space-y-2.5 text-left">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-700 inline-flex items-center gap-1.5">
                   <Target className="w-3.5 h-3.5 text-emerald-600" />
@@ -674,34 +828,48 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
                 rows={3}
                 value={fitnessGoals}
                 onChange={(e) => setFitnessGoals(e.target.value)}
-                placeholder="Ví dụ: Tăng 2kg cơ bắp, giảm mỡ vòng eo, tăng thể lực..."
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50/80 p-3 text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all resize-none"
+                placeholder="Ví dụ: Tăng 2kg cơ bắp, giảm mỡ vòng eo, tăng thể lực boxing..."
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50/90 p-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all resize-none"
               />
 
               {/* Quick Goal Suggestion Chips */}
-              <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                <span className="text-[10px] font-bold text-slate-400 inline-flex items-center gap-1 mr-1">
-                  <Sparkles className="w-3 h-3 text-amber-500" /> Gợi ý:
+              <div className="space-y-1.5 pt-0.5">
+                <span className="text-[10px] font-bold text-slate-400 inline-flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-amber-500" /> Gợi ý mục tiêu nhanh:
                 </span>
-                {FITNESS_GOAL_SUGGESTIONS.map((tag) => (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => {
-                      const currentText = fitnessGoals.trim();
-                      if (!currentText) setFitnessGoals(tag);
-                      else if (!currentText.includes(tag)) setFitnessGoals(`${currentText}, ${tag}`);
-                    }}
-                    className="!px-2.5 !py-1 !rounded-lg !text-[11px] !font-medium !bg-slate-100 hover:!bg-emerald-50 hover:!text-[#008b74] !text-slate-600 !border !border-slate-200 transition-all cursor-pointer"
-                  >
-                    + {tag}
-                  </button>
-                ))}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {FITNESS_GOAL_CATEGORIES.map((item) => {
+                    const isSelected = fitnessGoals.includes(item.label);
+                    return (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onClick={() => {
+                          const currentText = fitnessGoals.trim();
+                          if (!currentText) setFitnessGoals(item.label);
+                          else if (!currentText.includes(item.label)) {
+                            setFitnessGoals(`${currentText}, ${item.label}`);
+                          }
+                        }}
+                        className={cn(
+                          "!px-2.5 !py-1 !rounded-xl !text-[11px] !font-bold transition-all cursor-pointer border flex items-center gap-1",
+                          isSelected
+                            ? "!bg-emerald-50 !text-emerald-800 !border-emerald-300"
+                            : "!bg-slate-50 hover:!bg-emerald-50/60 hover:!text-emerald-800 !text-slate-600 !border-slate-200"
+                        )}
+                      >
+                        <span>{item.icon}</span>
+                        <span>{item.label}</span>
+                        {isSelected && <Check className="w-3 h-3 text-emerald-600" />}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
             {/* Medical History */}
-            <div className="space-y-2 text-left pt-2">
+            <div className="space-y-2.5 text-left">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-700 inline-flex items-center gap-1.5">
                   <HeartPulse className="w-3.5 h-3.5 text-rose-500" />
@@ -713,24 +881,26 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
                 value={medicalHistory}
                 onChange={(e) => setMedicalHistory(e.target.value)}
                 placeholder="Ví dụ: Không có bệnh lý nền / Tiền sử đau thắt lưng nhẹ..."
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50/80 p-3 text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all resize-none"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50/90 p-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all resize-none"
               />
 
               {/* Quick Medical Suggestion Chips */}
-              <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                <span className="text-[10px] font-bold text-slate-400 inline-flex items-center gap-1 mr-1">
-                  <Sparkles className="w-3 h-3 text-amber-500" /> Mẫu:
+              <div className="space-y-1.5 pt-0.5">
+                <span className="text-[10px] font-bold text-slate-400 inline-flex items-center gap-1">
+                  <HeartPulse className="w-3 h-3 text-rose-400" /> Mẫu nhanh:
                 </span>
-                {MEDICAL_SUGGESTIONS.map((tag) => (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => setMedicalHistory(tag)}
-                    className="!px-2.5 !py-1 !rounded-lg !text-[11px] !font-medium !bg-slate-100 hover:!bg-teal-50 hover:!text-teal-700 !text-slate-600 !border !border-slate-200 transition-all cursor-pointer"
-                  >
-                    {tag}
-                  </button>
-                ))}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {MEDICAL_SUGGESTIONS.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => setMedicalHistory(tag)}
+                      className="!px-2.5 !py-1 !rounded-xl !text-[11px] !font-medium !bg-slate-50 hover:!bg-teal-50 hover:!text-teal-800 !text-slate-600 !border !border-slate-200 transition-all cursor-pointer"
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -739,30 +909,30 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
 
       {/* FEEDBACK ALERTS */}
       {validationError && (
-        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center gap-2 shadow-2xs">
+        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center gap-2.5 shadow-xs">
           <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
           <span>{validationError}</span>
         </div>
       )}
 
       {saveError && (
-        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center gap-2 shadow-2xs">
+        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center gap-2.5 shadow-xs">
           <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
           <span>{saveError}</span>
         </div>
       )}
 
       {saveSuccess && (
-        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2 shadow-2xs">
+        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold flex items-center gap-2.5 shadow-xs animate-in fade-in duration-200">
           <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
-          <span>Hồ sơ cá nhân đã được lưu và cập nhật thành công!</span>
+          <span>Hồ sơ cá nhân đã được lưu và cập nhật thành công vào hệ thống!</span>
         </div>
       )}
 
       {/* BOTTOM ACTION BAR */}
       <div className="flex items-center justify-between pt-2">
         <p className="text-xs text-slate-400 font-medium hidden sm:block">
-          Các thay đổi sẽ được đồng bộ ngay lập tức vào hồ sơ hội viên của bạn.
+          Các thay đổi sẽ được đồng bộ ngay lập tức vào thẻ và giáo án của bạn.
         </p>
 
         <div className="flex items-center gap-3 ml-auto">
@@ -771,7 +941,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
             variant="outline"
             onClick={handleReset}
             disabled={isSaving}
-            className="h-11 px-5 rounded-2xl text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-100 cursor-pointer"
+            className="h-11 px-5 rounded-2xl text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-100 cursor-pointer transition-all"
           >
             <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
             <span>Đặt lại</span>
@@ -781,7 +951,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
             type="submit"
             variant="mint"
             disabled={isSaving}
-            className="h-11 px-7 rounded-2xl text-xs font-bold tracking-wide bg-[#008b74] hover:bg-[#007360] text-white shadow-md cursor-pointer transition-all active:scale-[0.98]"
+            className="h-11 px-7 rounded-2xl text-xs font-black tracking-wide bg-[#008b74] hover:bg-[#007360] text-white shadow-lg shadow-emerald-900/10 cursor-pointer transition-all active:scale-[0.98]"
           >
             <Save className="w-3.5 h-3.5 mr-1.5" />
             <span>{isSaving ? "Đang lưu..." : "Lưu thay đổi hồ sơ"}</span>
@@ -848,8 +1018,6 @@ export const ProfilePage: React.FC = () => {
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-6 pb-20">
-      {/* Page Header Title */}
-
       {/* Loading / Error States */}
       <StateMessage
         loading={profileQuery.isPending}
@@ -859,8 +1027,8 @@ export const ProfilePage: React.FC = () => {
 
       {/* Render Main Content Once Loaded */}
       {profileQuery.data && (
-        <div className="space-y-6">
-          {/* Visual Hero Card with Avatar & Live Status */}
+        <div className="space-y-6 animate-in fade-in duration-300">
+          {/* Visual Hero Card with Avatar & Live Athletic Status */}
           <ProfileHeader
             profile={profileQuery.data}
             avatarUrl={activeAvatarUrl}
