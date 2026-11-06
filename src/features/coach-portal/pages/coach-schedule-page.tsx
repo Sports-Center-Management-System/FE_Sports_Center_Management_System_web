@@ -220,9 +220,9 @@ export const CoachSchedulePage: React.FC = () => {
   }, [sessionList]);
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] dark:bg-[#0b0f17] text-slate-900 dark:text-slate-100 p-4 sm:p-6 lg:p-8 space-y-3">
+    <div className="min-h-screen bg-[#f8fafc] dark:bg-[#0b0f17] text-slate-900 dark:text-slate-100 px-4 sm:px-6 lg:px-8 pt-2 pb-6 space-y-3">
       {/* 1. TOP BAR: Title, Coach Info, Week Nav, Primary Actions */}
-      <div className="flex flex-col lg:flex-row lg:items-center  gap-4 pb-4 border-b border-slate-200/90 dark:border-slate-800">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200/90 dark:border-slate-800">
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-slate-50">

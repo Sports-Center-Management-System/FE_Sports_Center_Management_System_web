@@ -4,7 +4,6 @@ import {
   Clock,
   Plus,
   Trash2,
-  Calendar,
   CheckCircle2,
   RefreshCw,
   AlertCircle,
@@ -281,9 +280,7 @@ export const CoachAvailabilityPage: React.FC = () => {
                       {/* 2. Date */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-2.5">
-                          <span className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0 border border-emerald-200/60 font-black shadow-2xs">
-                            <Calendar className="h-4 w-4" />
-                          </span>
+                       
                           <div>
                             <div className="font-extrabold text-slate-900 capitalize leading-snug">
                               {formatDateVi(slot.startTime)}
@@ -298,7 +295,7 @@ export const CoachAvailabilityPage: React.FC = () => {
                       {/* 3. Time slot */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-1.5 font-black text-slate-900 font-mono text-sm tracking-tight">
-                          <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                        
                           <span>
                             {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
                           </span>
