@@ -34,6 +34,7 @@ import {
   parseExerciseInstructions,
   translateCategory,
   parseExerciseTitle,
+  getExerciseDiscipline,
 } from '../utils/exercise-metadata.utils';
 
 interface SessionWorkoutPlanModalProps {
@@ -156,35 +157,59 @@ export const SessionWorkoutPlanModal: React.FC<SessionWorkoutPlanModalProps> = (
     let yoga = 0;
     let gym = 0;
     exerciseLibrary.forEach((item) => {
-      const meta = parseExerciseInstructions(item.instructions);
-      if (meta.discipline === 'BOXING') boxing++;
-      else if (meta.discipline === 'YOGA') yoga++;
+      const disc = getExerciseDiscipline(item);
+      if (disc === 'BOXING') boxing++;
+      else if (disc === 'YOGA') yoga++;
       else gym++;
     });
     return { ALL: exerciseLibrary.length, BOXING: boxing, YOGA: yoga, GYM: gym };
   }, [exerciseLibrary]);
 
-  // Unique categories for Tab 3
+  // Unique categories for Tab 3 (Dynamically filtered by selected discipline)
   const exerciseCategories = useMemo(() => {
-    const set = new Set<string>();
-    exerciseLibrary.forEach((e) => {
-      if (e.category) set.add(e.category.toLowerCase().trim());
+    const map = new Map<string, number>();
+    exerciseLibrary.forEach((item) => {
+      const disc = getExerciseDiscipline(item);
+      if (exerciseDisciplineFilter === 'ALL' || disc === exerciseDisciplineFilter) {
+        const cat = item.category?.toLowerCase().trim();
+        if (cat) {
+          map.set(cat, (map.get(cat) || 0) + 1);
+        }
+      }
     });
-    return Array.from(set).sort();
-  }, [exerciseLibrary]);
+    return Array.from(map.entries())
+      .map(([cat, count]) => ({ cat, count }))
+      .sort((a, b) => a.cat.localeCompare(b.cat));
+  }, [exerciseLibrary, exerciseDisciplineFilter]);
+
+  const handleSelectExerciseDiscipline = (disc: 'ALL' | 'BOXING' | 'YOGA' | 'GYM') => {
+    setExerciseDisciplineFilter(disc);
+    if (exerciseCategoryFilter !== 'ALL') {
+      const stillValid = exerciseLibrary.some((item) => {
+        const d = getExerciseDiscipline(item);
+        return (
+          (disc === 'ALL' || d === disc) &&
+          item.category?.toLowerCase().trim() === exerciseCategoryFilter.toLowerCase().trim()
+        );
+      });
+      if (!stillValid) {
+        setExerciseCategoryFilter('ALL');
+      }
+    }
+  };
 
   // Filter exercise library for Tab 3
   const filteredExerciseLibrary = useMemo(() => {
     return exerciseLibrary.filter((item) => {
-      const meta = parseExerciseInstructions(item.instructions);
+      const disc = getExerciseDiscipline(item);
       const matchDiscipline =
-        exerciseDisciplineFilter === 'ALL' ||
-        meta.discipline?.toUpperCase() === exerciseDisciplineFilter;
+        exerciseDisciplineFilter === 'ALL' || disc === exerciseDisciplineFilter;
       const matchCategory =
         exerciseCategoryFilter === 'ALL' ||
-        item.category.toLowerCase() === exerciseCategoryFilter.toLowerCase();
+        item.category.toLowerCase().trim() === exerciseCategoryFilter.toLowerCase().trim();
 
       const q = exerciseSearch.trim().toLowerCase();
+      const meta = parseExerciseInstructions(item.instructions);
       const { primary, secondary } = parseExerciseTitle(item.title);
       const matchSearch =
         !q ||
@@ -716,7 +741,7 @@ export const SessionWorkoutPlanModal: React.FC<SessionWorkoutPlanModalProps> = (
                                 {/* Footer Actions */}
                                 <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 mt-auto">
                                   <span className="text-[10px] font-mono text-slate-400">
-                                    Mã giáo án: #{mPlan.id.slice(0, 8)}
+                                  
                                   </span>
                                   <div className="flex items-center gap-1.5">
                                     <Button
@@ -1043,7 +1068,7 @@ export const SessionWorkoutPlanModal: React.FC<SessionWorkoutPlanModalProps> = (
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <button
                             type="button"
-                            onClick={() => setExerciseDisciplineFilter('ALL')}
+                            onClick={() => handleSelectExerciseDiscipline('ALL')}
                             className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                               exerciseDisciplineFilter === 'ALL'
                                 ? 'bg-slate-900 text-white shadow-2xs'
@@ -1054,40 +1079,40 @@ export const SessionWorkoutPlanModal: React.FC<SessionWorkoutPlanModalProps> = (
                           </button>
                           <button
                             type="button"
-                            onClick={() => setExerciseDisciplineFilter('BOXING')}
+                            onClick={() => handleSelectExerciseDiscipline('BOXING')}
                             className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                               exerciseDisciplineFilter === 'BOXING'
-                                ? 'bg-rose-600 text-white shadow-2xs'
-                                : 'bg-white text-rose-700 hover:bg-rose-50 border border-rose-200'
+                                ? 'bg-slate-900 text-white shadow-2xs'
+                                : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
                             }`}
                           >
                             Boxing ({disciplineCounts.BOXING})
                           </button>
                           <button
                             type="button"
-                            onClick={() => setExerciseDisciplineFilter('YOGA')}
+                            onClick={() => handleSelectExerciseDiscipline('YOGA')}
                             className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                               exerciseDisciplineFilter === 'YOGA'
-                                ? 'bg-indigo-600 text-white shadow-2xs'
-                                : 'bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-200'
+                                ? 'bg-slate-900 text-white shadow-2xs'
+                                : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
                             }`}
                           >
                             Yoga ({disciplineCounts.YOGA})
                           </button>
                           <button
                             type="button"
-                            onClick={() => setExerciseDisciplineFilter('GYM')}
+                            onClick={() => handleSelectExerciseDiscipline('GYM')}
                             className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                               exerciseDisciplineFilter === 'GYM'
-                                ? 'bg-amber-600 text-white shadow-2xs'
-                                : 'bg-white text-amber-800 hover:bg-amber-50 border border-amber-200'
+                                ? 'bg-slate-900 text-white shadow-2xs'
+                                : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
                             }`}
                           >
                             Gym ({disciplineCounts.GYM})
                           </button>
                         </div>
 
-                        {/* Categories Chips */}
+                        {/* Categories Chips (Dynamically matched to discipline) */}
                         <div className="flex items-center gap-1 overflow-x-auto pb-1 pt-1 border-t border-slate-200">
                           <button
                             type="button"
@@ -1098,9 +1123,9 @@ export const SessionWorkoutPlanModal: React.FC<SessionWorkoutPlanModalProps> = (
                                 : 'bg-white text-slate-500 hover:bg-slate-100 border border-slate-200'
                             }`}
                           >
-                            Tất cả nhóm
+                            Tất cả nhóm ({disciplineCounts[exerciseDisciplineFilter]})
                           </button>
-                          {exerciseCategories.map((cat) => (
+                          {exerciseCategories.map(({ cat, count }) => (
                             <button
                               key={cat}
                               type="button"
@@ -1111,7 +1136,7 @@ export const SessionWorkoutPlanModal: React.FC<SessionWorkoutPlanModalProps> = (
                                   : 'bg-white text-slate-500 hover:bg-slate-100 border border-slate-200'
                               }`}
                             >
-                              {translateCategory(cat)}
+                              {translateCategory(cat)} ({count})
                             </button>
                           ))}
                         </div>
