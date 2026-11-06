@@ -19,7 +19,6 @@ import {
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import logo3tc from '@/assets/images/logo-3tc.png';
-import gymFacility from '@/assets/images/plan-gym-facility.jpg';
 
 const logoutButtonClassName =
   'w-full border-slate-200 bg-white text-xs font-semibold text-slate-600 shadow-none hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 focus-visible:ring-rose-500';
@@ -118,8 +117,8 @@ export const CoachLayout: React.FC = () => {
                 onClick={(event) => event.currentTarget.closest('details')?.removeAttribute('open')}
                 className={({ isActive }) =>
                   cn(
-                    'flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold',
-                    isActive ? 'bg-emerald-50 text-[#008b74]' : 'text-slate-600 hover:bg-slate-50',
+                    'flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold transition-all',
+                    isActive ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-50',
                   )
                 }
               >
@@ -188,8 +187,8 @@ export const CoachLayout: React.FC = () => {
                     'group flex items-center rounded-xl text-xs font-bold transition-all',
                     isCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2',
                     isActive
-                      ? 'bg-emerald-50 text-[#008b74] shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
+                      ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/30'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
                   )
                 }
               >
@@ -198,8 +197,7 @@ export const CoachLayout: React.FC = () => {
                     <Icon
                       aria-hidden="true"
                       className={cn(
-                        'shrink-0 transition-colors',
-                        isCollapsed ? 'h-4 w-4' : 'h-4 w-4',
+                        'shrink-0 transition-colors h-4 w-4',
                         isActive ? 'text-white' : 'text-slate-500 group-hover:text-slate-700'
                       )}
                     />
@@ -269,14 +267,8 @@ export const CoachLayout: React.FC = () => {
       </aside>
 
       {/* Main Workspace Area */}
-      <main className="h-full min-h-0 overflow-y-auto p-4 sm:p-8 w-full min-w-0 relative isolate">
-        <div
-          className="inbody-backdrop"
-          style={{ backgroundImage: `url("${gymFacility}")` }}
-        />
-        <div className="relative">
-          <Outlet />
-        </div>
+      <main className="h-full min-h-0 overflow-y-auto p-4 sm:p-8 w-full min-w-0 bg-[#f8fafc]">
+        <Outlet />
       </main>
     </div>
   )

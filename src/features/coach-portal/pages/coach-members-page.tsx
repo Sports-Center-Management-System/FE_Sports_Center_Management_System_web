@@ -62,10 +62,10 @@ export const CoachMembersPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-white">
+          <h1 className="text-2xl font-black tracking-tight text-slate-900">
             Học Viên Của Tôi
           </h1>
-          <p className="text-xs text-white mt-0.5">
+          <p className="text-xs font-semibold text-slate-500 mt-0.5">
             Quản lý danh sách hội viên VIP được chỉ định kèm cặp, theo dõi thể trạng và đo InBody
           </p>
         </div>
@@ -92,6 +92,8 @@ export const CoachMembersPage: React.FC = () => {
           className="w-full rounded-2xl border border-slate-200/90 bg-white pl-10 pr-4 py-2.5 text-xs text-slate-800 placeholder:text-slate-400 shadow-xs focus:border-emerald-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 transition-all"
         />
       </div>
+
+  
 
       {/* Loading State */}
       {isLoading && (

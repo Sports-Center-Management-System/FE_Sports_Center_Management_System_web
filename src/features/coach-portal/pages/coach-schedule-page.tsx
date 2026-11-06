@@ -220,8 +220,6 @@ export const CoachSchedulePage: React.FC = () => {
     return map;
   }, [sessionList]);
 
-  const coachDisplayName = user?.fullName || 'HLV Alex';
-
   return (
     <div className="min-h-screen bg-[#f8fafc] dark:bg-[#0b0f17] text-slate-900 dark:text-slate-100 p-4 sm:p-6 lg:p-8 space-y-6">
       {/* 1. TOP BAR: Title, Coach Info, Week Nav, Primary Actions */}
@@ -231,13 +229,9 @@ export const CoachSchedulePage: React.FC = () => {
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-slate-50">
               Lịch Dạy Theo Tuần
             </h1>
-            <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300 border border-teal-200 dark:border-teal-800/60">
-              {coachDisplayName} · HLV Trưởng
-            </span>
+            
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Quản lý ca dạy cá nhân PT 1:1, lớp nhóm và khung giờ nhận học viên trung tâm
-          </p>
+        
         </div>
 
         {/* Navigation & Action Controls */}
@@ -351,9 +345,7 @@ export const CoachSchedulePage: React.FC = () => {
           <div className="text-2xl font-black text-slate-900 dark:text-slate-50 tabular-nums">
             {stats.totalSessions} <span className="text-sm font-semibold text-slate-500">ca</span>
           </div>
-          <div className="text-[11px] text-slate-400">
-            {stats.totalPt} ca PT 1:1 · {stats.totalGroup} lớp nhóm
-          </div>
+         
         </div>
 
         {/* Metric 3: Tổng giờ dạy */}
@@ -364,9 +356,7 @@ export const CoachSchedulePage: React.FC = () => {
           <div className="text-2xl font-black text-slate-900 dark:text-slate-50 tabular-nums">
             {stats.totalHours} <span className="text-sm font-semibold text-slate-500">giờ</span>
           </div>
-          <div className="text-[11px] text-slate-400">
-            Tính theo các buổi tập thực tế
-          </div>
+         
         </div>
 
         {/* Metric 4: Số học viên PT */}
@@ -377,9 +367,7 @@ export const CoachSchedulePage: React.FC = () => {
           <div className="text-2xl font-black text-slate-900 dark:text-slate-50 tabular-nums">
             {stats.ptStudentsCount} <span className="text-sm font-semibold text-slate-500">học viên</span>
           </div>
-          <div className="text-[11px] text-slate-400">
-            Theo dõi giáo án và thể lực riêng
-          </div>
+      
         </div>
       </div>
 

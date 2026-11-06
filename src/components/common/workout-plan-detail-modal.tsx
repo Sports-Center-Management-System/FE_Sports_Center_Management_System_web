@@ -166,3 +166,4 @@ export const WorkoutPlanDetailModal: React.FC<WorkoutPlanDetailModalProps> = ({
 
   return typeof document !== 'undefined' ? createPortal(content, document.body) : content;
 };
+

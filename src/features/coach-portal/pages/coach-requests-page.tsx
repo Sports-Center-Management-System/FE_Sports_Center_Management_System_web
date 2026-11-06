@@ -9,7 +9,6 @@ import {
   RotateCcw,
   Loader2,
   AlertCircle,
-  Info,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { coachPortalApi } from '../api/coach-portal-api';
@@ -23,8 +22,6 @@ export const CoachRequestsPage: React.FC = () => {
   const {
     data: requests = [],
     isLoading: isReqLoading,
-    isRefetching: isReqRefetching,
-    refetch: refetchRequests,
   } = useQuery({
     queryKey: ['coach', 'cancellation-requests'],
     queryFn: () => coachPortalApi.getMyCancellationRequests(),
@@ -33,8 +30,6 @@ export const CoachRequestsPage: React.FC = () => {
   const {
     data: penalties = [],
     isLoading: isPenLoading,
-    isRefetching: isPenRefetching,
-    refetch: refetchPenalties,
   } = useQuery({
     queryKey: ['coach', 'penalties'],
     queryFn: () => coachPortalApi.getMyPenalties(),
@@ -85,47 +80,9 @@ export const CoachRequestsPage: React.FC = () => {
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 pb-12">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black tracking-tight text-white">
-            Đơn Hủy Khẩn Cấp & Kỷ Luật
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Theo dõi tiến trình phê duyệt và các thông tin kỷ luật liên quan đến ca dạy
-          </p>
-        </div>
+     
 
-        <Button
-          variant="outline"
-          onClick={() => {
-            void refetchRequests();
-            void refetchPenalties();
-          }}
-          disabled={isReqLoading || isPenLoading || isReqRefetching || isPenRefetching}
-          className="self-start sm:self-auto text-xs font-bold border-slate-200 bg-white shadow-xs"
-        >
-          <RefreshCw
-            className={`h-3.5 w-3.5 ${
-              isReqRefetching || isPenRefetching ? 'animate-spin' : ''
-            }`}
-          />
-          <span>Làm mới</span>
-        </Button>
-      </div>
-
-      {/* Policy Explainer Banner */}
-      <div className="flex items-start gap-3 rounded-2xl border border-amber-200/90 bg-amber-50/70 p-4 text-xs text-amber-950 shadow-xs">
-        <Info className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-        <div className="space-y-1">
-          <p className="font-bold">Quy trình xử lý yêu cầu Hủy lịch khẩn cấp:</p>
-          <p className="text-[11px] leading-relaxed text-amber-900">
-            • <strong>Quản lý Trung Tâm:</strong> Trực tiếp duyệt trên hệ thống Dashboard.<br />
-            • <strong>Lễ tân trực quầy:</strong> Hỗ trợ phê duyệt khi Quản lý vắng mặt.<br />
-            • <strong>Quyền lợi học viên:</strong> 100% học viên bị ảnh hưởng đều được tự động hoàn lại 01 lượt tập đầy đủ.
-          </p>
-        </div>
-      </div>
+     
 
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-2">

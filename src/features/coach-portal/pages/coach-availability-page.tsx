@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Clock,
@@ -9,6 +9,9 @@ import {
   RefreshCw,
   AlertCircle,
   Loader2,
+  Search,
+  X,
+  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { coachPortalApi } from '../api/coach-portal-api';
@@ -18,6 +21,7 @@ export const CoachAvailabilityPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState<boolean>(false);
   const [filter, setFilter] = useState<'ALL' | 'UNBOOKED' | 'BOOKED'>('ALL');
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
   const {
     data: slots = [],
@@ -37,24 +41,37 @@ export const CoachAvailabilityPage: React.FC = () => {
     },
   });
 
-  // Group slots by date (YYYY-MM-DD)
-  const filteredSlots = slots.filter((slot) => {
-    if (filter === 'UNBOOKED') return !slot.isBooked && !slot.isEmergencyCancelled;
-    if (filter === 'BOOKED') return slot.isBooked;
-    return true;
-  });
+  // Calculate statistics
+  const unbookedCount = useMemo(
+    () => slots.filter((s) => !s.isBooked && !s.isEmergencyCancelled).length,
+    [slots]
+  );
+  const bookedCount = useMemo(() => slots.filter((s) => s.isBooked).length, [slots]);
 
-  const groupedSlots = filteredSlots.reduce((acc, slot) => {
-    const dateKey = new Date(slot.startTime).toLocaleDateString('vi-VN', {
-      weekday: 'long',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
-    if (!acc[dateKey]) acc[dateKey] = [];
-    acc[dateKey].push(slot);
-    return acc;
-  }, {} as Record<string, typeof slots>);
+  // Format date helper
+  const formatDateVi = (iso: string) => {
+    try {
+      const d = new Date(iso);
+      return d.toLocaleDateString('vi-VN', {
+        weekday: 'long',
+      });
+    } catch {
+      return '';
+    }
+  };
+
+  const formatDateFull = (iso: string) => {
+    try {
+      const d = new Date(iso);
+      return d.toLocaleDateString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+    } catch {
+      return iso;
+    }
+  };
 
   const formatTime = (iso: string) => {
     try {
@@ -72,7 +89,7 @@ export const CoachAvailabilityPage: React.FC = () => {
       if (isNaN(diffMinutes) || diffMinutes <= 0) return '60 phút';
       const hours = Math.floor(diffMinutes / 60);
       const mins = diffMinutes % 60;
-      if (hours > 0 && mins > 0) return `${hours} giờ ${mins} phút`;
+      if (hours > 0 && mins > 0) return `${hours}h ${mins}m`;
       if (hours > 0) return `${hours} giờ`;
       return `${mins} phút`;
     } catch {
@@ -80,25 +97,47 @@ export const CoachAvailabilityPage: React.FC = () => {
     }
   };
 
+  // Filter and sort slots
+  const filteredAndSortedSlots = useMemo(() => {
+    return slots
+      .filter((slot) => {
+        // Tab filter
+        if (filter === 'UNBOOKED' && (slot.isBooked || slot.isEmergencyCancelled)) return false;
+        if (filter === 'BOOKED' && !slot.isBooked) return false;
+
+        // Search filter
+        if (searchTerm.trim()) {
+          const q = searchTerm.toLowerCase().trim();
+          const dayName = formatDateVi(slot.startTime).toLowerCase();
+          const dateStr = formatDateFull(slot.startTime).toLowerCase();
+          const timeStr = `${formatTime(slot.startTime)} ${formatTime(slot.endTime)}`.toLowerCase();
+          return dayName.includes(q) || dateStr.includes(q) || timeStr.includes(q);
+        }
+
+        return true;
+      })
+      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+  }, [slots, filter, searchTerm]);
+
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 pb-12">
-      {/* Header */}
+      {/* 1. Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-            Khung Giờ Rảnh PT 1-1
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">
+            Khung Giờ Rảnh PT
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Mở các khung giờ rảnh để hội viên VIP có thể đặt lịch kèm riêng trực tiếp với bạn
+          <p className="text-xs sm:text-sm font-semibold text-slate-500 mt-1">
+            Quản lý danh sách các ca mở rảnh để học viên có thể đặt lịch tập kèm 1-1 với bạn
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex items-center gap-2.5 self-start sm:self-auto shrink-0">
           <Button
             variant="outline"
             onClick={() => void refetch()}
             disabled={isLoading || isRefetching}
-            className="text-xs font-bold border-slate-200 bg-white shadow-xs"
+            className="text-xs font-bold border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-2xs h-9"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isRefetching ? 'animate-spin' : ''}`} />
             <span>Làm mới</span>
@@ -106,7 +145,7 @@ export const CoachAvailabilityPage: React.FC = () => {
 
           <Button
             onClick={() => setIsCreateOpen(true)}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold gap-1.5 shadow-sm shadow-emerald-600/20"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black gap-1.5 shadow-sm shadow-emerald-600/30 h-9 px-4 cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             <span>Mở khung giờ rảnh</span>
@@ -114,170 +153,299 @@ export const CoachAvailabilityPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
-        <button
-          onClick={() => setFilter('ALL')}
-          className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
-            filter === 'ALL'
-              ? 'bg-slate-900 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          Tất cả ({slots.length})
-        </button>
-        <button
-          onClick={() => setFilter('UNBOOKED')}
-          className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
-            filter === 'UNBOOKED'
-              ? 'bg-emerald-600 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          Còn trống ({slots.filter((s) => !s.isBooked && !s.isEmergencyCancelled).length})
-        </button>
-        <button
-          onClick={() => setFilter('BOOKED')}
-          className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
-            filter === 'BOOKED'
-              ? 'bg-blue-600 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          Đã được đặt ({slots.filter((s) => s.isBooked).length})
-        </button>
+      {/* 2. Overview Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-2xs flex items-center justify-between">
+          <div className="space-y-1">
+            <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block">
+              Tổng số ca đã mở
+            </span>
+            <div className="text-2xl font-black text-slate-900 tabular-nums">
+              {slots.length}{' '}
+              <span className="text-xs font-bold text-slate-400">ca</span>
+            </div>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+            <Calendar className="h-5 w-5" />
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/50 p-4 shadow-2xs flex items-center justify-between">
+          <div className="space-y-1">
+            <span className="text-[11px] font-black text-emerald-700 uppercase tracking-wider block">
+              Ca còn trống
+            </span>
+            <div className="text-2xl font-black text-emerald-950 tabular-nums">
+              {unbookedCount}{' '}
+              <span className="text-xs font-bold text-emerald-700">ca sẵn sàng</span>
+            </div>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+            <CheckCircle2 className="h-5 w-5" />
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-blue-200/80 bg-blue-50/50 p-4 shadow-2xs flex items-center justify-between">
+          <div className="space-y-1">
+            <span className="text-[11px] font-black text-blue-700 uppercase tracking-wider block">
+              Đã có học viên đặt
+            </span>
+            <div className="text-2xl font-black text-blue-950 tabular-nums">
+              {bookedCount}{' '}
+              <span className="text-xs font-bold text-blue-700">ca đã nhận</span>
+            </div>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+            <Users className="h-5 w-5" />
+          </div>
+        </div>
       </div>
 
-      {/* Loading State */}
-      {isLoading && (
-        <div className="py-20 text-center space-y-3">
+      {/* 3. Filter Bar & Search */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+        {/* Status Filter Tabs */}
+        <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-slate-100/80 border border-slate-200/60 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => setFilter('ALL')}
+            className={`rounded-xl px-3.5 py-1.5 text-xs font-black transition-all cursor-pointer ${
+              filter === 'ALL'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Tất cả ({slots.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilter('UNBOOKED')}
+            className={`rounded-xl px-3.5 py-1.5 text-xs font-black transition-all cursor-pointer ${
+              filter === 'UNBOOKED'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Còn trống ({unbookedCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilter('BOOKED')}
+            className={`rounded-xl px-3.5 py-1.5 text-xs font-black transition-all cursor-pointer ${
+              filter === 'BOOKED'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Đã được đặt ({bookedCount})
+          </button>
+        </div>
+
+        {/* Search by date or time */}
+        <div className="relative max-w-xs w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Tìm theo ngày (vd: Thứ sáu, 06/11)..."
+            className="w-full rounded-xl border border-slate-200 bg-white pl-8 pr-7 py-1.5 text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-hidden transition-all shadow-2xs"
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 4. Table of Availability Slots */}
+      {isLoading ? (
+        <div className="py-20 text-center space-y-3 rounded-3xl border border-slate-200 bg-white p-8">
           <RefreshCw className="h-8 w-8 text-emerald-600 animate-spin mx-auto" />
           <p className="text-xs font-bold text-slate-500">Đang tải danh sách khung giờ rảnh...</p>
         </div>
-      )}
-
-      {/* Empty State */}
-      {!isLoading && filteredSlots.length === 0 && (
-        <div className="py-16 text-center space-y-3 rounded-2xl border border-dashed border-slate-200 bg-white p-8">
+      ) : filteredAndSortedSlots.length === 0 ? (
+        <div className="py-16 text-center space-y-3 rounded-3xl border border-dashed border-slate-200 bg-white p-8">
           <Clock className="h-12 w-12 text-slate-300 mx-auto" />
-          <h3 className="text-base font-bold text-slate-800">Không có khung giờ rảnh nào</h3>
+          <h3 className="text-base font-black text-slate-800">Không có khung giờ rảnh nào</h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            Bạn chưa mở khung giờ rảnh nào trong thời gian tới. Hãy bấm nút "Mở khung giờ rảnh" phía trên để tạo slot mới.
+            {searchTerm
+              ? 'Không tìm thấy khung giờ nào khớp với từ khóa tìm kiếm của bạn.'
+              : 'Bạn chưa mở khung giờ rảnh nào. Hãy bấm nút "Mở khung giờ rảnh" phía trên để tạo ca mới.'}
           </p>
+          {searchTerm && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSearchTerm('')}
+              className="text-xs font-bold"
+            >
+              Xóa bộ lọc tìm kiếm
+            </Button>
+          )}
         </div>
-      )}
+      ) : (
+        <div className="rounded-3xl border border-slate-200/90 bg-white shadow-xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="bg-slate-50/90 border-b border-slate-200 text-[11px] font-black uppercase text-slate-500 tracking-wider">
+                <tr>
+                  <th className="py-3.5 px-4 text-center w-12">#</th>
+                  <th className="py-3.5 px-4">Ngày tập</th>
+                  <th className="py-3.5 px-4">Khung giờ</th>
+                  <th className="py-3.5 px-4">Thời lượng</th>
+                  <th className="py-3.5 px-4">Trạng thái</th>
+                  <th className="py-3.5 px-4">Mô tả / Loại ca</th>
+                  <th className="py-3.5 px-4 text-right">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-medium">
+                {filteredAndSortedSlots.map((slot, index) => {
+                  const durationText = calculateDuration(slot.startTime, slot.endTime);
+                  const isPast = new Date(slot.startTime).getTime() <= Date.now();
+                  const canDelete = !slot.isBooked && !slot.isEmergencyCancelled && !isPast;
 
-      {/* Slots Grouped by Date */}
-      <div className="space-y-6">
-        {Object.entries(groupedSlots).map(([dateLabel, dateSlots]) => (
-          <div key={dateLabel} className="space-y-3">
-            <div className="flex items-center gap-2 text-xs font-extrabold text-slate-800 dark:text-slate-100 uppercase tracking-wide">
-              <Calendar className="h-4 w-4 text-emerald-600" />
-              <span>{dateLabel}</span>
-              <span className="rounded-full bg-slate-200 text-slate-700 px-2.5 py-0.5 text-[10px] font-bold">
-                {dateSlots.length} ca rảnh
-              </span>
-            </div>
+                  return (
+                    <tr
+                      key={slot.id}
+                      className={`hover:bg-slate-50/70 transition-colors ${
+                        slot.isBooked
+                          ? 'bg-blue-50/20'
+                          : slot.isEmergencyCancelled
+                          ? 'bg-rose-50/20'
+                          : isPast
+                          ? 'opacity-65 bg-slate-50/30'
+                          : ''
+                      }`}
+                    >
+                      {/* 1. Index */}
+                      <td className="py-3.5 px-4 text-center text-slate-400 font-mono text-[11px] font-bold">
+                        {String(index + 1).padStart(2, '0')}
+                      </td>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-              {dateSlots.map((slot) => {
-                const durationText = calculateDuration(slot.startTime, slot.endTime);
-                const isPast = new Date(slot.startTime).getTime() <= Date.now();
-
-                return (
-                  <div
-                    key={slot.id}
-                    className={`rounded-2xl border p-4 shadow-xs transition-all flex flex-col justify-between ${
-                      slot.isBooked
-                        ? 'border-blue-200 bg-gradient-to-br from-blue-50/60 to-white'
-                        : slot.isEmergencyCancelled
-                        ? 'border-rose-200 bg-rose-50/40'
-                        : isPast
-                        ? 'border-slate-200 bg-slate-50/60 opacity-60'
-                        : 'border-slate-200/90 bg-white hover:border-emerald-300 hover:shadow-sm'
-                    }`}
-                  >
-                    <div className="space-y-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1.5 text-base font-black text-slate-900 tracking-tight">
-                            <Clock className="h-4 w-4 text-emerald-600" />
-                            <span>
-                              {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
-                            </span>
+                      {/* 2. Date */}
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0 border border-emerald-200/60 font-black shadow-2xs">
+                            <Calendar className="h-4 w-4" />
+                          </span>
+                          <div>
+                            <div className="font-extrabold text-slate-900 capitalize leading-snug">
+                              {formatDateVi(slot.startTime)}
+                            </div>
+                            <div className="text-[11px] text-slate-400 font-semibold mt-0.5">
+                              {formatDateFull(slot.startTime)}
+                            </div>
                           </div>
-                          <p className="text-xs font-medium text-slate-500">
-                            Thời lượng: <span className="font-bold text-slate-700">{durationText}</span>
-                          </p>
                         </div>
+                      </td>
 
+                      {/* 3. Time slot */}
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-1.5 font-black text-slate-900 font-mono text-sm tracking-tight">
+                          <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                          <span>
+                            {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* 4. Duration */}
+                      <td className="py-3.5 px-4">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs border border-slate-200/80">
+                          {durationText}
+                        </span>
+                      </td>
+
+                      {/* 5. Status Badge */}
+                      <td className="py-3.5 px-4">
                         {slot.isBooked ? (
-                          <span className="flex items-center gap-1 rounded-full bg-blue-100 text-blue-800 px-2.5 py-1 text-[10px] font-extrabold shrink-0">
-                            <CheckCircle2 className="h-3 w-3" />
-                            Đã có người đặt
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-800 px-3 py-1 text-xs font-black shadow-2xs">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-blue-600" />
+                            <span>Đã có người đặt</span>
                           </span>
                         ) : slot.isEmergencyCancelled ? (
-                          <span className="flex items-center gap-1 rounded-full bg-rose-100 text-rose-800 px-2.5 py-1 text-[10px] font-extrabold shrink-0">
-                            <AlertCircle className="h-3 w-3" />
-                            Đã hủy
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-800 px-3 py-1 text-xs font-black shadow-2xs">
+                            <AlertCircle className="h-3.5 w-3.5 text-rose-600" />
+                            <span>Đã hủy</span>
                           </span>
                         ) : isPast ? (
-                          <span className="flex items-center gap-1 rounded-full bg-slate-200 text-slate-600 px-2.5 py-1 text-[10px] font-extrabold shrink-0">
-                            <Clock className="h-3 w-3 text-slate-500" />
-                            Đã qua giờ
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600 px-3 py-1 text-xs font-bold">
+                            <Clock className="h-3.5 w-3.5 text-slate-400" />
+                            <span>Đã qua giờ</span>
                           </span>
                         ) : (
-                          <span className="flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-800 px-2.5 py-1 text-[10px] font-extrabold shrink-0">
-                            <CheckCircle2 className="h-3 w-3" />
-                            Còn trống
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-1 text-xs font-black shadow-2xs">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                            <span>Còn trống</span>
                           </span>
                         )}
-                      </div>
-                    </div>
+                      </td>
 
-                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                      {slot.isBooked ? (
-                        <span className="text-[11px] font-semibold text-blue-700">
-                          Buổi kèm 1-1 với hội viên
-                        </span>
-                      ) : slot.isEmergencyCancelled ? (
-                        <span className="text-[11px] font-semibold text-rose-600">
-                          Ca đã hủy
-                        </span>
-                      ) : (
-                        <span className="text-[11px] font-medium text-slate-400">
-                          Khung giờ sẵn sàng đón học viên
-                        </span>
-                      )}
+                      {/* 6. Description / Slot Type */}
+                      <td className="py-3.5 px-4">
+                        {slot.isBooked ? (
+                          <span className="text-xs font-bold text-blue-700">
+                            Buổi kèm 1-1 với hội viên
+                          </span>
+                        ) : slot.isEmergencyCancelled ? (
+                          <span className="text-xs font-bold text-rose-600">
+                            Ca đột xuất đã hủy
+                          </span>
+                        ) : isPast ? (
+                          <span className="text-xs font-medium text-slate-400">
+                            Đã qua thời gian nhận học viên
+                          </span>
+                        ) : (
+                          <span className="text-xs font-medium text-slate-600">
+                            Khung giờ sẵn sàng đón học viên
+                          </span>
+                        )}
+                      </td>
 
-                      {!slot.isBooked && !slot.isEmergencyCancelled && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            if (window.confirm('Bạn có chắc chắn muốn xóa khung giờ rảnh này không?')) {
-                              deleteMutation.mutate(slot.id);
-                            }
-                          }}
-                          disabled={deleteMutation.isPending}
-                          className="text-rose-600 hover:bg-rose-50 hover:text-rose-700 h-7 text-xs font-semibold gap-1 px-2.5 cursor-pointer ml-auto"
-                        >
-                          {deleteMutation.isPending ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-3 w-3" />
-                          )}
-                          <span>Xóa slot</span>
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                      {/* 7. Action Button */}
+                      <td className="py-3.5 px-4 text-right">
+                        {canDelete ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              if (window.confirm('Bạn có chắc chắn muốn xóa khung giờ rảnh này không?')) {
+                                deleteMutation.mutate(slot.id);
+                              }
+                            }}
+                            disabled={deleteMutation.isPending}
+                            className="text-rose-600 hover:bg-rose-50 hover:text-rose-700 h-8 text-xs font-black gap-1.5 px-3 rounded-xl border border-transparent hover:border-rose-200 transition-all cursor-pointer ml-auto"
+                          >
+                            {deleteMutation.isPending ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3.5 w-3.5" />
+                            )}
+                            <span>Xóa ca</span>
+                          </Button>
+                        ) : (
+                          <span className="text-slate-300 text-xs text-right block pr-4">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        ))}
-      </div>
+
+          {/* Table Footer info */}
+          <div className="py-3 px-5 border-t border-slate-100 bg-slate-50/60 flex items-center justify-between text-xs text-slate-400 font-semibold">
+            <span>Hiển thị {filteredAndSortedSlots.length} ca rảnh</span>
+            <span>Sắp xếp theo thứ tự ngày giờ</span>
+          </div>
+        </div>
+      )}
 
       {/* Modal Mở Khung Giờ Rảnh */}
       <CreateSlotModal
@@ -287,3 +455,5 @@ export const CoachAvailabilityPage: React.FC = () => {
     </div>
   );
 };
+
+export default CoachAvailabilityPage;

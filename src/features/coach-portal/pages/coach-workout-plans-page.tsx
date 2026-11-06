@@ -458,17 +458,11 @@ export const CoachWorkoutPlansPage: React.FC = () => {
       {/* 1. Header with Architectural Elevation */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 sm:p-6 rounded-3xl bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border border-white/60 dark:border-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60 px-2.5 py-0.5 rounded-full">
-              Chuyên Môn Huấn Luyện
-            </span>
-          </div>
+          
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-slate-50">
             Giáo Án &amp; Lộ Trình Đào Tạo
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium max-w-2xl">
-            Quản lý lộ trình 12 buổi chuẩn Boxing/Yoga và xây dựng kế hoạch tập luyện cá nhân hóa theo mục tiêu học viên.
-          </p>
+        
         </div>
 
         <div className="flex items-center gap-2.5 self-start sm:self-auto">
