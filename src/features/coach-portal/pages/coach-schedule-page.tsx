@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Clock,
   ChevronLeft,
   ChevronRight,
   Plus,
@@ -107,10 +106,10 @@ export const CoachSchedulePage: React.FC = () => {
           status: apiS.isEmergencyCancelled
             ? 'CANCELLED'
             : isLive
-            ? 'LIVE'
-            : isEnded
-            ? 'COMPLETED'
-            : 'UPCOMING',
+              ? 'LIVE'
+              : isEnded
+                ? 'COMPLETED'
+                : 'UPCOMING',
           title: apiS.title,
           studentName: firstStudent?.fullName || (isPt && apiS.isBooked ? 'Học viên PT' : undefined),
           studentPhone: firstStudent?.phone,
@@ -229,9 +228,9 @@ export const CoachSchedulePage: React.FC = () => {
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-slate-50">
               Lịch Dạy Theo Tuần
             </h1>
-            
+
           </div>
-        
+
         </div>
 
         {/* Navigation & Action Controls */}
@@ -290,86 +289,8 @@ export const CoachSchedulePage: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. STATS & METRICS SUMMARY CARDS */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* Metric 1: Ca kế tiếp */}
-        <div className="col-span-2 sm:col-span-1 rounded-xl border border-teal-200/90 dark:border-teal-800/60 bg-gradient-to-br from-teal-50/60 to-white dark:from-teal-950/20 dark:to-[#131b26] p-4 shadow-2xs space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-teal-800 dark:text-teal-300 uppercase tracking-wider">
-              Ca kế tiếp
-            </span>
-            {stats.nextSession && (
-              <button
-                onClick={() => setSelectedSession(stats.nextSession)}
-                className="text-[11px] font-semibold text-teal-700 dark:text-teal-400 hover:underline inline-flex items-center gap-0.5 cursor-pointer"
-              >
-                Chi tiết
-                <ChevronRight className="w-3 h-3" />
-              </button>
-            )}
-          </div>
 
-          {stats.nextSession ? (
-            <div className="space-y-1">
-              <div className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
-                {stats.nextSession.type === 'PT'
-                  ? `${stats.nextSession.studentName || 'Học viên PT'} (PT 1:1)`
-                  : `${stats.nextSession.title} (Lớp nhóm)`}
-              </div>
-              <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 tabular-nums">
-                <Clock className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-                {new Date(stats.nextSession.startTime).toLocaleTimeString('vi-VN', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}{' '}
-                –{' '}
-                {new Date(stats.nextSession.endTime).toLocaleTimeString('vi-VN', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}{' '}
-                · {new Date(stats.nextSession.startTime).toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' })}
-              </div>
-            </div>
-          ) : (
-            <p className="text-xs text-slate-400 italic pt-1">
-              Không có ca dạy nào sắp diễn ra trong tuần này.
-            </p>
-          )}
-        </div>
 
-        {/* Metric 2: Tổng số ca tuần */}
-        <div className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#131b26] p-4 shadow-2xs space-y-1">
-          <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-            Tổng số ca dạy
-          </div>
-          <div className="text-2xl font-black text-slate-900 dark:text-slate-50 tabular-nums">
-            {stats.totalSessions} <span className="text-sm font-semibold text-slate-500">ca</span>
-          </div>
-         
-        </div>
-
-        {/* Metric 3: Tổng giờ dạy */}
-        <div className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#131b26] p-4 shadow-2xs space-y-1">
-          <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-            Tổng thời lượng dạy
-          </div>
-          <div className="text-2xl font-black text-slate-900 dark:text-slate-50 tabular-nums">
-            {stats.totalHours} <span className="text-sm font-semibold text-slate-500">giờ</span>
-          </div>
-         
-        </div>
-
-        {/* Metric 4: Số học viên PT */}
-        <div className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#131b26] p-4 shadow-2xs space-y-1">
-          <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-            Học viên PT cá nhân
-          </div>
-          <div className="text-2xl font-black text-slate-900 dark:text-slate-50 tabular-nums">
-            {stats.ptStudentsCount} <span className="text-sm font-semibold text-slate-500">học viên</span>
-          </div>
-      
-        </div>
-      </div>
 
       {/* 3. FILTER CHIPS & VIEW MODE SWITCHER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
@@ -378,11 +299,10 @@ export const CoachSchedulePage: React.FC = () => {
           {/* Tất cả */}
           <button
             onClick={() => setFilterType('ALL')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              filterType === 'ALL'
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${filterType === 'ALL'
                 ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
                 : 'bg-white dark:bg-[#131b26] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'
-            }`}
+              }`}
           >
             Tất cả ({stats.totalSessions})
           </button>
@@ -390,11 +310,10 @@ export const CoachSchedulePage: React.FC = () => {
           {/* PT 1:1 */}
           <button
             onClick={() => setFilterType('PT')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
-              filterType === 'PT'
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${filterType === 'PT'
                 ? 'bg-purple-600 text-white shadow-2xs shadow-purple-600/30'
                 : 'bg-white dark:bg-[#131b26] text-purple-900 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60 hover:bg-purple-50/60'
-            }`}
+              }`}
           >
             <span className="w-2 h-2 rounded-full bg-purple-500" />
             PT 1:1 ({stats.totalPt})
@@ -403,11 +322,10 @@ export const CoachSchedulePage: React.FC = () => {
           {/* Lớp nhóm */}
           <button
             onClick={() => setFilterType('CLASS')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
-              filterType === 'CLASS'
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${filterType === 'CLASS'
                 ? 'bg-emerald-600 text-white shadow-2xs shadow-emerald-600/30'
                 : 'bg-white dark:bg-[#131b26] text-emerald-900 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-50/60'
-            }`}
+              }`}
           >
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
             Lớp nhóm ({stats.totalGroup})
@@ -418,22 +336,20 @@ export const CoachSchedulePage: React.FC = () => {
         <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#131b26] p-0.5 shadow-2xs self-start sm:self-auto">
           <button
             onClick={() => setViewMode('WEEK_GRID')}
-            className={`px-3 py-1 rounded-md text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
-              viewMode === 'WEEK_GRID'
+            className={`px-3 py-1 rounded-md text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${viewMode === 'WEEK_GRID'
                 ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
                 : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-100'
-            }`}
+              }`}
           >
             <CalendarRange className="w-3.5 h-3.5" />
             <span>Lưới tuần</span>
           </button>
           <button
             onClick={() => setViewMode('AGENDA')}
-            className={`px-3 py-1 rounded-md text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
-              viewMode === 'AGENDA'
+            className={`px-3 py-1 rounded-md text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${viewMode === 'AGENDA'
                 ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
                 : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-100'
-            }`}
+              }`}
           >
             <CalendarDays className="w-3.5 h-3.5" />
             <span>Lịch trình</span>
