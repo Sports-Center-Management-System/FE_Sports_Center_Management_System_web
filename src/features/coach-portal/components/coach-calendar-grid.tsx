@@ -110,10 +110,10 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
     });
 
     if (daySessions.length === 0) {
-      // Subtle empty state
+      // Clean empty state with active + Thêm slot button
       return (
-        <div className="absolute inset-x-2 top-24 bottom-12 flex flex-col items-center justify-center text-center p-3 pointer-events-none select-none opacity-40 hover:opacity-100 group transition-opacity">
-          <p className="text-[12px] text-slate-400 dark:text-slate-500 font-medium">
+        <div className="absolute inset-x-2 top-28 bottom-12 flex flex-col items-center justify-center text-center p-3 z-10">
+          <p className="text-[12px] text-slate-400 dark:text-slate-500 font-medium mb-1.5">
             Trống lịch dạy
           </p>
           {onOpenCreateSlot && (
@@ -123,10 +123,10 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
                 e.stopPropagation();
                 onOpenCreateSlot(dateString);
               }}
-              className="mt-2 pointer-events-auto inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800/60 hover:bg-teal-100 transition-colors shadow-2xs"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 transition shadow-2xs cursor-pointer active:scale-95"
             >
-              <Plus className="w-3 h-3" />
-              Mở khung giờ
+              <Plus className="w-3.5 h-3.5" />
+              <span>Thêm slot</span>
             </button>
           )}
         </div>
@@ -311,18 +311,18 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
                   <div
                     key={day.dateString}
                     className={cn(
-                      'py-2.5 px-2 text-center transition-colors flex flex-col items-center justify-center',
+                      'py-2.5 px-2 text-center transition-colors flex flex-col items-center justify-center group/header relative',
                       day.isToday
-                        ? 'bg-teal-500/[0.06] dark:bg-teal-400/[0.08]'
-                        : 'hover:bg-slate-50/50 dark:hover:bg-slate-900/30'
+                        ? 'bg-emerald-500/[0.06] dark:bg-emerald-400/[0.08]'
+                        : 'hover:bg-slate-50/70 dark:hover:bg-slate-900/30'
                     )}
                   >
                     {/* Day label: Thứ 2, Thứ 3, etc. */}
                     <span
                       className={cn(
-                        'text-[11.5px] font-semibold tracking-tight',
+                        'text-[11.5px] font-bold tracking-tight',
                         day.isToday
-                          ? 'text-teal-700 dark:text-teal-300 font-bold'
+                          ? 'text-emerald-700 dark:text-emerald-400'
                           : 'text-slate-500 dark:text-slate-400'
                       )}
                     >
@@ -334,24 +334,39 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
                       className={cn(
                         'mt-1 w-7 h-7 flex items-center justify-center rounded-full text-xs transition-all tabular-nums',
                         day.isToday
-                          ? 'bg-teal-600 dark:bg-teal-500 text-white font-bold shadow-xs'
-                          : 'text-slate-900 dark:text-slate-100 font-semibold'
+                          ? 'bg-emerald-600 dark:bg-emerald-500 text-white font-black shadow-xs'
+                          : 'text-slate-900 dark:text-slate-100 font-bold'
                       )}
                     >
                       {day.dayNumber}
                     </div>
 
-                    {/* Redesigned Session Count Text ("2 ca", "1 ca", "Nghỉ") */}
-                    <span
-                      className={cn(
-                        'mt-1 text-[11px] font-medium tracking-tight',
-                        daySessionsCount > 0
-                          ? 'text-slate-600 dark:text-slate-300'
-                          : 'text-slate-400/80 dark:text-slate-500 italic'
+                    {/* Session Count & Quick + Button */}
+                    <div className="mt-1 flex items-center justify-center gap-1">
+                      <span
+                        className={cn(
+                          'text-[11px] font-semibold tracking-tight',
+                          daySessionsCount > 0
+                            ? 'text-slate-700 dark:text-slate-300'
+                            : 'text-slate-400/80 dark:text-slate-500 italic'
+                        )}
+                      >
+                        {daySessionsCount > 0 ? `${daySessionsCount} ca` : 'Trống'}
+                      </span>
+                      {onOpenCreateSlot && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenCreateSlot(day.dateString);
+                          }}
+                          className="opacity-0 group-hover/header:opacity-100 transition-opacity p-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-200 cursor-pointer shadow-2xs"
+                          title={`Thêm slot cho ${day.dayLabel} (${day.dateString})`}
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
                       )}
-                    >
-                      {daySessionsCount > 0 ? `${daySessionsCount} ca` : 'Trống'}
-                    </span>
+                    </div>
                   </div>
                 );
               })}
@@ -389,9 +404,14 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
                 return (
                   <div
                     key={`col-${day.dateString}`}
+                    onClick={(e) => {
+                      if (e.target === e.currentTarget && onOpenCreateSlot) {
+                        onOpenCreateSlot(day.dateString);
+                      }
+                    }}
                     className={cn(
-                      'relative h-full transition-colors',
-                      day.isToday && 'bg-teal-500/[0.03] dark:bg-teal-400/[0.04]'
+                      'relative h-full transition-colors cursor-pointer',
+                      day.isToday && 'bg-emerald-500/[0.03] dark:bg-emerald-400/[0.04]'
                     )}
                   >
                     {/* Hourly Horizontal Grid Lines & 30-min auxiliary lines */}

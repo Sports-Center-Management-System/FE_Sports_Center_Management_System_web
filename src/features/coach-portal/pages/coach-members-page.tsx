@@ -56,7 +56,10 @@ export const CoachMembersPage: React.FC = () => {
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 pb-24">
-      {/* 1. Header */}
+
+     
+
+      {/* 1. Header Studio Hero */}
       <div className="p-6 sm:p-8 rounded-3xl bg-slate-950 text-white shadow-xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1.5">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold tracking-wide uppercase">
@@ -81,8 +84,6 @@ export const CoachMembersPage: React.FC = () => {
           <span>Làm mới</span>
         </Button>
       </div>
-
-      {/* 2. Controls & Search Bar */}
       <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="relative max-w-md w-full">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />

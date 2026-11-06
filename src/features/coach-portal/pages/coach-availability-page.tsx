@@ -249,7 +249,7 @@ export const CoachAvailabilityPage: React.FC = () => {
                   <th className="py-3.5 px-4">Khung giờ</th>
                   <th className="py-3.5 px-4">Thời lượng</th>
                   <th className="py-3.5 px-4">Trạng thái</th>
-                  <th className="py-3.5 px-4">Mô tả / Loại ca</th>
+                  <th className="py-3.5 px-4">Mô tả </th>
                   <th className="py-3.5 px-4 text-right">Thao tác</th>
                 </tr>
               </thead>

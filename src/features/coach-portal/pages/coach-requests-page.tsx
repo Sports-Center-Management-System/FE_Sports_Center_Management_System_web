@@ -112,9 +112,7 @@ export const CoachRequestsPage: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
             Đơn Hủy &amp; Kỷ Luật
           </h1>
-          <p className="text-sm text-slate-300 font-normal leading-relaxed">
-            Danh sách đơn xin hủy ca khẩn cấp và theo dõi lịch sử chế tài kỷ luật huấn luyện viên.
-          </p>
+        
         </div>
 
         <Button

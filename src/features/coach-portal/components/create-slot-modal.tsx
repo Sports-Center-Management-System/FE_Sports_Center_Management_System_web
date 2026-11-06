@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   X,
@@ -7,10 +7,10 @@ import {
   AlertCircle,
   Loader2,
   Plus,
-  Sparkles,
   Sun,
   Sunset,
   Coffee,
+  Check,
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
@@ -22,133 +22,40 @@ interface CreateSlotModalProps {
   initialDate?: string;
 }
 
-interface DutyShiftPreset {
-  period: 'MORNING' | 'LUNCH' | 'EVENING';
-  label: string;
+export type SlotPeriod = 'ALL' | 'MORNING' | 'AFTERNOON' | 'EVENING';
+
+export interface HourlySlotPreset {
   start: string;
   end: string;
+  label: string;
+  period: 'MORNING' | 'AFTERNOON' | 'EVENING';
   isPeak?: boolean;
-  desc: string;
 }
 
-const DUTY_PRESETS: DutyShiftPreset[] = [
-  // Morning Shifts
-  {
-    period: 'MORNING',
-    label: '06:00 - 10:00 (4h)',
-    start: '06:00',
-    end: '10:00',
-    isPeak: true,
-    desc: 'Ca trực sáng dài 4 tiếng (06h - 10h)',
-  },
-  {
-    period: 'MORNING',
-    label: '06:00 - 07:00',
-    start: '06:00',
-    end: '07:00',
-    desc: 'Khởi đầu ngày mới trước giờ công sở',
-  },
-  {
-    period: 'MORNING',
-    label: '07:00 - 08:00',
-    start: '07:00',
-    end: '08:00',
-    isPeak: true,
-    desc: 'Khung giờ vàng hội viên văn phòng',
-  },
-  {
-    period: 'MORNING',
-    label: '08:00 - 09:00',
-    start: '08:00',
-    end: '09:00',
-    desc: 'Ca sáng năng lượng',
-  },
-  {
-    period: 'MORNING',
-    label: '09:00 - 10:00',
-    start: '09:00',
-    end: '10:00',
-    desc: 'Ca giữa buổi sáng',
-  },
-  // Lunch Shifts
-  {
-    period: 'LUNCH',
-    label: '11:30 - 12:30',
-    start: '11:30',
-    end: '12:30',
-    desc: 'Tập nhanh thể lực giờ nghỉ trưa',
-  },
-  {
-    period: 'LUNCH',
-    label: '12:30 - 13:30',
-    start: '12:30',
-    end: '13:30',
-    desc: 'Duy trì vóc dáng đầu giờ chiều',
-  },
-  // Afternoon & Evening Shifts
-  {
-    period: 'EVENING',
-    label: '14:00 - 18:00 (4h)',
-    start: '14:00',
-    end: '18:00',
-    desc: 'Ca trực chiều dài 4 tiếng (14h - 18h)',
-  },
-  {
-    period: 'EVENING',
-    label: '17:00 - 21:00 (4h)',
-    start: '17:00',
-    end: '21:00',
-    isPeak: true,
-    desc: 'Ca trực tối dài 4 tiếng (17h - 21h)',
-  },
-  {
-    period: 'EVENING',
-    label: '17:00 - 18:00',
-    start: '17:00',
-    end: '18:00',
-    desc: 'Tập ngay sau giờ tan sở',
-  },
-  {
-    period: 'EVENING',
-    label: '18:00 - 19:00',
-    start: '18:00',
-    end: '19:00',
-    isPeak: true,
-    desc: 'Khung giờ nhu cầu PT cao nhất ngày',
-  },
-  {
-    period: 'EVENING',
-    label: '19:00 - 20:00',
-    start: '19:00',
-    end: '20:00',
-    isPeak: true,
-    desc: 'Khung giờ vàng buổi tối',
-  },
-  {
-    period: 'EVENING',
-    label: '20:00 - 21:00',
-    start: '20:00',
-    end: '21:00',
-    desc: 'Ca muộn xả stress cuối ngày',
-  },
-  {
-    period: 'EVENING',
-    label: '21:00 - 22:00',
-    start: '21:00',
-    end: '22:00',
-    desc: 'Ca đêm dành cho hội viên tập muộn',
-  },
+// 1-hour slots from 05:00 to 21:00 (every 1 hour)
+export const HOURLY_SLOTS: HourlySlotPreset[] = [
+  // Ca Sáng: 05:00 - 12:00
+  { start: '05:00', end: '06:00', label: '05:00 – 06:00', period: 'MORNING' },
+  { start: '06:00', end: '07:00', label: '06:00 – 07:00', period: 'MORNING' },
+  { start: '07:00', end: '08:00', label: '07:00 – 08:00', period: 'MORNING', isPeak: true },
+  { start: '08:00', end: '09:00', label: '08:00 – 09:00', period: 'MORNING' },
+  { start: '09:00', end: '10:00', label: '09:00 – 10:00', period: 'MORNING' },
+  { start: '10:00', end: '11:00', label: '10:00 – 11:00', period: 'MORNING' },
+  { start: '11:00', end: '12:00', label: '11:00 – 12:00', period: 'MORNING' },
+
+  // Ca Chiều: 12:00 - 17:00
+  { start: '12:00', end: '13:00', label: '12:00 – 13:00', period: 'AFTERNOON' },
+  { start: '13:00', end: '14:00', label: '13:00 – 14:00', period: 'AFTERNOON' },
+  { start: '14:00', end: '15:00', label: '14:00 – 15:00', period: 'AFTERNOON' },
+  { start: '15:00', end: '16:00', label: '15:00 – 16:00', period: 'AFTERNOON' },
+  { start: '16:00', end: '17:00', label: '16:00 – 17:00', period: 'AFTERNOON' },
+
+  // Ca Tối: 17:00 - 21:00
+  { start: '17:00', end: '18:00', label: '17:00 – 18:00', period: 'EVENING', isPeak: true },
+  { start: '18:00', end: '19:00', label: '18:00 – 19:00', period: 'EVENING', isPeak: true },
+  { start: '19:00', end: '20:00', label: '19:00 – 20:00', period: 'EVENING', isPeak: true },
+  { start: '20:00', end: '21:00', label: '20:00 – 21:00', period: 'EVENING' },
 ];
-
-// 24-hour time options from 05:00 to 23:00 (30-minute intervals)
-const TIME_OPTIONS_24H: string[] = [];
-for (let h = 5; h <= 23; h++) {
-  const hh = String(h).padStart(2, '0');
-  TIME_OPTIONS_24H.push(`${hh}:00`);
-  if (h < 23) {
-    TIME_OPTIONS_24H.push(`${hh}:30`);
-  }
-}
 
 const format24hInput = (val: string): string => {
   const trimmed = val.trim();
@@ -189,11 +96,12 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
   );
   const [startTime, setStartTime] = useState<string>('07:00');
   const [endTime, setEndTime] = useState<string>('08:00');
-  const [selectedPeriod, setSelectedPeriod] = useState<'ALL' | 'MORNING' | 'LUNCH' | 'EVENING'>('ALL');
+  const [selectedPeriod, setSelectedPeriod] = useState<SlotPeriod>('ALL');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showCustomTime, setShowCustomTime] = useState<boolean>(false);
 
   // Sync date when initialDate changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (initialDate && initialDate >= todayStr) {
       setDate(initialDate);
     }
@@ -211,7 +119,7 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
       const normEnd = format24hInput(endTime);
       const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
       if (!timeRegex.test(normStart) || !timeRegex.test(normEnd)) {
-        throw new Error('Vui lòng nhập định dạng giờ 24h hợp lệ (HH:mm, ví dụ 06:00, 14:00, 22:00).');
+        throw new Error('Vui lòng nhập định dạng giờ 24h hợp lệ (HH:mm, ví dụ 06:00, 14:00, 20:00).');
       }
 
       const startDateTime = new Date(`${date}T${normStart}:00`);
@@ -252,55 +160,60 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     },
   });
 
+  const filteredSlots = useMemo(() => {
+    if (selectedPeriod === 'ALL') return HOURLY_SLOTS;
+    return HOURLY_SLOTS.filter((s) => s.period === selectedPeriod);
+  }, [selectedPeriod]);
+
   if (!isOpen) return null;
 
-  const filteredPresets =
-    selectedPeriod === 'ALL'
-      ? DUTY_PRESETS
-      : DUTY_PRESETS.filter((p) => p.period === selectedPeriod);
-
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-gradient-to-r from-emerald-50/80 via-slate-50 to-white">
-          <div className="flex items-center gap-2.5">
-            <div className="h-9 w-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm shadow-emerald-600/30">
-              <Clock className="h-5 w-5" />
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 overflow-y-auto animate-in fade-in duration-150">
+      <div className="w-full max-w-xl rounded-3xl bg-white shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col">
+        {/* Header: Clean Light Header with Emerald Clock Badge */}
+        <div className="flex items-start justify-between border-b border-slate-100 p-6 pb-4 sm:p-7 sm:pb-5 bg-white shrink-0">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Clock className="h-6 w-6 text-white" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-extrabold text-slate-900">Mở Khung Giờ Rảnh PT</h3>
-                <span className="rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase px-2 py-0.5">
-                  COACH_DUTY
+                <h3 className="text-lg font-black text-slate-900 leading-tight">
+                  Mở Khung Giờ Rảnh PT
+                </h3>
+                <span className="rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase px-2 py-0.5">
+                  1-1
                 </span>
               </div>
-              <p className="text-xs text-slate-500">Mở slot 1-1 cho hội viên VIP và PT Add-on</p>
+              <p className="text-xs text-slate-500 font-medium mt-1">
+                Mở ca trực rảnh từng tiếng (05h – 20h) để học viên đặt lịch dạy kèm
+              </p>
             </div>
           </div>
           <button
             onClick={onClose}
             type="button"
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition-colors"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0 ml-3"
+            title="Đóng modal"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="p-6 overflow-y-auto space-y-4 flex-1">
+        <div className="p-6 pt-4 sm:p-7 sm:pt-5 overflow-y-auto space-y-4 flex-1 bg-white">
           {errorMessage && (
-            <div className="flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-800">
+            <div className="flex items-center gap-2.5 rounded-2xl bg-rose-50 border border-rose-200 p-4 text-xs font-semibold text-rose-800">
               <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
               <span>{errorMessage}</span>
             </div>
           )}
 
           {isSlotInPast && (
-            <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
+            <div className="flex items-start gap-2.5 rounded-2xl bg-amber-50 border border-amber-200 p-4 text-xs text-amber-900 font-medium">
               <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
               <div>
-                <span className="font-bold">Khung giờ không hợp lệ: </span>
+                <strong className="font-black text-amber-950">Khung giờ không hợp lệ: </strong>
                 {isPastDate
                   ? 'Ngày được chọn đã nằm trong quá khứ.'
                   : `Khung giờ bắt đầu (${startTime}) đã qua thời điểm hiện tại. Vui lòng chọn khung giờ ở tương lai.`}
@@ -308,180 +221,215 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
             </div>
           )}
 
-          {/* Date Picker */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5 text-slate-500" />
-              Ngày áp dụng slot
+          {/* Date Picker Card */}
+          <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-2xs space-y-2">
+            <label className="text-xs font-black text-slate-700 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5 text-emerald-600" />
+                Ngày áp dụng slot rảnh
+              </span>
+              <span className="text-[11px] font-semibold text-slate-500">
+                {new Date(date).toLocaleDateString('vi-VN', {
+                  weekday: 'long',
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                })}
+              </span>
             </label>
             <input
               type="date"
               value={date}
-              min={new Date().toISOString().slice(0, 10)}
+              min={todayStr}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-semibold text-slate-800 focus:border-emerald-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20"
+              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs font-bold text-slate-900 focus:border-emerald-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20"
             />
           </div>
 
-          {/* Period Filter for Duty Presets */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                <span>Khung giờ gợi ý phổ biến</span>
-              </label>
-              <span className="text-[10px] text-slate-400 font-semibold">Bấm để chọn nhanh</span>
+          {/* Shift Filter Pills (Sáng, Chiều, Tối) */}
+          <div className="space-y-3 pt-1">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <span className="text-xs font-black text-slate-500 uppercase tracking-wider">
+                CHỌN KHUNG GIỜ RẢNH (1 TIẾNG)
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowCustomTime((prev) => !prev)}
+                className="text-xs font-bold text-emerald-700 hover:text-emerald-800 underline cursor-pointer"
+              >
+                {showCustomTime ? 'Ẩn tùy chỉnh giờ' : 'Tùy chỉnh giờ lẻ'}
+              </button>
             </div>
 
-            <div className="flex items-center gap-1.5 pb-1">
+            {/* Filter Pills */}
+            <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
                 onClick={() => setSelectedPeriod('ALL')}
-                className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all ${
+                className={`rounded-xl px-3.5 py-1.5 text-xs font-black transition-all cursor-pointer ${
                   selectedPeriod === 'ALL'
-                    ? 'bg-slate-900 text-white'
+                    ? 'bg-slate-950 text-white shadow-xs'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
-                Tất cả ca
+                Tất cả ca (16)
               </button>
               <button
                 type="button"
                 onClick={() => setSelectedPeriod('MORNING')}
-                className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1 ${
+                className={`rounded-xl px-3.5 py-1.5 text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
                   selectedPeriod === 'MORNING'
-                    ? 'bg-amber-600 text-white'
-                    : 'bg-amber-50 text-amber-800 hover:bg-amber-100'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
                 }`}
               >
-                <Sun className="h-3 w-3" />
-                Ca Sáng (06-09h)
+                <Sun className="h-3.5 w-3.5" />
+                Ca Sáng (05h – 12h)
               </button>
               <button
                 type="button"
-                onClick={() => setSelectedPeriod('LUNCH')}
-                className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1 ${
-                  selectedPeriod === 'LUNCH'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-blue-50 text-blue-800 hover:bg-blue-100'
+                onClick={() => setSelectedPeriod('AFTERNOON')}
+                className={`rounded-xl px-3.5 py-1.5 text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                  selectedPeriod === 'AFTERNOON'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
                 }`}
               >
-                <Coffee className="h-3 w-3" />
-                Ca Trưa (11-13h)
+                <Coffee className="h-3.5 w-3.5" />
+                Ca Chiều (12h – 17h)
               </button>
               <button
                 type="button"
                 onClick={() => setSelectedPeriod('EVENING')}
-                className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1 ${
+                className={`rounded-xl px-3.5 py-1.5 text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
                   selectedPeriod === 'EVENING'
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-purple-50 text-purple-800 hover:bg-purple-100'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
                 }`}
               >
-                <Sunset className="h-3 w-3" />
-                Ca Tối (17-21h)
+                <Sunset className="h-3.5 w-3.5" />
+                Ca Tối (17h – 21h)
               </button>
             </div>
 
-            {/* Presets Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
-              {filteredPresets.map((preset) => {
-                const isSelected = startTime === preset.start && endTime === preset.end;
-                const [psh, psm] = preset.start.split(':').map(Number);
-                const isPresetPast = isPastDate || (isToday && (psh * 60 + psm <= currentMinutes));
+            {/* Hourly Slot Grid (05h - 20h) */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 max-h-64 overflow-y-auto pr-1 pt-1">
+              {filteredSlots.map((slot) => {
+                const isSelected = startTime === slot.start && endTime === slot.end;
+                const [psh, psm] = slot.start.split(':').map(Number);
+                const isPresetPast =
+                  isPastDate || (isToday && psh * 60 + psm <= currentMinutes);
 
                 return (
                   <button
-                    key={preset.label}
+                    key={slot.label}
                     type="button"
                     disabled={isPresetPast}
                     onClick={() => {
                       if (!isPresetPast) {
-                        setStartTime(preset.start);
-                        setEndTime(preset.end);
+                        setStartTime(slot.start);
+                        setEndTime(slot.end);
                       }
                     }}
-                    className={`rounded-xl border p-2.5 text-left transition-all flex flex-col justify-between ${
+                    className={`rounded-2xl border p-3 text-left transition-all flex flex-col justify-between gap-1.5 cursor-pointer relative ${
                       isPresetPast
                         ? 'border-slate-200 bg-slate-50 text-slate-400 opacity-50 cursor-not-allowed'
                         : isSelected
-                        ? 'border-emerald-600 bg-emerald-50/80 ring-2 ring-emerald-500/20 text-emerald-950'
-                        : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                        ? 'border-emerald-600 bg-emerald-50/90 ring-2 ring-emerald-500/30 text-emerald-950 shadow-xs'
+                        : 'border-slate-200/90 bg-white hover:border-slate-300 hover:bg-slate-50/60 text-slate-800'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-black">{preset.label}</span>
-                      {isPresetPast ? (
-                        <span className="rounded-md bg-slate-200 text-slate-500 text-[9px] font-bold px-1.5 py-0.5">
-                          Đã qua giờ
-                        </span>
-                      ) : preset.isPeak ? (
-                        <span className="rounded-md bg-amber-100 text-amber-900 text-[9px] font-black uppercase px-1.5 py-0.2">
-                          Giờ vàng ★
+                      <span className="text-xs font-black tracking-tight">{slot.label}</span>
+                      {isSelected ? (
+                        <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+                      ) : slot.isPeak && !isPresetPast ? (
+                        <span className="rounded-md bg-amber-100 text-amber-900 text-[9px] font-black uppercase px-1.5 py-0.5">
+                          Giờ vàng
                         </span>
                       ) : null}
                     </div>
-                    <p className="text-[10px] text-slate-500 mt-1 line-clamp-1">
-                      {isPresetPast ? 'Đã quá thời điểm hiện tại' : preset.desc}
-                    </p>
+
+                    <div className="flex items-center justify-between text-[11px] font-medium text-slate-500">
+                      <span>1 tiếng</span>
+                      {isPresetPast && (
+                        <span className="text-[10px] text-slate-400 font-bold">
+                          Đã qua giờ
+                        </span>
+                      )}
+                    </div>
                   </button>
                 );
               })}
             </div>
+
+            {/* Optional Custom Time Inputs */}
+            {showCustomTime && (
+              <div className="grid grid-cols-2 gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-200 animate-in fade-in duration-100">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                    Giờ bắt đầu (HH:mm)
+                  </label>
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 p-2 text-xs font-mono font-bold text-slate-900 outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                    Giờ kết thúc (HH:mm)
+                  </label>
+                  <input
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 p-2 text-xs font-mono font-bold text-slate-900 outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Footer Actions */}
-        <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-6 py-4">
-          <div className="text-xs font-semibold text-slate-600">
-            Ca tập: <span className="text-emerald-700 font-bold">{startTime} - {endTime}</span>
-            {(() => {
-              const normStart = format24hInput(startTime);
-              const normEnd = format24hInput(endTime);
-              const [sh, sm] = normStart.split(':').map(Number);
-              const [eh, em] = normEnd.split(':').map(Number);
-              if (!isNaN(sh) && !isNaN(sm) && !isNaN(eh) && !isNaN(em)) {
-                const diff = eh * 60 + em - (sh * 60 + sm);
-                if (diff > 0) {
-                  const h = Math.floor(diff / 60);
-                  const m = diff % 60;
-                  const durStr = h > 0 && m > 0 ? `${h} giờ ${m} phút` : h > 0 ? `${h} giờ` : `${m} phút`;
-                  return <span className="text-slate-500 font-medium"> ({durStr})</span>;
-                }
-              }
-              return null;
-            })()}
-            {' · '}
-            <span className="text-slate-700 font-medium">{new Date(date).toLocaleDateString('vi-VN')}</span>
+        {/* Footer Actions: Deep Black / Emerald Design */}
+        <div className="flex items-center justify-between border-t border-slate-100 bg-white p-6 pt-3 sm:p-7 sm:pt-3 shrink-0">
+          <div className="text-xs font-semibold text-slate-600 min-w-0 pr-3">
+            <span>Ca đã chọn: </span>
+            <strong className="text-emerald-700 font-black">
+              {startTime} – {endTime}
+            </strong>
+            <span className="text-slate-400"> (1 tiếng)</span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
               disabled={mutation.isPending}
-              className="text-xs font-semibold"
+              className="text-xs font-bold rounded-xl"
             >
               Hủy
             </Button>
-            <Button
+            <button
               type="button"
               onClick={() => mutation.mutate()}
               disabled={mutation.isPending || isSlotInPast}
-              className={`text-xs font-bold gap-1.5 shadow-sm transition-all ${
+              className={`px-6 py-2.5 rounded-full text-xs sm:text-sm font-black shadow-md transition active:scale-[0.98] flex items-center gap-1.5 cursor-pointer ${
                 isSlotInPast
-                  ? 'bg-slate-300 text-slate-500 cursor-not-allowed hover:bg-slate-300 shadow-none'
-                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+                  ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+                  : 'bg-slate-950 hover:bg-slate-800 text-white'
               }`}
             >
               {mutation.isPending ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Plus className="h-3.5 w-3.5" />
+                <Plus className="h-4 w-4" />
               )}
-              <span>{isSlotInPast ? 'Giờ trong quá khứ' : 'Mở slot rảnh'}</span>
-            </Button>
+              <span>{isSlotInPast ? 'Giờ không hợp lệ' : `Mở slot rảnh (${startTime} - ${endTime})`}</span>
+            </button>
           </div>
         </div>
       </div>
