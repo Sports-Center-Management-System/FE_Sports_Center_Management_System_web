@@ -37,6 +37,7 @@ import {
   getExerciseDiscipline,
 } from '../utils/exercise-metadata.utils';
 import { WorkoutPlanDetailModal } from '@/components/common/workout-plan-detail-modal';
+import { useAuth } from '@/context/auth-context';
 
 type PlanTab = 'TEMPLATES' | 'CUSTOM_PLANS' | 'EXERCISE_LIBRARY';
 
@@ -56,6 +57,7 @@ const CATEGORY_ORDER: Record<string, number> = {
 };
 
 export const CoachWorkoutPlansPage: React.FC = () => {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<PlanTab>('CUSTOM_PLANS');
   const [isCreateOpen, setIsCreateOpen] = useState<boolean>(false);
@@ -1464,7 +1466,7 @@ export const CoachWorkoutPlansPage: React.FC = () => {
         isOpen={!!viewingPlan}
         onClose={() => setViewingPlan(null)}
         title={viewingPlan?.title}
-        coachName="Bạn (Huấn luyện viên phụ trách)"
+        coachName={user?.fullName || 'Huấn luyện viên phụ trách'}
         notes={viewingPlan?.notes}
         exercises={viewingPlan?.exercises as any}
       />
