@@ -1,5 +1,5 @@
 import { Navigate, createBrowserRouter } from "react-router";
-import { PublicLayout, MemberLayout } from "@/layouts";
+import { PublicLayout, MemberLayout, CoachLayout, ReceptionistLayout } from "@/layouts";
 import { LoginPage, NotFoundPage } from "@/features/auth";
 import { PublicPlansPage, MockPaymentPage } from "@/features/public";
 import { PlansPage, QuotePage } from "@/features/plans";
@@ -14,10 +14,32 @@ import {
   AttendancesPage,
   LockersPage,
 } from "@/features/member";
+import {
+  FrontDeskPage,
+  GateCheckinPage,
+  InbodyPage,
+  MembersPage,
+  PosPage,
+} from "@/features/front-desk";
+import {
+  CoachSchedulePage,
+  CoachAvailabilityPage,
+  CoachMembersPage,
+  CoachWorkoutPlansPage,
+  CoachRequestsPage,
+  CoachProfilePage,
+} from "@/features/coach-portal";
 import { mondayInVietnam } from "@/lib/date";
-import { MemberGuard, CalendarRoute, CalendarAlias } from "./route-elements";
+import {
+  MemberGuard,
+  CalendarRoute,
+  CalendarAlias,
+  StaffGuard,
+  PortalErrorFallback,
+} from "./route-elements";
 
 export const router = createBrowserRouter([
+  // 1. PUBLIC ROUTES (wrapped in PublicLayout with public header)
   {
     path: "/",
     element: <PublicLayout />,
@@ -48,6 +70,7 @@ export const router = createBrowserRouter([
           </div>
         ),
       },
+      // 2. MEMBER PORTAL
       {
         path: "portal/member",
         element: (
@@ -78,10 +101,74 @@ export const router = createBrowserRouter([
           { path: "lockers", element: <LockersPage /> },
         ],
       },
-      { path: "404", element: <NotFoundPage /> },
-      { path: "*", element: <NotFoundPage /> },
+
+      // 3. DESK PORTAL
+      {
+        path: "portal/desk",
+        children: [
+          {
+            element: <StaffGuard roles={["RECEPTIONIST", "CENTER_MANAGER"]} />,
+            children: [
+              { index: true, element: <PortalPlaceholder title="Quầy lễ tân" /> },
+              { path: "gate-checkin", element: <PortalPlaceholder title="Check-in cổng" /> },
+              { path: "pos", element: <PortalPlaceholder title="Bán gói tập" /> },
+              { path: "subscriptions", element: <PortalPlaceholder title="Gia hạn gói tập" /> },
+              { path: "members", element: <PortalPlaceholder title="Hội viên" /> },
+              { path: "members/:memberId", element: <PortalPlaceholder title="Hội viên" /> },
+            ],
+          },
+          {
+            element: <StaffGuard roles={["RECEPTIONIST", "COACH"]} />,
+            children: [{ path: "inbody", element: <PortalPlaceholder title="Đo InBody" /> }],
+          },
+        ],
+      },
+
+      // 4. COACH PORTAL (/portal/coach and /coach)
+      {
+        path: "portal/coach",
+        element: <StaffGuard roles={["COACH"]} />,
+        errorElement: <PortalErrorFallback />,
+        children: [
+          {
+            element: <CoachLayout />,
+            children: [
+              { index: true, element: <Navigate to="/portal/coach/schedule" replace /> },
+              { path: "schedule", element: <CoachSchedulePage /> },
+              { path: "availability", element: <CoachAvailabilityPage /> },
+              { path: "members", element: <CoachMembersPage /> },
+              { path: "workout-plans", element: <CoachWorkoutPlansPage /> },
+              { path: "requests", element: <CoachRequestsPage /> },
+              { path: "profile", element: <CoachProfilePage /> },
+            ],
+          },
+        ],
+      },
+      {
+        path: "coach",
+        element: <StaffGuard roles={["COACH"]} />,
+        errorElement: <PortalErrorFallback />,
+        children: [
+          {
+            element: <CoachLayout />,
+            children: [
+              { index: true, element: <Navigate to="/coach/schedule" replace /> },
+              { path: "schedule", element: <CoachSchedulePage /> },
+              { path: "availability", element: <CoachAvailabilityPage /> },
+              { path: "members", element: <CoachMembersPage /> },
+              { path: "workout-plans", element: <CoachWorkoutPlansPage /> },
+              { path: "requests", element: <CoachRequestsPage /> },
+              { path: "profile", element: <CoachProfilePage /> },
+            ],
+          },
+        ],
+      },
     ],
   },
+
+  // 5. 404 Catch-all
+  { path: "404", element: <NotFoundPage /> },
+  { path: "*", element: <NotFoundPage /> },
 ]);
 
 export default router;

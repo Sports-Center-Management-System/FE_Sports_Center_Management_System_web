@@ -1,0 +1,515 @@
+import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import {
+  Clock,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  CalendarDays,
+  CalendarRange,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { coachPortalApi } from '../api/coach-portal-api';
+import { AttendanceModal } from '../components/attendance-modal';
+import { EmergencyCancelModal } from '../components/emergency-cancel-modal';
+import { ScheduleDatePickerModal } from '../components/schedule-date-picker-modal';
+import { CreateSlotModal } from '../components/create-slot-modal';
+import { CoachCalendarGrid } from '../components/coach-calendar-grid';
+import { CoachAgendaView } from '../components/coach-agenda-view';
+import { CoachSessionDrawer } from '../components/coach-session-drawer';
+import {
+  getMondayOfWeek,
+  shiftWeek,
+  formatRangeLabel,
+  parseYMDToDate,
+} from '@/features/calendar/utils/calendar-date.utils';
+import { useAuth } from '@/context/auth-context';
+import type { StudentBookingItem } from '../types/coach-portal.types';
+import type {
+  CoachScheduleSession,
+  ScheduleFilterType,
+} from '../types/coach-schedule.types';
+type ViewMode = 'WEEK_GRID' | 'AGENDA';
+
+export const CoachSchedulePage: React.FC = () => {
+  const { user } = useAuth();
+
+  // Dynamic current week (Monday)
+  const [currentWeek, setCurrentWeek] = useState<string>(() => getMondayOfWeek());
+  const [viewMode, setViewMode] = useState<ViewMode>('WEEK_GRID');
+  const [filterType, setFilterType] = useState<ScheduleFilterType>('ALL');
+
+  // Selected session for slide-out drawer
+  const [selectedSession, setSelectedSession] = useState<CoachScheduleSession | null>(null);
+
+  // Modals state
+  const [isCreateSlotOpen, setIsCreateSlotOpen] = useState<boolean>(false);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState<boolean>(false);
+
+  // Attendance check-in modal
+  const [selectedBookingData, setSelectedBookingData] = useState<{
+    booking: StudentBookingItem;
+    sessionStartTime: string;
+  } | null>(null);
+
+  // Emergency cancellation modal
+  const [cancelModalData, setCancelModalData] = useState<{
+    scheduleId?: string;
+    bookingId?: string;
+    sessionTitle: string;
+    sessionTime: string;
+  } | null>(null);
+
+  // Real backend queries
+  const { data: apiSessions = [] } = useQuery({
+    queryKey: ['coach', 'multi-day-schedule', user?.id],
+    queryFn: () => coachPortalApi.getMultiDaySchedule(user?.id),
+    staleTime: 30000,
+  });
+
+  // Local notes map for user note additions
+  const [notesMap, setNotesMap] = useState<Record<string, string>>({});
+
+  // Map real API sessions to CoachScheduleSession
+  const sessionList: CoachScheduleSession[] = useMemo(() => {
+    return apiSessions.map((apiS) => {
+      const isPt = apiS.type === 'PERSONAL_TRAINING';
+      const firstStudent = apiS.bookings?.[0]?.member;
+      const isEnded = new Date() > new Date(apiS.endTime);
+      const isLive = new Date() >= new Date(apiS.startTime) && new Date() <= new Date(apiS.endTime);
+
+      return {
+        id: apiS.id,
+        type: isPt ? (apiS.isBooked === false ? 'EMPTY_SLOT' : 'PT') : 'GROUP_CLASS',
+        status: apiS.isEmergencyCancelled
+          ? 'CANCELLED'
+          : isLive
+          ? 'LIVE'
+          : isEnded
+          ? 'COMPLETED'
+          : 'UPCOMING',
+        title: apiS.title,
+        studentName: firstStudent?.fullName || (isPt && apiS.isBooked ? 'Học viên PT' : undefined),
+        studentPhone: firstStudent?.phone,
+        studentAvatar: firstStudent?.avatarUrl,
+        roomName: apiS.roomName || 'Khu vực tập luyện',
+        startTime: apiS.startTime,
+        endTime: apiS.endTime,
+        capacity: apiS.capacity,
+        enrolledCount: apiS.currentEnrolled,
+        checkedInCount:
+          apiS.bookings?.filter(
+            (b) =>
+              b.status === 'ATTENDED' ||
+              b.attendance?.status === 'PRESENT' ||
+              b.attendance?.status === 'ATTENDED' ||
+              b.attendance?.status === 'LATE'
+          ).length || 0,
+        isSlotEmpty: isPt && !apiS.isBooked,
+        bookings: apiS.bookings,
+        scheduleId: apiS.scheduleId || undefined,
+        coachAvailabilityId: apiS.coachAvailabilityId || undefined,
+        isEmergencyCancelled: apiS.isEmergencyCancelled,
+        notes: notesMap[apiS.id] || '',
+      };
+    });
+  }, [apiSessions, notesMap]);
+
+  // Handle saving notes on session
+  const handleSaveNotes = (sessionId: string, newNotes: string) => {
+    setNotesMap((prev) => ({ ...prev, [sessionId]: newNotes }));
+    if (selectedSession && selectedSession.id === sessionId) {
+      setSelectedSession((prev) => (prev ? { ...prev, notes: newNotes } : null));
+    }
+  };
+
+  // Week navigation
+  const handleWeekChange = (direction: 'prev' | 'next') => {
+    const offset = direction === 'next' ? 1 : -1;
+    setCurrentWeek((prev) => shiftWeek(prev, offset));
+  };
+
+  const handleGoToCurrentWeek = () => {
+    setCurrentWeek(getMondayOfWeek());
+  };
+
+  // Compute 7 days for current week
+  const weekRangeLabel = useMemo(() => {
+    return formatRangeLabel(currentWeek);
+  }, [currentWeek]);
+
+  // Active sessions within the current week
+  const currentWeekSessions = useMemo(() => {
+    const monday = parseYMDToDate(currentWeek);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+
+    const monTime = monday.getTime();
+    const sunTime = sunday.getTime();
+
+    return sessionList.filter((s) => {
+      const sTime = new Date(s.startTime).getTime();
+      return sTime >= monTime && sTime <= sunTime;
+    });
+  }, [sessionList, currentWeek]);
+
+  // Stats ribbon metrics (Strictly exclude empty slots and empty slot duration)
+  const stats = useMemo(() => {
+    const bookedSessions = currentWeekSessions.filter(
+      (s) => s.type !== 'EMPTY_SLOT' && !s.isSlotEmpty
+    );
+    const totalSessions = bookedSessions.length;
+    const ptSessions = bookedSessions.filter((s) => s.type === 'PT');
+    const groupSessions = bookedSessions.filter((s) => s.type === 'GROUP_CLASS');
+
+    // Total teaching hours (only booked sessions)
+    let totalMinutes = 0;
+    bookedSessions.forEach((s) => {
+      const start = new Date(s.startTime).getTime();
+      const end = new Date(s.endTime).getTime();
+      totalMinutes += Math.max(0, (end - start) / 60000);
+    });
+    const totalHours = (totalMinutes / 60).toFixed(1);
+
+    // Unique PT students
+    const ptStudentNames = new Set(
+      ptSessions.map((s) => s.studentName).filter(Boolean)
+    );
+
+    // Next upcoming session (earliest upcoming or live session)
+    const upcomingSessions = bookedSessions
+      .filter((s) => s.status === 'UPCOMING' || s.status === 'LIVE')
+      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+
+    const nextSession = upcomingSessions[0] || null;
+
+    return {
+      totalSessions,
+      totalPt: ptSessions.length,
+      totalGroup: groupSessions.length,
+      totalHours,
+      ptStudentsCount: ptStudentNames.size,
+      nextSession,
+    };
+  }, [currentWeekSessions]);
+
+  const sessionsByDate = useMemo(() => {
+    const map = new Map<string, any[]>();
+    sessionList.forEach((s) => {
+      const dateKey = s.startTime.split('T')[0];
+      if (!map.has(dateKey)) map.set(dateKey, []);
+      map.get(dateKey)!.push(s);
+    });
+    return map;
+  }, [sessionList]);
+
+  const coachDisplayName = user?.fullName || 'HLV Alex';
+
+  return (
+    <div className="min-h-screen bg-[#f8fafc] dark:bg-[#0b0f17] text-slate-900 dark:text-slate-100 p-4 sm:p-6 lg:p-8 space-y-6">
+      {/* 1. TOP BAR: Title, Coach Info, Week Nav, Primary Actions */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200/90 dark:border-slate-800">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-slate-50">
+              Lịch Dạy Theo Tuần
+            </h1>
+            <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300 border border-teal-200 dark:border-teal-800/60">
+              {coachDisplayName} · HLV Trưởng
+            </span>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Quản lý ca dạy cá nhân PT 1:1, lớp nhóm và khung giờ nhận học viên trung tâm
+          </p>
+        </div>
+
+        {/* Navigation & Action Controls */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          {/* Jump to This Week */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleGoToCurrentWeek}
+            className="text-xs font-bold border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 shadow-2xs"
+          >
+            Tuần này
+          </Button>
+
+          {/* Week Range Nav: ‹ 19/10 – 25/10/2026 › */}
+          <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#131b26] p-0.5 shadow-2xs">
+            <button
+              onClick={() => handleWeekChange('prev')}
+              aria-label="Tuần trước"
+              className="p-1.5 rounded-md text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="px-3 text-xs font-bold text-slate-800 dark:text-slate-200 tabular-nums">
+              {weekRangeLabel}
+            </span>
+            <button
+              onClick={() => handleWeekChange('next')}
+              aria-label="Tuần kế tiếp"
+              className="p-1.5 rounded-md text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Date Picker Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsDatePickerOpen(true)}
+            className="text-xs font-semibold border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            <CalendarDays className="w-3.5 h-3.5 mr-1 text-slate-500" />
+            <span className="hidden sm:inline">Chọn ngày</span>
+          </Button>
+
+          {/* Primary Action Button: Mở khung giờ */}
+          <Button
+            onClick={() => setIsCreateSlotOpen(true)}
+            className="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-lg shadow-sm shadow-teal-600/30 gap-1.5"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Mở khung giờ</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* 2. STATS RIBBON (Dải thống kê theo chuẩn thiết kế) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* Hero Card: Ca kế tiếp */}
+        <div className="rounded-xl border border-teal-200/90 dark:border-teal-800/80 bg-gradient-to-br from-teal-50/80 via-white to-white dark:from-teal-950/30 dark:via-[#131b26] dark:to-[#131b26] p-4 shadow-2xs space-y-2 relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-teal-800 dark:text-teal-300 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
+              Ca kế tiếp
+            </span>
+            {stats.nextSession && (
+              <button
+                onClick={() => setSelectedSession(stats.nextSession)}
+                className="text-[11px] font-semibold text-teal-700 dark:text-teal-400 hover:underline inline-flex items-center gap-0.5"
+              >
+                Chi tiết
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          {stats.nextSession ? (
+            <div className="space-y-1">
+              <div className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
+                {stats.nextSession.type === 'PT'
+                  ? `${stats.nextSession.studentName} (PT 1:1)`
+                  : `${stats.nextSession.title} (Lớp nhóm)`}
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 tabular-nums">
+                <Clock className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                {new Date(stats.nextSession.startTime).toLocaleTimeString('vi-VN', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}{' '}
+                –{' '}
+                {new Date(stats.nextSession.endTime).toLocaleTimeString('vi-VN', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}{' '}
+                · {new Date(stats.nextSession.startTime).toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' })}
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-400 italic pt-1">
+              Không có ca dạy nào sắp diễn ra trong tuần này.
+            </p>
+          )}
+        </div>
+
+        {/* Metric 2: Tổng số ca tuần */}
+        <div className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#131b26] p-4 shadow-2xs space-y-1">
+          <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            Tổng số ca dạy
+          </div>
+          <div className="text-2xl font-black text-slate-900 dark:text-slate-50 tabular-nums">
+            {stats.totalSessions} <span className="text-sm font-semibold text-slate-500">ca</span>
+          </div>
+          <div className="text-[11px] text-slate-400">
+            {stats.totalPt} ca PT 1:1 · {stats.totalGroup} lớp nhóm
+          </div>
+        </div>
+
+        {/* Metric 3: Tổng giờ dạy */}
+        <div className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#131b26] p-4 shadow-2xs space-y-1">
+          <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            Tổng thời lượng dạy
+          </div>
+          <div className="text-2xl font-black text-slate-900 dark:text-slate-50 tabular-nums">
+            {stats.totalHours} <span className="text-sm font-semibold text-slate-500">giờ</span>
+          </div>
+          <div className="text-[11px] text-slate-400">
+            Tính theo các buổi tập thực tế
+          </div>
+        </div>
+
+        {/* Metric 4: Số học viên PT */}
+        <div className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#131b26] p-4 shadow-2xs space-y-1">
+          <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            Học viên PT cá nhân
+          </div>
+          <div className="text-2xl font-black text-slate-900 dark:text-slate-50 tabular-nums">
+            {stats.ptStudentsCount} <span className="text-sm font-semibold text-slate-500">học viên</span>
+          </div>
+          <div className="text-[11px] text-slate-400">
+            Theo dõi giáo án và thể lực riêng
+          </div>
+        </div>
+      </div>
+
+      {/* 3. FILTER CHIPS & VIEW MODE SWITCHER */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+        {/* Category Filter Chips */}
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          {/* Tất cả */}
+          <button
+            onClick={() => setFilterType('ALL')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              filterType === 'ALL'
+                ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
+                : 'bg-white dark:bg-[#131b26] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'
+            }`}
+          >
+            Tất cả ({stats.totalSessions})
+          </button>
+
+          {/* PT 1:1 */}
+          <button
+            onClick={() => setFilterType('PT')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 ${
+              filterType === 'PT'
+                ? 'bg-purple-600 text-white shadow-2xs shadow-purple-600/30'
+                : 'bg-white dark:bg-[#131b26] text-purple-900 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60 hover:bg-purple-50/60'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-purple-500" />
+            PT 1:1 ({stats.totalPt})
+          </button>
+
+          {/* Lớp nhóm */}
+          <button
+            onClick={() => setFilterType('CLASS')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 ${
+              filterType === 'CLASS'
+                ? 'bg-emerald-600 text-white shadow-2xs shadow-emerald-600/30'
+                : 'bg-white dark:bg-[#131b26] text-emerald-900 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-50/60'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            Lớp nhóm ({stats.totalGroup})
+          </button>
+        </div>
+
+        {/* View Switcher: Lưới tuần / Lịch trình */}
+        <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#131b26] p-0.5 shadow-2xs self-start sm:self-auto">
+          <button
+            onClick={() => setViewMode('WEEK_GRID')}
+            className={`px-3 py-1 rounded-md text-xs font-bold transition-all inline-flex items-center gap-1.5 ${
+              viewMode === 'WEEK_GRID'
+                ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
+                : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-100'
+            }`}
+          >
+            <CalendarRange className="w-3.5 h-3.5" />
+            <span>Lưới tuần</span>
+          </button>
+          <button
+            onClick={() => setViewMode('AGENDA')}
+            className={`px-3 py-1 rounded-md text-xs font-bold transition-all inline-flex items-center gap-1.5 ${
+              viewMode === 'AGENDA'
+                ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
+                : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-100'
+            }`}
+          >
+            <CalendarDays className="w-3.5 h-3.5" />
+            <span>Lịch trình</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 4. MAIN SCHEDULE VIEW: Grid or Agenda */}
+      {viewMode === 'WEEK_GRID' ? (
+        <CoachCalendarGrid
+          currentWeek={currentWeek}
+          sessions={sessionList}
+          filterType={filterType}
+          onSelectSession={(session) => setSelectedSession(session)}
+          onOpenCreateSlot={() => setIsCreateSlotOpen(true)}
+        />
+      ) : (
+        <CoachAgendaView
+          currentWeek={currentWeek}
+          sessions={sessionList}
+          filterType={filterType}
+          onSelectSession={(session) => setSelectedSession(session)}
+          onOpenCreateSlot={() => setIsCreateSlotOpen(true)}
+        />
+      )}
+
+      {/* 5. SLIDE-OUT SESSION DETAIL DRAWER */}
+      <CoachSessionDrawer
+        session={selectedSession}
+        isOpen={Boolean(selectedSession)}
+        onClose={() => setSelectedSession(null)}
+        onCheckInStudent={(booking, sessionStartTime) => {
+          setSelectedBookingData({ booking, sessionStartTime });
+        }}
+        onEmergencyCancel={(data) => {
+          setCancelModalData(data);
+        }}
+        onSaveNotes={handleSaveNotes}
+      />
+
+      {/* 6. CREATE AVAILABILITY SLOT MODAL */}
+      <CreateSlotModal
+        isOpen={isCreateSlotOpen}
+        onClose={() => setIsCreateSlotOpen(false)}
+      />
+
+      {/* 7. ATTENDANCE CHECK-IN MODAL */}
+      {selectedBookingData && (
+        <AttendanceModal
+          booking={selectedBookingData.booking}
+          sessionStartTime={selectedBookingData.sessionStartTime}
+          isOpen={Boolean(selectedBookingData)}
+          onClose={() => setSelectedBookingData(null)}
+        />
+      )}
+
+      {/* 8. EMERGENCY CANCELLATION MODAL */}
+      {cancelModalData && (
+        <EmergencyCancelModal
+          scheduleId={cancelModalData.scheduleId}
+          bookingId={cancelModalData.bookingId}
+          sessionTitle={cancelModalData.sessionTitle}
+          sessionTime={cancelModalData.sessionTime}
+          isOpen={Boolean(cancelModalData)}
+          onClose={() => setCancelModalData(null)}
+        />
+      )}
+
+      {/* 9. DATE PICKER MODAL */}
+      <ScheduleDatePickerModal
+        isOpen={isDatePickerOpen}
+        onClose={() => setIsDatePickerOpen(false)}
+        selectedDate={currentWeek}
+        weekOffset={0}
+        onSelectDateAndWeek={(dateStr) => {
+          setCurrentWeek(getMondayOfWeek(dateStr));
+          setIsDatePickerOpen(false);
+        }}
+        sessionsByDate={sessionsByDate}
+      />
+    </div>
+  );
+};

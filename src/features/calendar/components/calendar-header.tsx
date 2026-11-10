@@ -1,13 +1,15 @@
-import React from 'react'
+import React, { useState } from 'react'
 import type { Discipline, CalendarSubscription } from '../types/calendar.types'
 import { formatRangeLabel } from '../utils/calendar-date.utils'
 import {
   ChevronLeft,
   ChevronRight,
   Calendar as CalendarIcon,
+  CalendarDays,
   Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { MemberDatePickerModal } from './member-date-picker-modal'
 
 const disciplineTagClass = (discipline: Discipline) => {
   const value = `${discipline.code} ${discipline.name}`.toLowerCase()
@@ -22,6 +24,7 @@ interface CalendarHeaderProps {
   currentWeek: string
   onWeekChange: (direction: 'prev' | 'next') => void
   onGoToCurrentWeek: () => void
+  onSelectWeek?: (weekMonday: string) => void
   selectedDisciplineId: string
   onDisciplineChange: (disciplineId: string) => void
   disciplines: Discipline[]
@@ -33,20 +36,22 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   currentWeek,
   onWeekChange,
   onGoToCurrentWeek,
+  onSelectWeek,
   selectedDisciplineId,
   onDisciplineChange,
   disciplines,
   subscriptions,
   isLoading,
 }) => {
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
 
   return (
     <header className="bg-white border-b border-slate-200 top-0 z-30 shadow-xs rounded-t-3xl">
       {/* Top Navbar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          {/* Navigation Controls: Today, Prev, Next, Range */}
-          <div className="flex relative items-center gap-2 sm:gap-3">
+          {/* Navigation Controls: Today, Prev, Next, Range, Select Date Modal */}
+          <div className="flex relative items-center gap-2 sm:gap-3 flex-wrap">
             <button
               type="button"
               onClick={onGoToCurrentWeek}
@@ -78,8 +83,28 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
               </button>
             </div>
 
+            {/* Chọn lịch modal button */}
+            <button
+              type="button"
+              onClick={() => setIsDatePickerOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-300/80 bg-emerald-50/70 text-xs font-bold text-emerald-800 hover:bg-emerald-100 active:bg-emerald-200 transition shadow-2xs cursor-pointer"
+              title="Chọn ngày / tuần để xem lịch tập"
+            >
+              <CalendarDays className="h-3.5 w-3.5 text-[#008b74]" />
+              <span>Chọn lịch</span>
+            </button>
           </div>
         </div>
+
+        {/* Modal Chọn Lịch */}
+        <MemberDatePickerModal
+          isOpen={isDatePickerOpen}
+          onClose={() => setIsDatePickerOpen(false)}
+          currentWeek={currentWeek}
+          onSelectWeek={(weekMonday) => {
+            onSelectWeek?.(weekMonday)
+          }}
+        />
 
         {/* Filter bar & Subscriptions Summary */}
         <div className="mt-3 pt-3 border-t border-slate-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
