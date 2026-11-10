@@ -153,6 +153,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         <div className="flex flex-wrap gap-1.5">
           <button
             type="button"
+            onClick={() => handleQuickFill("coach.alex@sportscenter.com")}
+            className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 transition-colors cursor-pointer shadow-xs"
+          >
+            HLV (Coach Alex)
+          </button>
+          <button
+            type="button"
             onClick={() => handleQuickFill("member.john@example.com")}
             className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-emerald-50 text-[#008b74] border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer"
           >

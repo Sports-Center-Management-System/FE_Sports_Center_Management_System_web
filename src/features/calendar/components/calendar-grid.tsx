@@ -14,7 +14,7 @@ import {
   formatBookingSlotRange,
   formatDateToYMD,
 } from '../utils/calendar-date.utils'
-import { Users, UserCheck, CheckCircle2, Clock, MapPin } from 'lucide-react'
+import { Users, UserCheck, CheckCircle2, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export type CalendarEventItem =
@@ -24,13 +24,22 @@ export type CalendarEventItem =
 
 const ACTIVE_BOOKING_STATUSES = new Set(['CONFIRMED', 'PENDING'])
 
-const disciplineEventClass = (code?: string, name?: string) => {
+// Modern curated discipline color styling (clean borders, no thick stripes)
+const getDisciplineCardClasses = (code?: string, name?: string) => {
   const value = `${code ?? ''} ${name ?? ''}`.toLowerCase()
-  if (value.includes('gym') || value.includes('fitness')) return 'bg-orange-50 border-orange-300 text-orange-950 hover:bg-orange-100 hover:border-orange-400'
-  if (value.includes('box') || value.includes('combat')) return 'bg-rose-50 border-rose-300 text-rose-950 hover:bg-rose-100 hover:border-rose-400'
-  if (value.includes('yoga')) return 'bg-violet-50 border-violet-300 text-violet-950 hover:bg-violet-100 hover:border-violet-400'
-  if (value.includes('dance') || value.includes('zumba')) return 'bg-amber-50 border-amber-300 text-amber-950 hover:bg-amber-100 hover:border-amber-400'
-  return 'bg-cyan-50 border-cyan-300 text-cyan-950 hover:bg-cyan-100 hover:border-cyan-400'
+  if (value.includes('gym') || value.includes('fitness')) {
+    return 'bg-sky-50/95 dark:bg-sky-950/40 text-sky-950 dark:text-sky-100 border border-sky-200/90 dark:border-sky-800/60 hover:bg-sky-100/95 dark:hover:bg-sky-950/60 focus:ring-sky-400'
+  }
+  if (value.includes('box') || value.includes('combat')) {
+    return 'bg-rose-50/95 dark:bg-rose-950/40 text-rose-950 dark:text-rose-100 border border-rose-200/90 dark:border-rose-800/60 hover:bg-rose-100/95 dark:hover:bg-rose-950/60 focus:ring-rose-400'
+  }
+  if (value.includes('yoga')) {
+    return 'bg-violet-50/95 dark:bg-violet-950/40 text-violet-950 dark:text-violet-100 border border-violet-200/90 dark:border-violet-800/60 hover:bg-violet-100/95 dark:hover:bg-violet-950/60 focus:ring-violet-400'
+  }
+  if (value.includes('dance') || value.includes('zumba')) {
+    return 'bg-amber-50/95 dark:bg-amber-950/40 text-amber-950 dark:text-amber-100 border border-amber-200/90 dark:border-amber-800/60 hover:bg-amber-100/95 dark:hover:bg-amber-950/60 focus:ring-amber-400'
+  }
+  return 'bg-teal-50/95 dark:bg-teal-950/40 text-teal-950 dark:text-teal-100 border border-teal-200/90 dark:border-teal-800/60 hover:bg-teal-100/95 dark:hover:bg-teal-950/60 focus:ring-teal-400'
 }
 
 interface CalendarGridProps {
@@ -51,20 +60,16 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
   const weekDays = getWeekDays(currentWeek)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
-  // The calendar begins at 05:00 so a 05:45 session is never hidden above the viewport.
+  // Scroll to top on week switch (never stuck or jumping)
   useEffect(() => {
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = 0
     }
   }, [currentWeek])
 
-  // Hours array from CALENDAR_START_HOUR to CALENDAR_END_HOUR
-  const hours = Array.from(
-    { length: CALENDAR_END_HOUR - CALENDAR_START_HOUR },
-    (_, i) => CALENDAR_START_HOUR + i,
-  )
-
-  const totalGridHeight = (CALENDAR_END_HOUR - CALENDAR_START_HOUR) * HOUR_HEIGHT_PX
+  const totalHours = CALENDAR_END_HOUR - CALENDAR_START_HOUR
+  const hours = Array.from({ length: totalHours }, (_, i) => CALENDAR_START_HOUR + i)
+  const totalGridHeight = totalHours * HOUR_HEIGHT_PX
   const currentTimeTop = getCurrentTimeTop()
 
   // Helper to check if a booking matches a schedule
@@ -81,154 +86,249 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
     )
   }
 
+  // Helper to format time range
+  const formatTimeRange = (startIso: string, endIso: string) => {
+    return `${formatTimeHHmm(startIso)} - ${formatTimeHHmm(endIso)}`
+  }
+
   // Render events for a specific day column
   const renderEventsForDay = (dateString: string) => {
     const events: React.ReactNode[] = []
 
-    // Retain active bookings even when the API omits the linked schedule or slot.
+    // 1. Group classes
+    schedules
+      .filter((s) => formatDateToYMD(new Date(s.startAt)) === dateString)
+      .forEach((schedule) => {
+        const { top, height } = calculateEventPosition(schedule.startAt, schedule.endAt)
+        const booking = getBookingForSchedule(schedule.id)
+        const isBooked = !!booking
+        const isFull = schedule.currentEnrolled >= schedule.capacity && !isBooked
+
+        const durationMin = Math.round(
+          (new Date(schedule.endAt).getTime() - new Date(schedule.startAt).getTime()) / 60000,
+        )
+        const isShort = durationMin <= 45 || height <= 52
+
+        const timeRangeStr = formatTimeRange(schedule.startAt, schedule.endAt)
+        const primaryTitle = schedule.class?.name || schedule.discipline?.name || 'Lớp tập nhóm'
+        const coachName = schedule.coach?.fullName ? `HLV: ${schedule.coach.fullName}` : 'HLV Trung tâm'
+        const roomName = schedule.room?.name ? schedule.room.name.split('·')[0].trim() : ''
+
+        events.push(
+          <div
+            key={`sched-${schedule.id}`}
+            onClick={() => onSelectEvent({ type: 'SCHEDULE', data: schedule, booking })}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onSelectEvent({ type: 'SCHEDULE', data: schedule, booking })
+              }
+            }}
+            style={{
+              top: `${top}px`,
+              height: `${height}px`,
+              left: '6px',
+              right: '6px',
+            }}
+            className={cn(
+              'absolute rounded-[10px] p-2 text-xs transition-all duration-150 cursor-pointer overflow-hidden shadow-2xs select-none group hover:shadow-md hover:scale-[1.01] hover:z-20 focus:outline-hidden focus:ring-2 z-10',
+              // Booked State (Green emerald theme)
+              isBooked &&
+                'bg-emerald-50/95 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 border border-emerald-300/90 dark:border-emerald-800 hover:bg-emerald-100/95 dark:hover:bg-emerald-950/60 focus:ring-emerald-400',
+              // Full State
+              !isBooked &&
+                isFull &&
+                'bg-slate-50/80 dark:bg-slate-900/40 text-slate-500 dark:text-slate-400 border border-slate-200/90 dark:border-slate-800 hover:bg-slate-100/90 focus:ring-slate-400',
+              // Available State (Themed by discipline)
+              !isBooked &&
+                !isFull &&
+                getDisciplineCardClasses(
+                  schedule.discipline?.code,
+                  schedule.discipline?.name || schedule.class?.name,
+                ),
+            )}
+          >
+            {isShort ? (
+              <div className="flex items-center justify-between h-full gap-1">
+                <div className="flex items-center gap-1.5 truncate">
+                  <span className="font-bold tabular-nums text-[11px] shrink-0">
+                    {timeRangeStr}
+                  </span>
+                  <span className="font-semibold truncate text-[11.5px]">{primaryTitle}</span>
+                </div>
+                {isBooked ? (
+                  <span className="inline-flex items-center text-[10px] font-bold text-emerald-700 dark:text-emerald-300 shrink-0">
+                    <CheckCircle2 className="w-3 h-3 mr-0.5 text-emerald-600" />
+                    Đã đặt
+                  </span>
+                ) : isFull ? (
+                  <span className="px-1.5 py-0.2 rounded text-[9.5px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
+                    Hết chỗ
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-medium shrink-0 opacity-80">
+                    {schedule.currentEnrolled}/{schedule.capacity}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col justify-between h-full space-y-1">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold tabular-nums text-[11.5px] tracking-tight">
+                      {timeRangeStr}
+                    </span>
+                    {isBooked ? (
+                      <span className="inline-flex items-center text-[10.5px] font-bold text-emerald-700 dark:text-emerald-300">
+                        <CheckCircle2 className="w-3.5 h-3.5 mr-0.5 text-emerald-600 dark:text-emerald-400" />
+                        Đã đặt
+                      </span>
+                    ) : isFull ? (
+                      <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-slate-200/90 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                        Hết chỗ
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-semibold bg-white/70 dark:bg-black/20 shadow-2xs text-slate-700 dark:text-slate-200">
+                        <Users className="w-3 h-3 text-slate-500" />
+                        {schedule.currentEnrolled}/{schedule.capacity}
+                      </span>
+                    )}
+                  </div>
+                  <div className="font-semibold text-[13px] leading-snug tracking-tight truncate mt-0.5">
+                    {primaryTitle}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-black/5 dark:border-white/5">
+                  <span className="truncate opacity-85 font-medium">{coachName}</span>
+                  {roomName && (
+                    <span className="text-[10px] opacity-75 truncate max-w-[85px] ml-1">
+                      {roomName}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>,
+        )
+      })
+
+    // 2. PT 1-1 Slots
+    ptSlots
+      .filter((pt) => formatDateToYMD(new Date(pt.startAt)) === dateString)
+      .forEach((ptSlot) => {
+        const { top, height } = calculateEventPosition(ptSlot.startAt, ptSlot.endAt)
+        const booking = getBookingForPtSlot(ptSlot.id)
+        const isBookedByMe = !!booking
+
+        // Hide slots booked by other members
+        if (ptSlot.isBooked && !isBookedByMe) {
+          return
+        }
+
+        const durationMin = Math.round(
+          (new Date(ptSlot.endAt).getTime() - new Date(ptSlot.startAt).getTime()) / 60000,
+        )
+        const isShort = durationMin <= 45 || height <= 52
+
+        const timeRangeStr = formatTimeRange(ptSlot.startAt, ptSlot.endAt)
+        const coachName = ptSlot.coach?.fullName || 'HLV'
+        const primaryTitle = `PT với HLV ${coachName}`
+        const roomName = 'Khu vực PT'
+
+        events.push(
+          <div
+            key={`pt-${ptSlot.id}`}
+            onClick={() => onSelectEvent({ type: 'PT_SLOT', data: ptSlot, booking })}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onSelectEvent({ type: 'PT_SLOT', data: ptSlot, booking })
+              }
+            }}
+            style={{
+              top: `${top}px`,
+              height: `${height}px`,
+              left: '6px',
+              right: '6px',
+            }}
+            className={cn(
+              'absolute rounded-[10px] p-2 text-xs transition-all duration-150 cursor-pointer overflow-hidden shadow-2xs select-none group hover:shadow-md hover:scale-[1.01] hover:z-20 focus:outline-hidden focus:ring-2 z-10',
+              // Booked State (Green emerald theme)
+              isBookedByMe &&
+                'bg-emerald-50/95 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 border border-emerald-300/90 dark:border-emerald-800 hover:bg-emerald-100/95 dark:hover:bg-emerald-950/60 focus:ring-emerald-400',
+              // Available PT State (Purple theme)
+              !isBookedByMe &&
+                'bg-purple-50/95 dark:bg-purple-950/40 text-purple-950 dark:text-purple-100 border border-purple-200/90 dark:border-purple-800/60 hover:bg-purple-100/95 dark:hover:bg-purple-950/60 focus:ring-purple-400',
+            )}
+          >
+            {isShort ? (
+              <div className="flex items-center justify-between h-full gap-1">
+                <div className="flex items-center gap-1.5 truncate">
+                  <span className="font-bold tabular-nums text-[11px] shrink-0">
+                    {timeRangeStr}
+                  </span>
+                  <span className="font-semibold truncate text-[11.5px]">{primaryTitle}</span>
+                </div>
+                {isBookedByMe ? (
+                  <span className="inline-flex items-center text-[10px] font-bold text-emerald-700 dark:text-emerald-300 shrink-0">
+                    <CheckCircle2 className="w-3 h-3 mr-0.5 text-emerald-600" />
+                    Đã đặt
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 shrink-0">
+                    PT 1-1
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col justify-between h-full space-y-1">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold tabular-nums text-[11.5px] tracking-tight">
+                      {timeRangeStr}
+                    </span>
+                    {isBookedByMe ? (
+                      <span className="inline-flex items-center text-[10.5px] font-bold text-emerald-700 dark:text-emerald-300">
+                        <CheckCircle2 className="w-3.5 h-3.5 mr-0.5 text-emerald-600 dark:text-emerald-400" />
+                        Đã đặt
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-bold bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200">
+                        <UserCheck className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+                        PT 1-1
+                      </span>
+                    )}
+                  </div>
+                  <div className="font-semibold text-[13px] leading-snug tracking-tight truncate mt-0.5">
+                    {primaryTitle}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-black/5 dark:border-white/5">
+                  <span className="truncate opacity-85 font-medium">Kèm riêng 1-1</span>
+                  {roomName && (
+                    <span className="text-[10px] opacity-75 truncate max-w-[85px] ml-1">
+                      {roomName}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>,
+        )
+      })
+
+    // 3. Standalone Bookings (retained even if matching slot is not found)
     const dayBookings = bookings.filter((b) => {
       const bDate = formatDateToYMD(new Date(b.startAt))
       return bDate === dateString && ACTIVE_BOOKING_STATUSES.has(b.status)
     })
 
-    const visiblePtSlots = ptSlots.filter((ptSlot) => {
-      if (formatDateToYMD(new Date(ptSlot.startAt)) !== dateString) return false
-      return !ptSlot.isBooked || !!getBookingForPtSlot(ptSlot.id)
-    })
-
-    // 1. Every discipline view includes group classes.
-    schedules
-        .filter((s) => formatDateToYMD(new Date(s.startAt)) === dateString)
-        .forEach((schedule) => {
-          const { top, height } = calculateEventPosition(schedule.startAt)
-          const booking = getBookingForSchedule(schedule.id)
-          const isBooked = !!booking
-          const isFull = schedule.currentEnrolled >= schedule.capacity && !isBooked
-
-          events.push(
-            <div
-              key={`sched-${schedule.id}`}
-              onClick={() => onSelectEvent({ type: 'SCHEDULE', data: schedule, booking })}
-              style={{
-                top: `${top}px`,
-                height: `${height}px`,
-              }}
-              className={cn(
-                'absolute inset-x-1 rounded-lg p-2 text-xs transition-all duration-150 cursor-pointer overflow-hidden border shadow-2xs select-none',
-                isBooked
-                  ? 'bg-emerald-500/15 border-emerald-500 text-emerald-950 ring-1 ring-emerald-500/30 hover:bg-emerald-500/25'
-                  : isFull
-                    ? 'bg-slate-100 border-slate-300 text-slate-500 opacity-75 hover:bg-slate-200'
-                    : `${disciplineEventClass(
-                        schedule.discipline?.code,
-                        schedule.discipline?.name || schedule.class?.name,
-                      )} hover:shadow-xs`,
-              )}
-            >
-              <div className="flex items-start justify-between gap-1 mb-1">
-                <span className="font-bold text-[11px] leading-tight line-clamp-1">
-                  {schedule.class?.name || schedule.discipline?.name || 'Lớp nhóm'}
-                </span>
-                {isBooked ? (
-                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-600 text-white shrink-0">
-                    <CheckCircle2 className="h-3 w-3" />
-                    ĐÃ ĐẶT
-                  </span>
-                ) : isFull ? (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-300 text-slate-700 shrink-0">
-                    Hết chỗ
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-0.5 px-1 py-0.2 rounded text-[10px] font-semibold bg-sky-200/80 text-sky-900 shrink-0">
-                    <Users className="h-3 w-3" />
-                    {schedule.currentEnrolled}/{schedule.capacity}
-                  </span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-1 text-[11px] opacity-85 mb-0.5 font-medium">
-                <Clock className="h-3 w-3 shrink-0" />
-                <span>
-                  {formatBookingSlotRange(schedule.startAt)}
-                </span>
-              </div>
-
-              {schedule.room && (
-                <div className="flex items-center gap-1 text-[10px] opacity-75 truncate">
-                  <MapPin className="h-2.5 w-2.5 shrink-0" />
-                  <span className="truncate">{schedule.room.name}</span>
-                </div>
-              )}
-
-              {schedule.coach && (
-                <div className="text-[10px] opacity-75 truncate">
-                  HLV: {schedule.coach.fullName}
-                </div>
-              )}
-            </div>,
-          )
-        })
-
-    // 2. PT slots from different coaches can share one time. Give every coach a lane
-    // instead of stacking their cards on top of one another.
-    visiblePtSlots
-        .forEach((ptSlot) => {
-          const { top, height } = calculateEventPosition(ptSlot.startAt)
-          const booking = getBookingForPtSlot(ptSlot.id)
-          const isBookedByMe = !!booking
-          const matchingSlots = visiblePtSlots.filter(
-            (slot) => slot.startAt === ptSlot.startAt,
-          )
-          const laneIndex = matchingSlots.findIndex((slot) => slot.id === ptSlot.id)
-          const laneWidth = 100 / matchingSlots.length
-
-          events.push(
-            <div
-              key={`pt-${ptSlot.id}`}
-              onClick={() => onSelectEvent({ type: 'PT_SLOT', data: ptSlot, booking })}
-              style={{
-                top: `${top}px`,
-                height: `${height}px`,
-                left: `calc(${laneIndex * laneWidth}% + 4px)`,
-                width: `calc(${laneWidth}% - 8px)`,
-              }}
-              className={cn(
-                'absolute rounded-lg p-2 text-xs transition-all duration-150 cursor-pointer overflow-hidden border shadow-2xs select-none',
-                isBookedByMe
-                  ? 'bg-emerald-500/15 border-emerald-500 text-emerald-950 ring-1 ring-emerald-500/30 hover:bg-emerald-500/25'
-                  : 'bg-purple-50 border-purple-300 text-purple-950 hover:bg-purple-100/90 hover:border-purple-400 hover:shadow-xs',
-              )}
-            >
-              <div className="flex items-start justify-between gap-1 mb-1">
-                <span className="font-bold text-[11px] leading-tight line-clamp-1 flex items-center gap-1">
-                  <UserCheck className="h-3 w-3 text-purple-600 shrink-0" />
-                  PT 1-1 Kèm riêng
-                </span>
-                {isBookedByMe && (
-                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-600 text-white shrink-0">
-                    <CheckCircle2 className="h-3 w-3" />
-                    ĐÃ ĐẶT
-                  </span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-1 text-[11px] opacity-85 mb-0.5 font-medium">
-                <Clock className="h-3 w-3 shrink-0" />
-                <span>
-                  {formatBookingSlotRange(ptSlot.startAt)}
-                </span>
-              </div>
-
-              {ptSlot.coach && (
-                <div className="text-[10px] opacity-85 font-medium truncate">
-                  HLV: {ptSlot.coach.fullName}
-                </div>
-              )}
-            </div>,
-          )
-        })
-
-    // 3. Keep the member's booking visible even if the matching source slot is absent.
     dayBookings
       .filter(
         (booking) =>
@@ -236,38 +336,73 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
           !ptSlots.some((slot) => slot.id === booking.coachAvailabilityId),
       )
       .forEach((b) => {
-        const { top, height } = calculateEventPosition(b.startAt)
+        const { top, height } = calculateEventPosition(b.startAt, b.endAt)
+        const durationMin = Math.round(
+          (new Date(b.endAt).getTime() - new Date(b.startAt).getTime()) / 60000,
+        )
+        const isShort = durationMin <= 45 || height <= 52
+
+        const timeRangeStr = formatTimeRange(b.startAt, b.endAt)
+        const primaryTitle =
+          b.schedule?.class?.name ||
+          b.discipline?.name ||
+          (b.type === 'PERSONAL_TRAINING' ? 'Buổi tập PT 1-1' : 'Lớp tập nhóm')
+        const coachName = b.coach?.fullName ? `HLV: ${b.coach.fullName}` : 'Đã xác nhận'
+
         events.push(
           <div
             key={`mine-${b.id}`}
             onClick={() => onSelectEvent({ type: 'BOOKING_STANDALONE', data: b })}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onSelectEvent({ type: 'BOOKING_STANDALONE', data: b })
+              }
+            }}
             style={{
               top: `${top}px`,
               height: `${height}px`,
+              left: '6px',
+              right: '6px',
             }}
-            className="absolute inset-x-1 rounded-lg p-2 text-xs bg-emerald-50 border-2 border-emerald-500 text-emerald-950 shadow-sm cursor-pointer hover:bg-emerald-100/80 transition select-none"
+            className="absolute rounded-[10px] p-2 text-xs transition-all duration-150 cursor-pointer overflow-hidden shadow-2xs select-none group hover:shadow-md hover:scale-[1.01] hover:z-20 focus:outline-hidden focus:ring-2 z-10 bg-emerald-50/95 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 border border-emerald-300/90 dark:border-emerald-800 hover:bg-emerald-100/95 dark:hover:bg-emerald-950/60 focus:ring-emerald-400"
           >
-            <div className="flex items-start justify-between gap-1 mb-1">
-              <span className="font-bold text-[11px] leading-tight line-clamp-1">
-                {b.schedule?.class?.name ||
-                  b.discipline?.name ||
-                  (b.type === 'PERSONAL_TRAINING' ? 'Buổi tập PT 1-1' : 'Lớp học nhóm')}
-              </span>
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-600 text-white shrink-0">
-                <CheckCircle2 className="h-3 w-3" />
-                ĐÃ ĐẶT
-              </span>
-            </div>
+            {isShort ? (
+              <div className="flex items-center justify-between h-full gap-1">
+                <div className="flex items-center gap-1.5 truncate">
+                  <span className="font-bold tabular-nums text-[11px] shrink-0">
+                    {timeRangeStr}
+                  </span>
+                  <span className="font-semibold truncate text-[11.5px]">{primaryTitle}</span>
+                </div>
+                <span className="inline-flex items-center text-[10px] font-bold text-emerald-700 dark:text-emerald-300 shrink-0">
+                  <CheckCircle2 className="w-3 h-3 mr-0.5 text-emerald-600" />
+                  Đã đặt
+                </span>
+              </div>
+            ) : (
+              <div className="flex flex-col justify-between h-full space-y-1">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold tabular-nums text-[11.5px] tracking-tight">
+                      {timeRangeStr}
+                    </span>
+                    <span className="inline-flex items-center text-[10.5px] font-bold text-emerald-700 dark:text-emerald-300">
+                      <CheckCircle2 className="w-3.5 h-3.5 mr-0.5 text-emerald-600 dark:text-emerald-400" />
+                      Đã đặt
+                    </span>
+                  </div>
+                  <div className="font-semibold text-[13px] leading-snug tracking-tight truncate mt-0.5">
+                    {primaryTitle}
+                  </div>
+                </div>
 
-            <div className="flex items-center gap-1 text-[11px] opacity-90 mb-0.5 font-semibold">
-              <Clock className="h-3 w-3 shrink-0" />
-              <span>
-                {formatBookingSlotRange(b.startAt)}
-              </span>
-            </div>
-
-            {b.coach && (
-              <div className="text-[10px] opacity-80 truncate">HLV: {b.coach.fullName}</div>
+                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-black/5 dark:border-white/5">
+                  <span className="truncate opacity-85 font-medium">{coachName}</span>
+                </div>
+              </div>
             )}
           </div>,
         )
@@ -277,107 +412,158 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-white overflow-hidden select-none">
-      {/* 7-Day Header Row (Sticky) */}
-      <div className="grid grid-cols-[60px_repeat(7,1fr)] sm:grid-cols-[72px_repeat(7,1fr)] border-b border-slate-200 bg-slate-50/80 sticky top-0 z-20 shadow-2xs">
-        {/* Time label corner */}
-        <div className="p-3 border-r border-slate-200 flex items-center justify-center text-[11px] font-semibold text-slate-400">
-          GMT+7
-        </div>
-
-        {/* Days of week */}
-        {weekDays.map((day) => (
-          <div
-            key={day.dateString}
-            className={cn(
-              'py-2.5 px-1 sm:px-2 text-center border-r border-slate-200 last:border-r-0 transition-colors',
-              day.isToday ? 'bg-emerald-50/60' : '',
-            )}
-          >
-            <div className="text-[11px] font-semibold uppercase text-slate-500 tracking-wider">
-              {day.dayLabel}
-            </div>
-            <div className="mt-1 flex items-center justify-center">
-              <span
-                className={cn(
-                  'inline-flex items-center justify-center text-sm sm:text-base font-bold transition-all',
-                  day.isToday
-                    ? 'h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-[#008b74] text-white shadow-sm'
-                    : 'text-slate-800',
-                )}
-              >
-                {day.dayNumber}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Calendar Scroll Area */}
+    <div className="flex flex-col flex-1 h-full min-h-[580px] bg-white dark:bg-[#131b26] rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-xs overflow-hidden">
+      {/* Scrollable Container with Sticky Day Headers */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-auto relative scroll-smooth bg-slate-50/30"
-        style={{ height: 'calc(100vh - 165px)' }}
+        className="flex-1 overflow-y-auto overflow-x-auto relative"
+        style={{ scrollBehavior: 'smooth' }}
       >
-        <div
-          className="grid grid-cols-[60px_repeat(7,1fr)] sm:grid-cols-[72px_repeat(7,1fr)] relative min-w-[700px]"
-          style={{ height: `${totalGridHeight}px` }}
-        >
-          {/* Time scale column */}
-          <div className="border-r border-slate-200 bg-slate-50/50 select-none">
-            {hours.map((hour) => (
-              <div
-                key={`hour-${hour}`}
-                style={{ height: `${HOUR_HEIGHT_PX}px` }}
-                className="relative border-b border-slate-200/60 text-right pr-2 sm:pr-3"
-              >
-                <span
-                  className={cn(
-                    'text-[11px] font-medium text-slate-400 block',
-                    hour === CALENDAR_START_HOUR ? 'translate-y-1' : '-translate-y-2',
-                  )}
-                >
-                  {String(hour).padStart(2, '0')}:00
-                </span>
-              </div>
-            ))}
+        <div className="min-w-[760px] relative">
+          {/* Sticky Header: GMT+7 Corner & 7 Day Columns */}
+          <div className="sticky top-0 z-30 flex border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-[#131b26]/95 backdrop-blur-md">
+            {/* GMT+7 corner */}
+            <div className="w-16 shrink-0 p-2.5 flex flex-col items-center justify-center border-r border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80">
+              <span className="text-[10.5px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                GMT+7
+              </span>
+              <Clock className="w-3.5 h-3.5 text-slate-400 mt-0.5" />
+            </div>
+
+            {/* 7 Days Columns Headers */}
+            <div className="grid grid-cols-7 flex-1 divide-x divide-slate-200 dark:divide-slate-800">
+              {weekDays.map((day) => {
+                // Count available classes + PT slots for this day
+                const daySchedules = schedules.filter(
+                  (s) => formatDateToYMD(new Date(s.startAt)) === day.dateString,
+                ).length
+                const dayPtSlots = ptSlots.filter((pt) => {
+                  if (formatDateToYMD(new Date(pt.startAt)) !== day.dateString) return false
+                  const booking = getBookingForPtSlot(pt.id)
+                  return !pt.isBooked || !!booking
+                }).length
+                const dayEventsCount = daySchedules + dayPtSlots
+
+                return (
+                  <div
+                    key={day.dateString}
+                    className={cn(
+                      'py-2.5 px-2 text-center transition-colors flex flex-col items-center justify-center',
+                      day.isToday
+                        ? 'bg-teal-500/[0.06] dark:bg-teal-400/[0.08]'
+                        : 'hover:bg-slate-50/50 dark:hover:bg-slate-900/30',
+                    )}
+                  >
+                    {/* Day label: Thứ 2, Thứ 3, etc. */}
+                    <span
+                      className={cn(
+                        'text-[11.5px] font-semibold tracking-tight',
+                        day.isToday
+                          ? 'text-teal-700 dark:text-teal-300 font-bold'
+                          : 'text-slate-500 dark:text-slate-400',
+                      )}
+                    >
+                      {day.dayLabel}
+                    </span>
+
+                    {/* Date Number Badge */}
+                    <div
+                      className={cn(
+                        'mt-1 w-7 h-7 flex items-center justify-center rounded-full text-xs transition-all tabular-nums',
+                        day.isToday
+                          ? 'bg-teal-600 dark:bg-teal-500 text-white font-bold shadow-xs'
+                          : 'text-slate-900 dark:text-slate-100 font-semibold',
+                      )}
+                    >
+                      {day.dayNumber}
+                    </div>
+
+                    {/* Daily Session Count Text ("X buổi", "Trống") */}
+                    <span
+                      className={cn(
+                        'mt-1 text-[11px] font-medium tracking-tight',
+                        dayEventsCount > 0
+                          ? 'text-slate-600 dark:text-slate-300'
+                          : 'text-slate-400/80 dark:text-slate-500 italic',
+                      )}
+                    >
+                      {dayEventsCount > 0 ? `${dayEventsCount} buổi` : 'Trống'}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
           </div>
 
-          {/* 7 Day Event Columns */}
-          {weekDays.map((day) => (
-            <div
-              key={`col-${day.dateString}`}
-              className={cn(
-                'relative border-r border-slate-200 last:border-r-0',
-                day.isToday ? 'bg-emerald-50/20' : '',
-              )}
-            >
-              {/* Horizontal grid lines for each hour */}
-              {hours.map((hour) => (
-                <div
-                  key={`grid-${day.dateString}-${hour}`}
-                  style={{ height: `${HOUR_HEIGHT_PX}px` }}
-                  className="border-b border-slate-200/60"
-                />
-              ))}
-
-              {/* Current time line if today */}
-              {day.isToday && currentTimeTop !== null && (
-                <div
-                  className="absolute left-0 right-0 z-10 pointer-events-none flex items-center"
-                  style={{ top: `${currentTimeTop}px` }}
-                >
-                  <span className="h-2 w-2 rounded-full bg-rose-500 -ml-1 ring-2 ring-white shadow-xs" />
-                  <div className="flex-1 h-0.5 bg-rose-500/80 shadow-xs" />
-                </div>
-              )}
-
-              {/* Event Cards for this day */}
-              <div className="absolute inset-0 pointer-events-auto">
-                {renderEventsForDay(day.dateString)}
-              </div>
+          {/* Grid Body */}
+          <div className="flex relative" style={{ height: `${totalGridHeight}px` }}>
+            {/* Time labels column (05:00 -> 23:00) */}
+            <div className="w-16 shrink-0 relative border-r border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/40 select-none">
+              {hours.map((hour, idx) => {
+                const hourFormatted = `${String(hour).padStart(2, '0')}:00`
+                return (
+                  <div
+                    key={`time-${hour}`}
+                    style={{
+                      top: `${idx * HOUR_HEIGHT_PX}px`,
+                    }}
+                    className={cn(
+                      'absolute w-full flex justify-center pr-1 pointer-events-none',
+                      idx === 0 ? 'translate-y-1' : '-translate-y-1/2',
+                    )}
+                  >
+                    <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 tabular-nums">
+                      {hourFormatted}
+                    </span>
+                  </div>
+                )
+              })}
             </div>
-          ))}
+
+            {/* 7 Columns for Days */}
+            <div className="grid grid-cols-7 flex-1 divide-x divide-slate-200 dark:divide-slate-800 relative">
+              {weekDays.map((day) => {
+                return (
+                  <div
+                    key={`col-${day.dateString}`}
+                    className={cn(
+                      'relative h-full transition-colors',
+                      day.isToday && 'bg-teal-500/[0.03] dark:bg-teal-400/[0.04]',
+                    )}
+                  >
+                    {/* Hourly Horizontal Grid Lines & 30-min auxiliary lines */}
+                    {hours.map((_, idx) => (
+                      <React.Fragment key={`gridlines-${idx}`}>
+                        {/* Main hourly line */}
+                        <div
+                          style={{ top: `${idx * HOUR_HEIGHT_PX}px` }}
+                          className="absolute inset-x-0 border-t border-slate-200/70 dark:border-slate-800/80 pointer-events-none"
+                        />
+                        {/* 30-minute faint dashed line */}
+                        <div
+                          style={{ top: `${idx * HOUR_HEIGHT_PX + HOUR_HEIGHT_PX / 2}px` }}
+                          className="absolute inset-x-0 border-t border-dashed border-slate-200/40 dark:border-slate-800/40 pointer-events-none"
+                        />
+                      </React.Fragment>
+                    ))}
+
+                    {/* Red line for current time (only on today's column) */}
+                    {day.isToday && currentTimeTop !== null && (
+                      <div
+                        style={{ top: `${currentTimeTop}px` }}
+                        className="absolute inset-x-0 border-t-2 border-rose-500 z-20 pointer-events-none flex items-center shadow-xs"
+                      >
+                        <div className="w-2.5 h-2.5 rounded-full bg-rose-500 -ml-1.5 shadow-sm shadow-rose-500/50" />
+                      </div>
+                    )}
+
+                    {/* Events for this day */}
+                    {renderEventsForDay(day.dateString)}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         </div>
       </div>
     </div>

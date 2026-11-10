@@ -42,8 +42,8 @@ export const CoachRequestsPage: React.FC = () => {
           <h1 className="text-2xl font-black tracking-tight text-white">
             Đơn Hủy Khẩn Cấp & Kỷ Luật
           </h1>
-          <p className="text-xs text-white mt-0.5">
-            Theo dõi tiến trình phê duyệt và hệ thống hỗ trợ ra quyết định kỷ luật
+          <p className="text-xs text-slate-500 mt-0.5">
+            Theo dõi tiến trình phê duyệt và các thông tin kỷ luật liên quan đến ca dạy
           </p>
         </div>
 
@@ -65,7 +65,20 @@ export const CoachRequestsPage: React.FC = () => {
         </Button>
       </div>
 
-        {/* Tabs */}
+      {/* Policy Explainer Banner */}
+      <div className="flex items-start gap-3 rounded-2xl border border-amber-200/90 bg-amber-50/70 p-4 text-xs text-amber-950 shadow-xs">
+        <Info className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+        <div className="space-y-1">
+          <p className="font-bold">Quy trình xử lý yêu cầu Hủy lịch khẩn cấp:</p>
+          <p className="text-[11px] leading-relaxed text-amber-900">
+            • <strong>Quản lý Trung Tâm:</strong> Trực tiếp duyệt trên hệ thống Dashboard.<br />
+            • <strong>Lễ tân trực quầy:</strong> Hỗ trợ phê duyệt khi Quản lý vắng mặt.<br />
+            • <strong>Quyền lợi học viên:</strong> 100% học viên bị ảnh hưởng đều được tự động hoàn lại 01 lượt tập đầy đủ.
+          </p>
+        </div>
+      </div>
+
+      {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
         <button
           onClick={() => setActiveTab('REQUESTS')}

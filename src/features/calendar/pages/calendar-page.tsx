@@ -131,6 +131,11 @@ export const CalendarPage: React.FC = () => {
     updateUrlParams(thisMonday, selectedDisciplineId)
   }
 
+  const handleSelectWeek = (newWeekMonday: string) => {
+    setCurrentWeek(newWeekMonday)
+    updateUrlParams(newWeekMonday, selectedDisciplineId)
+  }
+
   const handleDisciplineChange = (discId: string) => {
     setSelectedDisciplineId(discId)
     updateUrlParams(currentWeek, discId)
@@ -194,6 +199,7 @@ export const CalendarPage: React.FC = () => {
         currentWeek={currentWeek}
         onWeekChange={handleWeekChange}
         onGoToCurrentWeek={handleGoToCurrentWeek}
+        onSelectWeek={handleSelectWeek}
         selectedDisciplineId={selectedDisciplineId}
         onDisciplineChange={handleDisciplineChange}
         disciplines={disciplines}
@@ -220,7 +226,7 @@ export const CalendarPage: React.FC = () => {
             </button>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          <div className="flex-1 flex flex-col min-h-[600px]">
             <CalendarGrid
               currentWeek={currentWeek}
               schedules={calendarData?.schedules || []}
