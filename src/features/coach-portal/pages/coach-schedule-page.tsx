@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { coachPortalApi } from '../api/coach-portal-api';
 import { AttendanceModal } from '../components/attendance-modal';
+import { SessionWorkoutPlanModal } from '../components/session-workout-plan-modal';
 import { EmergencyCancelModal } from '../components/emergency-cancel-modal';
 import { ScheduleDatePickerModal } from '../components/schedule-date-picker-modal';
 import { CreateSlotModal } from '../components/create-slot-modal';
@@ -29,6 +30,7 @@ import type {
   CoachScheduleSession,
   ScheduleFilterType,
 } from '../types/coach-schedule.types';
+
 type ViewMode = 'WEEK_GRID' | 'AGENDA';
 
 export const CoachSchedulePage: React.FC = () => {
@@ -44,12 +46,20 @@ export const CoachSchedulePage: React.FC = () => {
 
   // Modals state
   const [isCreateSlotOpen, setIsCreateSlotOpen] = useState<boolean>(false);
+  const [createSlotDate, setCreateSlotDate] = useState<string | undefined>(undefined);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState<boolean>(false);
 
   // Attendance check-in modal
   const [selectedBookingData, setSelectedBookingData] = useState<{
     booking: StudentBookingItem;
     sessionStartTime: string;
+    sessionEndTime: string;
+  } | null>(null);
+
+  // Selected booking for workout plan modal (M14.1)
+  const [selectedWorkoutBookingData, setSelectedWorkoutBookingData] = useState<{
+    booking: StudentBookingItem;
+    sessionTitle: string;
   } | null>(null);
 
   // Emergency cancellation modal
@@ -72,47 +82,60 @@ export const CoachSchedulePage: React.FC = () => {
 
   // Map real API sessions to CoachScheduleSession
   const sessionList: CoachScheduleSession[] = useMemo(() => {
-    return apiSessions.map((apiS) => {
-      const isPt = apiS.type === 'PERSONAL_TRAINING';
-      const firstStudent = apiS.bookings?.[0]?.member;
-      const isEnded = new Date() > new Date(apiS.endTime);
-      const isLive = new Date() >= new Date(apiS.startTime) && new Date() <= new Date(apiS.endTime);
+    return apiSessions
+      .filter((apiS) => {
+        const isPt = apiS.type === 'PERSONAL_TRAINING';
+        const isSlotEmpty = isPt && !apiS.isBooked;
+        const isTimeArrived = new Date() >= new Date(apiS.startTime);
+        // Khi slot trống không có học viên mà đã đến giờ diễn ra (hoặc quá giờ) thì ẩn đi
+        if (isSlotEmpty && isTimeArrived) {
+          return false;
+        }
+        return true;
+      })
+      .map((apiS) => {
+        const isPt = apiS.type === 'PERSONAL_TRAINING';
+        const firstStudent = apiS.bookings?.[0]?.member;
+        const isEnded = new Date() > new Date(apiS.endTime);
+        const isSlotEmpty = isPt && !apiS.isBooked;
+        // Tuyệt đối không đánh dấu slot trống là LIVE ("Đang dạy")
+        const isLive = !isSlotEmpty && new Date() >= new Date(apiS.startTime) && new Date() <= new Date(apiS.endTime);
 
-      return {
-        id: apiS.id,
-        type: isPt ? (apiS.isBooked === false ? 'EMPTY_SLOT' : 'PT') : 'GROUP_CLASS',
-        status: apiS.isEmergencyCancelled
-          ? 'CANCELLED'
-          : isLive
-          ? 'LIVE'
-          : isEnded
-          ? 'COMPLETED'
-          : 'UPCOMING',
-        title: apiS.title,
-        studentName: firstStudent?.fullName || (isPt && apiS.isBooked ? 'Học viên PT' : undefined),
-        studentPhone: firstStudent?.phone,
-        studentAvatar: firstStudent?.avatarUrl,
-        roomName: apiS.roomName || 'Khu vực tập luyện',
-        startTime: apiS.startTime,
-        endTime: apiS.endTime,
-        capacity: apiS.capacity,
-        enrolledCount: apiS.currentEnrolled,
-        checkedInCount:
-          apiS.bookings?.filter(
-            (b) =>
-              b.status === 'ATTENDED' ||
-              b.attendance?.status === 'PRESENT' ||
-              b.attendance?.status === 'ATTENDED' ||
-              b.attendance?.status === 'LATE'
-          ).length || 0,
-        isSlotEmpty: isPt && !apiS.isBooked,
-        bookings: apiS.bookings,
-        scheduleId: apiS.scheduleId || undefined,
-        coachAvailabilityId: apiS.coachAvailabilityId || undefined,
-        isEmergencyCancelled: apiS.isEmergencyCancelled,
-        notes: notesMap[apiS.id] || '',
-      };
-    });
+        return {
+          id: apiS.id,
+          type: isPt ? (apiS.isBooked === false ? 'EMPTY_SLOT' : 'PT') : 'GROUP_CLASS',
+          status: apiS.isEmergencyCancelled
+            ? 'CANCELLED'
+            : isLive
+            ? 'LIVE'
+            : isEnded
+            ? 'COMPLETED'
+            : 'UPCOMING',
+          title: apiS.title,
+          studentName: firstStudent?.fullName || (isPt && apiS.isBooked ? 'Học viên PT' : undefined),
+          studentPhone: firstStudent?.phone,
+          studentAvatar: firstStudent?.avatarUrl,
+          roomName: apiS.roomName || 'Khu vực tập luyện',
+          startTime: apiS.startTime,
+          endTime: apiS.endTime,
+          capacity: apiS.capacity,
+          enrolledCount: apiS.currentEnrolled,
+          checkedInCount:
+            apiS.bookings?.filter(
+              (b) =>
+                b.status === 'ATTENDED' ||
+                b.attendance?.status === 'PRESENT' ||
+                b.attendance?.status === 'ATTENDED' ||
+                b.attendance?.status === 'LATE'
+            ).length || 0,
+          isSlotEmpty,
+          bookings: apiS.bookings,
+          scheduleId: apiS.scheduleId || undefined,
+          coachAvailabilityId: apiS.coachAvailabilityId || undefined,
+          isEmergencyCancelled: apiS.isEmergencyCancelled,
+          notes: notesMap[apiS.id] || '',
+        };
+      });
   }, [apiSessions, notesMap]);
 
   // Handle saving notes on session
@@ -133,53 +156,46 @@ export const CoachSchedulePage: React.FC = () => {
     setCurrentWeek(getMondayOfWeek());
   };
 
-  // Compute 7 days for current week
   const weekRangeLabel = useMemo(() => {
     return formatRangeLabel(currentWeek);
   }, [currentWeek]);
 
-  // Active sessions within the current week
+  // Filter sessions that belong to the selected week (Monday to Sunday)
   const currentWeekSessions = useMemo(() => {
-    const monday = parseYMDToDate(currentWeek);
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    sunday.setHours(23, 59, 59, 999);
-
-    const monTime = monday.getTime();
-    const sunTime = sunday.getTime();
+    const startOfWeek = parseYMDToDate(currentWeek);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(endOfWeek.getDate() + 7);
 
     return sessionList.filter((s) => {
-      const sTime = new Date(s.startTime).getTime();
-      return sTime >= monTime && sTime <= sunTime;
+      const sDate = new Date(s.startTime);
+      return sDate >= startOfWeek && sDate < endOfWeek;
     });
   }, [sessionList, currentWeek]);
 
-  // Stats ribbon metrics (Strictly exclude empty slots and empty slot duration)
+  // Statistics calculation
   const stats = useMemo(() => {
-    const bookedSessions = currentWeekSessions.filter(
-      (s) => s.type !== 'EMPTY_SLOT' && !s.isSlotEmpty
-    );
-    const totalSessions = bookedSessions.length;
-    const ptSessions = bookedSessions.filter((s) => s.type === 'PT');
-    const groupSessions = bookedSessions.filter((s) => s.type === 'GROUP_CLASS');
+    const totalSessions = currentWeekSessions.length;
+    const ptSessions = currentWeekSessions.filter((s) => s.type === 'PT');
+    const groupSessions = currentWeekSessions.filter((s) => s.type === 'GROUP_CLASS');
 
-    // Total teaching hours (only booked sessions)
-    let totalMinutes = 0;
-    bookedSessions.forEach((s) => {
+    // Total actual teaching hours
+    const totalMinutes = currentWeekSessions.reduce((acc, s) => {
       const start = new Date(s.startTime).getTime();
       const end = new Date(s.endTime).getTime();
-      totalMinutes += Math.max(0, (end - start) / 60000);
+      return acc + (end - start) / (1000 * 60);
+    }, 0);
+    const totalHours = Math.round(totalMinutes / 60);
+
+    // Count distinct PT students
+    const ptStudentNames = new Set<string>();
+    ptSessions.forEach((s) => {
+      if (s.studentName) ptStudentNames.add(s.studentName);
     });
-    const totalHours = (totalMinutes / 60).toFixed(1);
 
-    // Unique PT students
-    const ptStudentNames = new Set(
-      ptSessions.map((s) => s.studentName).filter(Boolean)
-    );
-
-    // Next upcoming session (earliest upcoming or live session)
-    const upcomingSessions = bookedSessions
-      .filter((s) => s.status === 'UPCOMING' || s.status === 'LIVE')
+    // Next upcoming session
+    const now = new Date();
+    const upcomingSessions = currentWeekSessions
+      .filter((s) => new Date(s.startTime) > now && s.status !== 'CANCELLED')
       .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
     const nextSession = upcomingSessions[0] || null;
@@ -231,7 +247,7 @@ export const CoachSchedulePage: React.FC = () => {
             variant="outline"
             size="sm"
             onClick={handleGoToCurrentWeek}
-            className="text-xs font-bold border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 shadow-2xs"
+            className="text-xs font-bold border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 shadow-2xs cursor-pointer"
           >
             Tuần này
           </Button>
@@ -241,7 +257,7 @@ export const CoachSchedulePage: React.FC = () => {
             <button
               onClick={() => handleWeekChange('prev')}
               aria-label="Tuần trước"
-              className="p-1.5 rounded-md text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="p-1.5 rounded-md text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -251,47 +267,47 @@ export const CoachSchedulePage: React.FC = () => {
             <button
               onClick={() => handleWeekChange('next')}
               aria-label="Tuần kế tiếp"
-              className="p-1.5 rounded-md text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="p-1.5 rounded-md text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Date Picker Button */}
+          {/* Open Date Picker Modal */}
           <Button
             variant="outline"
             size="sm"
             onClick={() => setIsDatePickerOpen(true)}
-            className="text-xs font-semibold border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="text-xs font-bold border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 shadow-2xs gap-1.5 cursor-pointer"
           >
-            <CalendarDays className="w-3.5 h-3.5 mr-1 text-slate-500" />
-            <span className="hidden sm:inline">Chọn ngày</span>
+            <CalendarDays className="w-3.5 h-3.5 text-slate-500" />
+            <span>Chọn ngày</span>
           </Button>
 
-          {/* Primary Action Button: Mở khung giờ */}
+          {/* Mở slot nhận học viên PT */}
           <Button
+            size="sm"
             onClick={() => setIsCreateSlotOpen(true)}
-            className="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-lg shadow-sm shadow-teal-600/30 gap-1.5"
+            className="bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs gap-1.5 shadow-xs shadow-teal-600/20 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Mở khung giờ</span>
+            <span>Mở slot PT</span>
           </Button>
         </div>
       </div>
 
-      {/* 2. STATS RIBBON (Dải thống kê theo chuẩn thiết kế) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* Hero Card: Ca kế tiếp */}
-        <div className="rounded-xl border border-teal-200/90 dark:border-teal-800/80 bg-gradient-to-br from-teal-50/80 via-white to-white dark:from-teal-950/30 dark:via-[#131b26] dark:to-[#131b26] p-4 shadow-2xs space-y-2 relative overflow-hidden">
+      {/* 2. STATS & METRICS SUMMARY CARDS */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* Metric 1: Ca kế tiếp */}
+        <div className="col-span-2 sm:col-span-1 rounded-xl border border-teal-200/90 dark:border-teal-800/60 bg-gradient-to-br from-teal-50/60 to-white dark:from-teal-950/20 dark:to-[#131b26] p-4 shadow-2xs space-y-1">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-teal-800 dark:text-teal-300 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
+            <span className="text-[11px] font-bold text-teal-800 dark:text-teal-300 uppercase tracking-wider">
               Ca kế tiếp
             </span>
             {stats.nextSession && (
               <button
                 onClick={() => setSelectedSession(stats.nextSession)}
-                className="text-[11px] font-semibold text-teal-700 dark:text-teal-400 hover:underline inline-flex items-center gap-0.5"
+                className="text-[11px] font-semibold text-teal-700 dark:text-teal-400 hover:underline inline-flex items-center gap-0.5 cursor-pointer"
               >
                 Chi tiết
                 <ChevronRight className="w-3 h-3" />
@@ -303,7 +319,7 @@ export const CoachSchedulePage: React.FC = () => {
             <div className="space-y-1">
               <div className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
                 {stats.nextSession.type === 'PT'
-                  ? `${stats.nextSession.studentName} (PT 1:1)`
+                  ? `${stats.nextSession.studentName || 'Học viên PT'} (PT 1:1)`
                   : `${stats.nextSession.title} (Lớp nhóm)`}
               </div>
               <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 tabular-nums">
@@ -374,7 +390,7 @@ export const CoachSchedulePage: React.FC = () => {
           {/* Tất cả */}
           <button
             onClick={() => setFilterType('ALL')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               filterType === 'ALL'
                 ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
                 : 'bg-white dark:bg-[#131b26] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'
@@ -386,7 +402,7 @@ export const CoachSchedulePage: React.FC = () => {
           {/* PT 1:1 */}
           <button
             onClick={() => setFilterType('PT')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
               filterType === 'PT'
                 ? 'bg-purple-600 text-white shadow-2xs shadow-purple-600/30'
                 : 'bg-white dark:bg-[#131b26] text-purple-900 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60 hover:bg-purple-50/60'
@@ -399,7 +415,7 @@ export const CoachSchedulePage: React.FC = () => {
           {/* Lớp nhóm */}
           <button
             onClick={() => setFilterType('CLASS')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
               filterType === 'CLASS'
                 ? 'bg-emerald-600 text-white shadow-2xs shadow-emerald-600/30'
                 : 'bg-white dark:bg-[#131b26] text-emerald-900 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-50/60'
@@ -414,7 +430,7 @@ export const CoachSchedulePage: React.FC = () => {
         <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#131b26] p-0.5 shadow-2xs self-start sm:self-auto">
           <button
             onClick={() => setViewMode('WEEK_GRID')}
-            className={`px-3 py-1 rounded-md text-xs font-bold transition-all inline-flex items-center gap-1.5 ${
+            className={`px-3 py-1 rounded-md text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
               viewMode === 'WEEK_GRID'
                 ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
                 : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-100'
@@ -425,7 +441,7 @@ export const CoachSchedulePage: React.FC = () => {
           </button>
           <button
             onClick={() => setViewMode('AGENDA')}
-            className={`px-3 py-1 rounded-md text-xs font-bold transition-all inline-flex items-center gap-1.5 ${
+            className={`px-3 py-1 rounded-md text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
               viewMode === 'AGENDA'
                 ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
                 : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-100'
@@ -444,7 +460,10 @@ export const CoachSchedulePage: React.FC = () => {
           sessions={sessionList}
           filterType={filterType}
           onSelectSession={(session) => setSelectedSession(session)}
-          onOpenCreateSlot={() => setIsCreateSlotOpen(true)}
+          onOpenCreateSlot={(dateStr) => {
+            setCreateSlotDate(dateStr);
+            setIsCreateSlotOpen(true);
+          }}
         />
       ) : (
         <CoachAgendaView
@@ -452,7 +471,10 @@ export const CoachSchedulePage: React.FC = () => {
           sessions={sessionList}
           filterType={filterType}
           onSelectSession={(session) => setSelectedSession(session)}
-          onOpenCreateSlot={() => setIsCreateSlotOpen(true)}
+          onOpenCreateSlot={(dateStr) => {
+            setCreateSlotDate(dateStr);
+            setIsCreateSlotOpen(true);
+          }}
         />
       )}
 
@@ -461,8 +483,18 @@ export const CoachSchedulePage: React.FC = () => {
         session={selectedSession}
         isOpen={Boolean(selectedSession)}
         onClose={() => setSelectedSession(null)}
-        onCheckInStudent={(booking, sessionStartTime) => {
-          setSelectedBookingData({ booking, sessionStartTime });
+        onCheckInStudent={(booking, sessionStartTime, sessionEndTime) => {
+          setSelectedBookingData({
+            booking,
+            sessionStartTime,
+            sessionEndTime: sessionEndTime || selectedSession?.endTime || '',
+          });
+        }}
+        onOpenWorkoutPlan={(booking, sessionTitle) => {
+          setSelectedWorkoutBookingData({
+            booking,
+            sessionTitle,
+          });
         }}
         onEmergencyCancel={(data) => {
           setCancelModalData(data);
@@ -473,7 +505,11 @@ export const CoachSchedulePage: React.FC = () => {
       {/* 6. CREATE AVAILABILITY SLOT MODAL */}
       <CreateSlotModal
         isOpen={isCreateSlotOpen}
-        onClose={() => setIsCreateSlotOpen(false)}
+        initialDate={createSlotDate}
+        onClose={() => {
+          setIsCreateSlotOpen(false);
+          setCreateSlotDate(undefined);
+        }}
       />
 
       {/* 7. ATTENDANCE CHECK-IN MODAL */}
@@ -481,12 +517,23 @@ export const CoachSchedulePage: React.FC = () => {
         <AttendanceModal
           booking={selectedBookingData.booking}
           sessionStartTime={selectedBookingData.sessionStartTime}
+          sessionEndTime={selectedBookingData.sessionEndTime}
           isOpen={Boolean(selectedBookingData)}
           onClose={() => setSelectedBookingData(null)}
         />
       )}
 
-      {/* 8. EMERGENCY CANCELLATION MODAL */}
+      {/* 8. SESSION WORKOUT PLAN MODAL (M14.1) */}
+      {selectedWorkoutBookingData && (
+        <SessionWorkoutPlanModal
+          booking={selectedWorkoutBookingData.booking}
+          sessionTitle={selectedWorkoutBookingData.sessionTitle}
+          isOpen={Boolean(selectedWorkoutBookingData)}
+          onClose={() => setSelectedWorkoutBookingData(null)}
+        />
+      )}
+
+      {/* 9. EMERGENCY CANCELLATION MODAL */}
       {cancelModalData && (
         <EmergencyCancelModal
           scheduleId={cancelModalData.scheduleId}
@@ -498,7 +545,7 @@ export const CoachSchedulePage: React.FC = () => {
         />
       )}
 
-      {/* 9. DATE PICKER MODAL */}
+      {/* 10. DATE PICKER MODAL */}
       <ScheduleDatePickerModal
         isOpen={isDatePickerOpen}
         onClose={() => setIsDatePickerOpen(false)}

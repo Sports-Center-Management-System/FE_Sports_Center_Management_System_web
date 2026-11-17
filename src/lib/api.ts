@@ -110,7 +110,8 @@ export async function request<T>(
       response = await fetch(`${apiBaseUrl}${path}`, {
         ...init,
         headers: {
-          ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+          // FormData sets its own multipart boundary.
+          ...(init.body && !(init.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
           ...init.headers,
         },

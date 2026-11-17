@@ -19,6 +19,7 @@ import { coachPortalApi } from '../api/coach-portal-api';
 interface CreateSlotModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialDate?: string;
 }
 
 interface DutyShiftPreset {
@@ -31,7 +32,15 @@ interface DutyShiftPreset {
 }
 
 const DUTY_PRESETS: DutyShiftPreset[] = [
-  // Morning Prime
+  // Morning Shifts
+  {
+    period: 'MORNING',
+    label: '06:00 - 10:00 (4h)',
+    start: '06:00',
+    end: '10:00',
+    isPeak: true,
+    desc: 'Ca trực sáng dài 4 tiếng (06h - 10h)',
+  },
   {
     period: 'MORNING',
     label: '06:00 - 07:00',
@@ -54,7 +63,14 @@ const DUTY_PRESETS: DutyShiftPreset[] = [
     end: '09:00',
     desc: 'Ca sáng năng lượng',
   },
-  // Lunch Express
+  {
+    period: 'MORNING',
+    label: '09:00 - 10:00',
+    start: '09:00',
+    end: '10:00',
+    desc: 'Ca giữa buổi sáng',
+  },
+  // Lunch Shifts
   {
     period: 'LUNCH',
     label: '11:30 - 12:30',
@@ -69,7 +85,22 @@ const DUTY_PRESETS: DutyShiftPreset[] = [
     end: '13:30',
     desc: 'Duy trì vóc dáng đầu giờ chiều',
   },
-  // Evening Peak
+  // Afternoon & Evening Shifts
+  {
+    period: 'EVENING',
+    label: '14:00 - 18:00 (4h)',
+    start: '14:00',
+    end: '18:00',
+    desc: 'Ca trực chiều dài 4 tiếng (14h - 18h)',
+  },
+  {
+    period: 'EVENING',
+    label: '17:00 - 21:00 (4h)',
+    start: '17:00',
+    end: '21:00',
+    isPeak: true,
+    desc: 'Ca trực tối dài 4 tiếng (17h - 21h)',
+  },
   {
     period: 'EVENING',
     label: '17:00 - 18:00',
@@ -100,29 +131,91 @@ const DUTY_PRESETS: DutyShiftPreset[] = [
     end: '21:00',
     desc: 'Ca muộn xả stress cuối ngày',
   },
+  {
+    period: 'EVENING',
+    label: '21:00 - 22:00',
+    start: '21:00',
+    end: '22:00',
+    desc: 'Ca đêm dành cho hội viên tập muộn',
+  },
 ];
+
+// 24-hour time options from 05:00 to 23:00 (30-minute intervals)
+const TIME_OPTIONS_24H: string[] = [];
+for (let h = 5; h <= 23; h++) {
+  const hh = String(h).padStart(2, '0');
+  TIME_OPTIONS_24H.push(`${hh}:00`);
+  if (h < 23) {
+    TIME_OPTIONS_24H.push(`${hh}:30`);
+  }
+}
+
+const format24hInput = (val: string): string => {
+  const trimmed = val.trim();
+  if (/^\d{1,2}$/.test(trimmed)) {
+    const h = parseInt(trimmed, 10);
+    if (h >= 0 && h <= 23) return `${String(h).padStart(2, '0')}:00`;
+  }
+  const match = trimmed.match(/^(\d{1,2}):(\d{1,2})$/);
+  if (match) {
+    const h = parseInt(match[1], 10);
+    const m = parseInt(match[2], 10);
+    if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+  }
+  return trimmed;
+};
 
 export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
   isOpen,
   onClose,
+  initialDate,
 }) => {
   const queryClient = useQueryClient();
 
-  // Tomorrow by default
+  // Time calculations to prevent past slot creation
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+  // Tomorrow by default if no valid initial date
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const defaultDateStr = tomorrow.toISOString().slice(0, 10);
 
-  const [date, setDate] = useState<string>(defaultDateStr);
+  const [date, setDate] = useState<string>(
+    initialDate && initialDate >= todayStr ? initialDate : defaultDateStr
+  );
   const [startTime, setStartTime] = useState<string>('07:00');
   const [endTime, setEndTime] = useState<string>('08:00');
   const [selectedPeriod, setSelectedPeriod] = useState<'ALL' | 'MORNING' | 'LUNCH' | 'EVENING'>('ALL');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Sync date when initialDate changes
+  React.useEffect(() => {
+    if (initialDate && initialDate >= todayStr) {
+      setDate(initialDate);
+    }
+  }, [initialDate, todayStr]);
+
+  const isPastDate = date < todayStr;
+  const isToday = date === todayStr;
+  const [sh, sm] = (startTime || '').split(':').map(Number);
+  const isStartTimePast = isToday && (!isNaN(sh) && !isNaN(sm) ? sh * 60 + sm <= currentMinutes : false);
+  const isSlotInPast = isPastDate || isStartTimePast;
+
   const mutation = useMutation({
     mutationFn: async () => {
-      const startDateTime = new Date(`${date}T${startTime}:00`);
-      const endDateTime = new Date(`${date}T${endTime}:00`);
+      const normStart = format24hInput(startTime);
+      const normEnd = format24hInput(endTime);
+      const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+      if (!timeRegex.test(normStart) || !timeRegex.test(normEnd)) {
+        throw new Error('Vui lòng nhập định dạng giờ 24h hợp lệ (HH:mm, ví dụ 06:00, 14:00, 22:00).');
+      }
+
+      const startDateTime = new Date(`${date}T${normStart}:00`);
+      const endDateTime = new Date(`${date}T${normEnd}:00`);
 
       if (startDateTime <= new Date()) {
         throw new Error('Khung giờ rảnh mở mới bắt buộc phải nằm ở tương lai.');
@@ -144,8 +237,18 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
       onClose();
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message || err.message || 'Lỗi khi mở khung giờ rảnh';
-      setErrorMessage(typeof msg === 'string' ? msg : JSON.stringify(msg));
+      let msg = err.response?.data?.message || err.message || 'Lỗi khi mở khung giờ rảnh';
+      if (typeof msg !== 'string') msg = JSON.stringify(msg);
+
+      if (msg.includes('SCHEDULE_OR_DATA_CONFLICT') || msg.includes('23P01')) {
+        msg =
+          'Trùng lịch dạy: Khung giờ này bị trùng lặp hoặc giao thoa với ca rảnh/lịch dạy lớp khác của bạn. Hệ thống cơ sở dữ liệu không cho phép 1 HLV mở 2 ca trùng/chồng chéo thời gian.';
+      } else if (msg.includes('SLOT_MUST_BE_FUTURE')) {
+        msg = 'Khung giờ mở slot rảnh bắt buộc phải ở thời điểm tương lai.';
+      } else if (msg.includes('SLOT_ALREADY_BOOKED')) {
+        msg = 'Slot đã có học viên đặt lịch, không thể thay đổi.';
+      }
+      setErrorMessage(msg);
     },
   });
 
@@ -190,6 +293,18 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
             <div className="flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-800">
               <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
               <span>{errorMessage}</span>
+            </div>
+          )}
+
+          {isSlotInPast && (
+            <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
+              <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+              <div>
+                <span className="font-bold">Khung giờ không hợp lệ: </span>
+                {isPastDate
+                  ? 'Ngày được chọn đã nằm trong quá khứ.'
+                  : `Khung giờ bắt đầu (${startTime}) đã qua thời điểm hiện tại. Vui lòng chọn khung giờ ở tương lai.`}
+              </div>
             </div>
           )}
 
@@ -272,63 +387,46 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
               {filteredPresets.map((preset) => {
                 const isSelected = startTime === preset.start && endTime === preset.end;
+                const [psh, psm] = preset.start.split(':').map(Number);
+                const isPresetPast = isPastDate || (isToday && (psh * 60 + psm <= currentMinutes));
+
                 return (
                   <button
                     key={preset.label}
                     type="button"
+                    disabled={isPresetPast}
                     onClick={() => {
-                      setStartTime(preset.start);
-                      setEndTime(preset.end);
+                      if (!isPresetPast) {
+                        setStartTime(preset.start);
+                        setEndTime(preset.end);
+                      }
                     }}
                     className={`rounded-xl border p-2.5 text-left transition-all flex flex-col justify-between ${
-                      isSelected
+                      isPresetPast
+                        ? 'border-slate-200 bg-slate-50 text-slate-400 opacity-50 cursor-not-allowed'
+                        : isSelected
                         ? 'border-emerald-600 bg-emerald-50/80 ring-2 ring-emerald-500/20 text-emerald-950'
                         : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-black">{preset.label}</span>
-                      {preset.isPeak && (
+                      {isPresetPast ? (
+                        <span className="rounded-md bg-slate-200 text-slate-500 text-[9px] font-bold px-1.5 py-0.5">
+                          Đã qua giờ
+                        </span>
+                      ) : preset.isPeak ? (
                         <span className="rounded-md bg-amber-100 text-amber-900 text-[9px] font-black uppercase px-1.5 py-0.2">
                           Giờ vàng ★
                         </span>
-                      )}
+                      ) : null}
                     </div>
-                    <p className="text-[10px] text-slate-500 mt-1 line-clamp-1">{preset.desc}</p>
+                    <p className="text-[10px] text-slate-500 mt-1 line-clamp-1">
+                      {isPresetPast ? 'Đã quá thời điểm hiện tại' : preset.desc}
+                    </p>
                   </button>
                 );
               })}
-            </div>
-          </div>
-
-          {/* Custom Time Selection (Fine-tune) */}
-          <div className="pt-2 border-t border-slate-100">
-            <span className="text-[11px] font-bold text-slate-500 block mb-2">
-              Hoặc tùy chỉnh giờ cụ thể:
-            </span>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                  Giờ bắt đầu
-                </label>
-                <input
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-800 focus:border-emerald-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                  Giờ kết thúc
-                </label>
-                <input
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-800 focus:border-emerald-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20"
-                />
-              </div>
             </div>
           </div>
         </div>
@@ -338,14 +436,18 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
           <div className="text-xs font-semibold text-slate-600">
             Ca tập: <span className="text-emerald-700 font-bold">{startTime} - {endTime}</span>
             {(() => {
-              const [sh, sm] = startTime.split(':').map(Number);
-              const [eh, em] = endTime.split(':').map(Number);
-              const diff = (eh * 60 + em) - (sh * 60 + sm);
-              if (diff > 0) {
-                const h = Math.floor(diff / 60);
-                const m = diff % 60;
-                const durStr = h > 0 && m > 0 ? `${h} giờ ${m} phút` : h > 0 ? `${h} giờ` : `${m} phút`;
-                return <span className="text-slate-500 font-medium"> ({durStr})</span>;
+              const normStart = format24hInput(startTime);
+              const normEnd = format24hInput(endTime);
+              const [sh, sm] = normStart.split(':').map(Number);
+              const [eh, em] = normEnd.split(':').map(Number);
+              if (!isNaN(sh) && !isNaN(sm) && !isNaN(eh) && !isNaN(em)) {
+                const diff = eh * 60 + em - (sh * 60 + sm);
+                if (diff > 0) {
+                  const h = Math.floor(diff / 60);
+                  const m = diff % 60;
+                  const durStr = h > 0 && m > 0 ? `${h} giờ ${m} phút` : h > 0 ? `${h} giờ` : `${m} phút`;
+                  return <span className="text-slate-500 font-medium"> ({durStr})</span>;
+                }
               }
               return null;
             })()}
@@ -366,15 +468,19 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
             <Button
               type="button"
               onClick={() => mutation.mutate()}
-              disabled={mutation.isPending}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold gap-1.5 shadow-sm shadow-emerald-600/20"
+              disabled={mutation.isPending || isSlotInPast}
+              className={`text-xs font-bold gap-1.5 shadow-sm transition-all ${
+                isSlotInPast
+                  ? 'bg-slate-300 text-slate-500 cursor-not-allowed hover:bg-slate-300 shadow-none'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+              }`}
             >
               {mutation.isPending ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
                 <Plus className="h-3.5 w-3.5" />
               )}
-              <span>Mở slot rảnh</span>
+              <span>{isSlotInPast ? 'Giờ trong quá khứ' : 'Mở slot rảnh'}</span>
             </Button>
           </div>
         </div>

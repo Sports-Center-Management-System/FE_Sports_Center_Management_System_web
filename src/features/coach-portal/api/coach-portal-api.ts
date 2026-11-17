@@ -14,6 +14,9 @@ import type {
   ExerciseKnowledgeItem,
   WorkoutPlanItem,
   CreateWorkoutPlanPayload,
+  WorkoutTemplateItem,
+  BookingWorkoutPlan,
+  UpdateSessionWorkoutPlanPayload,
   CoachRateItem,
   EquipmentItem,
   StudentBookingItem,
@@ -86,47 +89,31 @@ export const coachPortalApi = {
     const mySlots = Array.isArray(mySlotsRes.data) ? mySlotsRes.data : [];
     const allSchedules = Array.isArray(schedulesRes.data) ? schedulesRes.data : [];
 
-    // Collect all memberIds needing hydration
-    const memberIdSet = new Set<string>();
-    rawBookings.forEach((b: any) => {
-      if (b.memberId && !b.member?.fullName) memberIdSet.add(b.memberId);
-    });
+    // Populate user map from today's schedule bookings without firing N+1 requests
+    const userMap = new Map<string, any>();
     (todayData.classes || []).forEach((c) => {
       (c.bookings || []).forEach((b) => {
-        if (b.memberId && !b.member?.fullName) memberIdSet.add(b.memberId);
+        if (b.memberId && b.member?.fullName) userMap.set(b.memberId, b.member);
       });
     });
     (todayData.pt || []).forEach((p) => {
       (p.bookings || []).forEach((b) => {
-        if (b.memberId && !b.member?.fullName) memberIdSet.add(b.memberId);
+        if (b.memberId && b.member?.fullName) userMap.set(b.memberId, b.member);
       });
     });
-
-    // Hydrate users in parallel
-    const userMap = new Map<string, any>();
-    if (memberIdSet.size > 0) {
-      await Promise.all(
-        [...memberIdSet].map(async (mId) => {
-          try {
-            const uRes = await apiClient.get(`/users/${mId}`);
-            userMap.set(mId, uRes.data);
-          } catch {
-            // ignore
-          }
-        })
-      );
-    }
 
     const formatMember = (mId?: string, fallbackMember?: any) => {
       if (fallbackMember?.fullName) return fallbackMember;
       if (mId && userMap.has(mId)) {
-        const u = userMap.get(mId);
+        return userMap.get(mId);
+      }
+      if (mId) {
         return {
-          id: u.id,
-          fullName: u.fullName,
-          phone: u.phone,
-          avatarUrl: u.avatarUrl,
-          memberProfile: u.memberProfile,
+          id: mId,
+          fullName: fallbackMember?.fullName || 'Học viên',
+          phone: fallbackMember?.phone,
+          avatarUrl: fallbackMember?.avatarUrl,
+          memberProfile: fallbackMember?.memberProfile,
         };
       }
       return fallbackMember || null;
@@ -488,6 +475,40 @@ export const coachPortalApi = {
     return res.data;
   },
 
+  // Lộ trình khung 12 buổi mẫu & Giáo án theo ca PT (M14 & M14.1)
+  getWorkoutTemplates: async (discipline?: string): Promise<WorkoutTemplateItem[]> => {
+    const res = await apiClient.get<WorkoutTemplateItem[]>('/workout-templates', {
+      params: discipline ? { discipline } : undefined,
+    });
+    return res.data;
+  },
+
+  assignWorkoutTemplate: async (payload: {
+    bookingId: string;
+    templateCode?: string;
+    sessionOrder?: number;
+  }): Promise<BookingWorkoutPlan> => {
+    const res = await apiClient.post<BookingWorkoutPlan>('/workout-plans/assign-template', payload);
+    return res.data;
+  },
+
+  getWorkoutPlanByBooking: async (bookingId: string): Promise<BookingWorkoutPlan | null> => {
+    try {
+      const res = await apiClient.get<BookingWorkoutPlan>(`/bookings/${bookingId}/workout-plan`);
+      return res.data;
+    } catch {
+      return null;
+    }
+  },
+
+  updateSessionWorkoutPlan: async (
+    planId: string,
+    payload: UpdateSessionWorkoutPlanPayload
+  ): Promise<BookingWorkoutPlan> => {
+    const res = await apiClient.put<BookingWorkoutPlan>(`/workout-plans/${planId}`, payload);
+    return res.data;
+  },
+
   // Hủy lịch khẩn cấp & Chế tài kỷ luật DSS
   requestEmergencyCancel: async (
     payload: CancellationRequestPayload
@@ -501,6 +522,16 @@ export const coachPortalApi = {
 
   getMyCancellationRequests: async (): Promise<CancellationRequestItem[]> => {
     const res = await apiClient.get<CancellationRequestItem[]>('/cancellation-requests');
+    return res.data;
+  },
+
+  withdrawCancellationRequest: async (
+    id: string
+  ): Promise<CancellationRequestItem> => {
+    const res = await apiClient.put<CancellationRequestItem>(
+      `/cancellation-requests/${id}/cancel`,
+      {}
+    );
     return res.data;
   },
 

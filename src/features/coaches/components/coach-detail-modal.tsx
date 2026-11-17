@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
   X,
-  Clock,
   ShieldCheck,
   CheckCircle2,
   Phone,
@@ -12,14 +11,17 @@ import {
   Tag,
   DollarSign,
   ChevronRight,
-  Check,
   FileText,
   Calendar,
+  AlertTriangle,
+  ExternalLink,
 } from "lucide-react";
-import { money } from "@/lib/api";
+import { money, get } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/auth-context";
 import type { Coach, CoachAvailabilitySlot } from "../types/coach.types";
 import { coachApiService } from "../services/coach-api.service";
+import { getMondayOfWeek } from "@/features/calendar/utils/calendar-date.utils";
 import { DisciplineIcon } from "./discipline-icon";
 import { getDisciplineColor, getInitials } from "../utils/coach.utils";
 
@@ -34,11 +36,13 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
   coach,
   isOpen,
   onClose,
-  onSelectSlot,
+  onSelectSlot: _onSelectSlot,
 }) => {
   const navigate = useNavigate();
-  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
-  const [bookSuccess, setBookSuccess] = useState(false);
+  const { isAuthenticated, user } = useAuth();
+
+  const [selectedDisciplineId, setSelectedDisciplineId] = useState<string>('');
+  const [bookingError, setBookingError] = useState<string | null>(null);
 
   // 1. Fetch full coach detail
   const coachDetailQuery = useQuery({
@@ -50,17 +54,48 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
 
   const activeCoach = coachDetailQuery.data || coach;
 
-  // 2. Fetch real availability slots from API
-  const availabilityQuery = useQuery({
-    queryKey: ["coach-availability", coach?.id],
-    queryFn: () => (coach?.id ? coachApiService.getAvailability(coach.id) : Promise.resolve([])),
-    enabled: Boolean(isOpen && coach?.id),
+  // Fetch member's subscriptions to match the best active PT package
+  const memberSubscriptionsQuery = useQuery({
+    queryKey: ['member-subscriptions', user?.id],
+    queryFn: () => get<any[]>('/memberships/subscriptions'),
+    enabled: Boolean(isOpen && isAuthenticated),
+    staleTime: 30000,
   });
 
-  const slots =
-    availabilityQuery.data && availabilityQuery.data.length > 0
-      ? availabilityQuery.data
-      : activeCoach?.coachAvailabilities || [];
+  // Find member's active PT subscriptions matching this coach
+  const matchingSubscriptions = useMemo(() => {
+    const list = memberSubscriptionsQuery.data || [];
+    return list.filter((s: any) => {
+      if (s.status !== 'ACTIVE') return false;
+      if ((s.remainingPtSessions ?? 0) <= 0) return false;
+      if (s.assignedCoachId && s.assignedCoachId !== activeCoach?.id) return false;
+      if (
+        activeCoach?.disciplineIds?.length &&
+        !activeCoach.disciplineIds.includes(s.disciplineId)
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [memberSubscriptionsQuery.data, activeCoach]);
+
+  const activeSubscription = useMemo(() => {
+    if (matchingSubscriptions.length === 0) return null;
+    if (selectedDisciplineId) {
+      return (
+        matchingSubscriptions.find((s: any) => s.disciplineId === selectedDisciplineId) ||
+        matchingSubscriptions[0]
+      );
+    }
+    return matchingSubscriptions[0];
+  }, [matchingSubscriptions, selectedDisciplineId]);
+
+  // Reset modal state on open/coach change
+  useEffect(() => {
+    if (isOpen) {
+      setBookingError(null);
+    }
+  }, [isOpen, coach?.id]);
 
   // Handle ESC key
   useEffect(() => {
@@ -93,21 +128,14 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
   const hasAvatar = Boolean(activeCoach.avatarUrl && activeCoach.avatarUrl.trim());
   const bio = activeCoach.bio || activeCoach.coachProfile?.bio;
 
-  const handleConfirmBooking = () => {
-    const chosenSlot = slots.find((s) => s.id === selectedSlotId);
-    if (onSelectSlot && chosenSlot) {
-      onSelectSlot(activeCoach, chosenSlot);
-    } else {
-      setBookSuccess(true);
-      setTimeout(() => {
-        navigate(`/portal/member/bookings?coachId=${activeCoach.id}`);
-        onClose();
-      }, 1000);
-    }
+  const handleConfirmBooking = async () => {
+    setBookingError(null);
+    navigate(`/portal/member/bookings?week=${getMondayOfWeek()}&coachId=${activeCoach.id}`);
+    onClose();
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
       <div
         className="relative w-full max-w-5xl max-h-[92vh] overflow-y-auto bg-white rounded-[2rem] shadow-2xl border border-slate-200/90 flex flex-col lg:flex-row overflow-hidden"
         onClick={(e) => e.stopPropagation()}
@@ -281,7 +309,7 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {specialties.length > 0 ? (
-                  specialties.map((item, idx) => (
+                  specialties.map((item: any, idx: number) => (
                     <div
                       key={idx}
                       className="p-3 rounded-xl bg-white border border-slate-200/90 shadow-2xs space-y-1 hover:border-emerald-500/40 transition-colors"
@@ -309,85 +337,80 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
               </div>
             </div>
 
-            {/* 3. AVAILABILITY SLOTS */}
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Khung giờ dạy kèm mở rảnh (Availability Slots)</span>
-                </h4>
-                <span className="text-[11px] text-slate-400 font-medium">
-                  {availabilityQuery.isPending ? "Đang tải khung giờ..." : "Chọn 1 khung giờ để đăng ký"}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {slots.length > 0 ? (
-                  slots.map((slot) => {
-                    const isSelected = selectedSlotId === slot.id;
-                    const formatSlotTime = (t: string) => {
-                      if (!t) return "";
-                      if (t.includes("T")) {
-                        const d = new Date(t);
-                        if (!isNaN(d.getTime())) {
-                          return d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
-                        }
-                      }
-                      return t.slice(0, 5);
-                    };
-                    const displayTime =
-                      slot.timeRange ||
-                      `${formatSlotTime(slot.startTime)} - ${formatSlotTime(slot.endTime)}`;
-
-                    return (
-                      <button
-                        key={slot.id}
-                        type="button"
-                        disabled={slot.isBooked}
-                        onClick={() => setSelectedSlotId(slot.id)}
-                        className={cn(
-                          "p-2.5 rounded-xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[58px]",
-                          slot.isBooked
-                            ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-60"
-                            : isSelected
-                              ? "!bg-emerald-600 !border-emerald-600 !text-white shadow-md scale-[1.02]"
-                              : "bg-white border-slate-200 text-slate-800 hover:border-emerald-400 hover:bg-emerald-50/30"
-                        )}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-extrabold">{displayTime}</span>
-                          {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
-                        </div>
-                        <span
-                          className={cn(
-                            "text-[10px] font-semibold",
-                            slot.isBooked
-                              ? "text-slate-400"
-                              : isSelected
-                                ? "text-emerald-100"
-                                : "text-emerald-600"
-                          )}
-                        >
-                          {slot.isBooked ? "Đã được đặt" : "Trống (Có thể đặt)"}
-                        </span>
-                      </button>
-                    );
-                  })
-                ) : (
-                  <div className="col-span-full p-4 rounded-xl bg-white border border-slate-200 text-slate-500 text-xs font-medium text-center">
-                    Hiện chưa có khung giờ rảnh nào mở trong hệ thống cho HLV này.
+            {/* ACTIVE PACKAGE STATUS FOR LOGGED-IN MEMBERS */}
+            {isAuthenticated && (
+              <div className="space-y-2">
+                {matchingSubscriptions.length > 1 ? (
+                  <div className="p-3 rounded-2xl bg-purple-50 border border-purple-200 text-xs space-y-1.5 shadow-2xs">
+                    <label className="text-[11px] font-bold text-purple-950 block">
+                      Chọn gói tập &amp; bộ môn áp dụng cho buổi học kèm này:
+                    </label>
+                    <select
+                      value={activeSubscription?.disciplineId || ''}
+                      onChange={(e) => setSelectedDisciplineId(e.target.value)}
+                      className="w-full p-2 bg-white border border-purple-300 rounded-xl text-slate-800 font-semibold focus:outline-hidden text-xs"
+                    >
+                      {matchingSubscriptions.map((sub: any) => (
+                        <option key={sub.id} value={sub.disciplineId}>
+                          {sub.plan?.name || sub.planName || 'Gói PT'} ({sub.discipline?.code || 'PT'}) — Còn {sub.remainingPtSessions} buổi PT
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                )}
+                ) : matchingSubscriptions.length === 1 && activeSubscription ? (
+                  <div className="p-3 rounded-2xl bg-emerald-50/90 border border-emerald-200 text-xs flex items-center justify-between shadow-2xs">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span className="font-semibold text-emerald-950">
+                        Gói tập áp dụng: <span className="font-bold">{activeSubscription.plan?.name || 'Gói PT'}</span> ({activeSubscription.discipline?.code || targetCode})
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-extrabold text-emerald-800 bg-emerald-100/90 px-2.5 py-0.5 rounded-lg border border-emerald-300/50">
+                      Còn {activeSubscription.remainingPtSessions} buổi PT
+                    </span>
+                  </div>
+                ) : matchingSubscriptions.length === 0 && !memberSubscriptionsQuery.isLoading ? (
+                  <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-xs space-y-1 shadow-2xs">
+                    <div className="flex items-center gap-1.5 font-bold text-amber-800">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span>Chưa có gói tập PT khả dụng cho HLV này</span>
+                    </div>
+                    <p className="text-[11px] text-amber-700 leading-relaxed">
+                      Bạn chưa có gói tập kèm HLV 1-1 còn hiệu lực hoặc đã dùng hết số buổi tập.
+                    </p>
+                  </div>
+                ) : null}
               </div>
-            </div>
+            )}
           </div>
 
           {/* BOTTOM ACTIONS BAR */}
-          <div className="pt-4 border-t border-slate-200 space-y-2">
-            {bookSuccess && (
-              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-in fade-in">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Đã ghi nhận khung giờ! Đang chuyển đến giao diện xếp lịch...</span>
+          <div className="pt-4 border-t border-slate-200 space-y-3">
+            {/* Error Message if booking fails */}
+            {bookingError && (
+              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs space-y-1 animate-in fade-in">
+                <div className="flex items-center gap-1.5 font-bold text-rose-700">
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                  <span>Không thể đặt lịch:</span>
+                </div>
+                <p className="text-[11.5px] leading-relaxed text-rose-700 pl-5">
+                  {bookingError}
+                </p>
+                {bookingError.includes("gói") && (
+                  <div className="pt-1 pl-5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigate("/portal/member/plans");
+                        onClose();
+                      }}
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-[#008b74] hover:underline"
+                    >
+                      <span>Xem và đăng ký gói tập PT</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -406,11 +429,7 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
                 className="flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-2xl text-xs font-extrabold bg-[#008b74] hover:bg-[#007360] text-white shadow-md transition-all active:scale-[0.98] cursor-pointer"
               >
                 <Calendar className="w-4 h-4" />
-                <span>
-                  {selectedSlotId
-                    ? "Xác nhận đặt khung giờ này"
-                    : "Đặt lịch học kèm với HLV này"}
-                </span>
+                <span>Xem lịch của HLV trên Thời khóa biểu</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>

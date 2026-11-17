@@ -103,9 +103,16 @@ export const formatBookingSlotRange = (startAt: string): string => {
  */
 export const calculateEventPosition = (
   startAt: string,
+  endAt?: string,
 ): { top: number; height: number } => {
   const start = new Date(startAt)
-  const end = new Date(getBookingSlotEndAt(startAt))
+  let end = endAt ? new Date(endAt) : new Date(getBookingSlotEndAt(startAt))
+
+  // Guard against invalid or non-positive duration; preserve multi-hour shifts (e.g. 06:00 - 10:00)
+  const durationMs = end.getTime() - start.getTime()
+  if (isNaN(durationMs) || durationMs <= 0) {
+    end = new Date(start.getTime() + BOOKING_SLOT_DURATION_MS)
+  }
 
   const startHour = start.getHours() + start.getMinutes() / 60
   const endHour = end.getHours() + end.getMinutes() / 60

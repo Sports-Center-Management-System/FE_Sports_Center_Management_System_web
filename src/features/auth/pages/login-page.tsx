@@ -8,6 +8,26 @@ import type { AuthUser } from "../types/auth.types";
 import { LogIn, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+function isPathAllowedForRole(path: string, role?: string): boolean {
+  if (!path || !path.startsWith('/') || path.startsWith('//')) return false;
+  if (path.includes('/auth/login') || path.includes('/auth/register')) return false;
+
+  switch (role) {
+    case 'ADMIN':
+      return path.startsWith('/console');
+    case 'CENTER_MANAGER':
+      return path.startsWith('/portal/manager');
+    case 'RECEPTIONIST':
+      return path.startsWith('/portal/desk');
+    case 'COACH':
+      return path.startsWith('/coach');
+    case 'MEMBER':
+      return path.startsWith('/portal/member') || path.startsWith('/calendar') || path.startsWith('/memberships');
+    default:
+      return false;
+  }
+}
+
 function getRoleDefaultPath(role?: string): string {
   switch (role) {
     case "ADMIN":
@@ -32,17 +52,20 @@ export const LoginPage: React.FC = () => {
   // Pure derived state from route pathname
   const activeTab: "login" | "register" = location.pathname.includes("register") ? "register" : "login";
 
-  // Only auto-redirect if redirected from a protected route guard with a specific destination
+  // Only auto-redirect if authenticated and path matches role
   useEffect(() => {
-    const fromPath = (location.state as { from?: string } | null)?.from;
-    if (!isLoading && isAuthenticated && user && fromPath && fromPath !== "/auth/login" && fromPath !== "/auth/register") {
-      navigate(fromPath, { replace: true });
+    if (!isLoading && isAuthenticated && user) {
+      const fromPath = (location.state as { from?: string } | null)?.from;
+      const target = fromPath && isPathAllowedForRole(fromPath, user.role)
+        ? fromPath
+        : getRoleDefaultPath(user.role);
+      navigate(target, { replace: true });
     }
   }, [isAuthenticated, isLoading, user, navigate, location.state]);
 
   const handleAuthSuccess = (authUser: AuthUser) => {
     const fromPath = (location.state as { from?: string } | null)?.from;
-    const target = fromPath && fromPath.startsWith("/") && !fromPath.startsWith("//")
+    const target = fromPath && isPathAllowedForRole(fromPath, authUser.role)
       ? fromPath
       : getRoleDefaultPath(authUser.role);
     navigate(target, { replace: true });

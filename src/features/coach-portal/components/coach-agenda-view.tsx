@@ -51,7 +51,11 @@ export const CoachAgendaView: React.FC<CoachAgendaViewProps> = ({
       {weekDays.map((day) => {
         const daySessions = filteredSessions.filter((s) => {
           const sDate = formatDateToYMD(new Date(s.startTime));
-          return sDate === day.dateString;
+          if (sDate !== day.dateString) return false;
+          const isEmpty = s.type === 'EMPTY_SLOT' || s.isSlotEmpty;
+          const isTimeArrived = new Date() >= new Date(s.startTime);
+          if (isEmpty && isTimeArrived) return false;
+          return true;
         });
 
         const isToday = day.dateString === todayYMD;

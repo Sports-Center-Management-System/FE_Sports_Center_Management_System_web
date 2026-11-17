@@ -2,8 +2,12 @@ import React, { type FormEvent, type ReactNode, useEffect, useRef, useState } fr
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { memberError } from "../lib/member-error";
-import { changeSubscriptionStatus, updateMemberDetail } from "../services/member-management.service";
-import type { MemberDetail, MemberProfileUpdate } from "../types/member-management.types";
+import { changeSubscriptionStatus, createMember, updateMemberDetail } from "../services/member-management.service";
+import type {
+  CreateMemberPayload,
+  MemberDetail,
+  MemberProfileUpdate,
+} from "../types/member-management.types";
 import type { PosSubscription } from "../types/pos.types";
 
 const DialogFrame: React.FC<{
@@ -124,4 +128,147 @@ export const SubscriptionStatusModal: React.FC<{
     {error && <p role="alert" className="mt-4 text-sm text-[#af3c2d]">{error}</p>}
     <div className="mt-6 flex justify-end gap-2 border-t border-[#e3eee7] pt-4"><Button type="button" variant="outline" disabled={busy} onClick={onClose}>Hủy</Button><Button type="button" variant="mint" disabled={busy} onClick={() => void submit()}>{busy ? "Đang xử lý..." : freezing ? "Xác nhận đóng băng" : "Xác nhận kích hoạt"}</Button></div>
   </DialogFrame>;
+};
+
+export const CreateMemberModal: React.FC<{
+  onClose: () => void;
+  onCreated: (newMember: MemberDetail) => void;
+}> = ({ onClose, onCreated }) => {
+  const [form, setForm] = useState<CreateMemberPayload>({
+    fullName: "",
+    email: "",
+    phone: "",
+    password: "",
+    avatarUrl: "",
+  });
+  const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const setField = (field: keyof CreateMemberPayload, value: string) => {
+    setForm((current) => ({ ...current, [field]: value }));
+    setError(null);
+  };
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (busyRef.current) return;
+    const payload: CreateMemberPayload = {
+      fullName: form.fullName.trim(),
+      email: form.email.trim().toLowerCase(),
+      phone: form.phone.trim(),
+      password: form.password,
+      avatarUrl: form.avatarUrl?.trim() || undefined,
+    };
+    if (!payload.fullName) {
+      setError("Vui lòng nhập họ và tên hội viên.");
+      return;
+    }
+    if (!payload.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
+      setError("Vui lòng nhập địa chỉ email hợp lệ.");
+      return;
+    }
+    if (!payload.phone) {
+      setError("Vui lòng nhập số điện thoại.");
+      return;
+    }
+    if (!payload.password || payload.password.length < 6) {
+      setError("Mật khẩu khởi tạo phải có tối thiểu 6 ký tự.");
+      return;
+    }
+    busyRef.current = true;
+    setBusy(true);
+    setError(null);
+    try {
+      const created = await createMember(payload);
+      onCreated(created);
+    } catch (cause) {
+      setError(memberError(cause, "Không thể đăng ký hội viên mới. Vui lòng kiểm tra lại email/SĐT."));
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+    }
+  };
+
+  return (
+    <DialogFrame title="Đăng ký hội viên mới tại quầy" onClose={onClose} busy={busy}>
+      <form onSubmit={(event) => void submit(event)} className="mt-5 space-y-4 text-sm">
+        <label className="block font-medium text-slate-800">
+          Họ và tên hội viên <span className="text-rose-500">*</span>
+          <input
+            required
+            value={form.fullName}
+            maxLength={150}
+            onChange={(event) => setField("fullName", event.target.value)}
+            placeholder="Ví dụ: Nguyễn Văn A"
+            className="mt-1.5 h-10 w-full rounded-md border border-[#cbded4] px-3 outline-none focus:border-[#008b74]"
+          />
+        </label>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block font-medium text-slate-800">
+            Địa chỉ email <span className="text-rose-500">*</span>
+            <input
+              type="email"
+              required
+              value={form.email}
+              maxLength={150}
+              onChange={(event) => setField("email", event.target.value)}
+              placeholder="member@gmail.com"
+              className="mt-1.5 h-10 w-full rounded-md border border-[#cbded4] px-3 outline-none focus:border-[#008b74]"
+            />
+          </label>
+          <label className="block font-medium text-slate-800">
+            Số điện thoại <span className="text-rose-500">*</span>
+            <input
+              type="tel"
+              required
+              value={form.phone}
+              maxLength={20}
+              onChange={(event) => setField("phone", event.target.value)}
+              placeholder="0912345678"
+              className="mt-1.5 h-10 w-full rounded-md border border-[#cbded4] px-3 outline-none focus:border-[#008b74]"
+            />
+          </label>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block font-medium text-slate-800">
+            Mật khẩu khởi tạo <span className="text-rose-500">*</span>
+            <input
+              type="password"
+              required
+              value={form.password}
+              minLength={6}
+              maxLength={100}
+              onChange={(event) => setField("password", event.target.value)}
+              placeholder="Tối thiểu 6 ký tự"
+              className="mt-1.5 h-10 w-full rounded-md border border-[#cbded4] px-3 outline-none focus:border-[#008b74]"
+            />
+          </label>
+          <label className="block font-medium text-slate-800">
+            URL ảnh đại diện (tùy chọn)
+            <input
+              value={form.avatarUrl}
+              maxLength={2000}
+              onChange={(event) => setField("avatarUrl", event.target.value)}
+              placeholder="https://..."
+              className="mt-1.5 h-10 w-full rounded-md border border-[#cbded4] px-3 outline-none focus:border-[#008b74]"
+            />
+          </label>
+        </div>
+        {error && (
+          <p role="alert" className="text-xs font-semibold text-rose-600 bg-rose-50 p-3 rounded-lg border border-rose-200">
+            {error}
+          </p>
+        )}
+        <div className="flex justify-end gap-2 border-t border-[#e3eee7] pt-4">
+          <Button type="button" variant="outline" disabled={busy} onClick={onClose}>
+            Hủy
+          </Button>
+          <Button type="submit" variant="mint" disabled={busy}>
+            {busy ? "Đang xử lý..." : "Đăng ký hội viên"}
+          </Button>
+        </div>
+      </form>
+    </DialogFrame>
+  );
 };

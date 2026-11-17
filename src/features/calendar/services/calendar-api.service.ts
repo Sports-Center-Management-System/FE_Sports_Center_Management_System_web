@@ -58,3 +58,12 @@ export const getDisciplinesApi = async (): Promise<Discipline[]> => {
   const response = await apiClient.get<Discipline[]>('/disciplines')
   return response.data as unknown as Discipline[]
 }
+
+export const getWorkoutPlanByBookingApi = async (bookingId: string): Promise<unknown> => {
+  try {
+    const response = await apiClient.get(`/bookings/${bookingId}/workout-plan`)
+    return response.data
+  } catch {
+    return null
+  }
+}

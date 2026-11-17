@@ -42,10 +42,17 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
   const hours = Array.from({ length: totalHours }, (_, i) => GRID_START_HOUR + i);
   const totalGridHeight = totalHours * HOUR_HEIGHT_PX;
 
-  // Calculate event positioning within 06:00 - 23:00
+  // Calculate event positioning within 05:00 - 23:00
   const calculatePosition = (startIso: string, endIso: string) => {
     const start = new Date(startIso);
-    const end = new Date(endIso);
+    let end = new Date(endIso);
+
+    // Guard against invalid or non-positive duration; preserve multi-hour shifts (e.g. 06:00 - 10:00)
+    const durationMs = end.getTime() - start.getTime();
+    if (isNaN(durationMs) || durationMs <= 0) {
+      end = new Date(start.getTime() + 60 * 60 * 1000);
+    }
+
     const startHour = start.getHours() + start.getMinutes() / 60;
     const endHour = end.getHours() + end.getMinutes() / 60;
 
@@ -94,7 +101,12 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
   const renderEventsForDay = (dateString: string) => {
     const daySessions = filteredSessions.filter((s) => {
       const sDate = formatDateToYMD(new Date(s.startTime));
-      return sDate === dateString;
+      if (sDate !== dateString) return false;
+      const isEmpty = s.type === 'EMPTY_SLOT' || s.isSlotEmpty;
+      const isTimeArrived = new Date() >= new Date(s.startTime);
+      // Nếu là slot trống không có học viên mà đã đến giờ diễn ra thì ẩn đi
+      if (isEmpty && isTimeArrived) return false;
+      return true;
     });
 
     if (daySessions.length === 0) {
@@ -128,7 +140,7 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
       const isGroup = session.type === 'GROUP_CLASS';
       const isEmpty = session.type === 'EMPTY_SLOT' || session.isSlotEmpty;
       const isCompleted = session.status === 'COMPLETED';
-      const isLive = session.status === 'LIVE';
+      const isLive = session.status === 'LIVE' && !isEmpty;
 
       // Primary Title: Student name for PT, Class name for Group, "Slot trống" for empty slot
       const primaryTitle = isEmpty
@@ -155,6 +167,18 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
 
       const timeRangeStr = formatTimeRangeLabel(session.startTime, session.endTime);
 
+      // Split overlapping sessions (any sessions intersecting in time) into side-by-side lanes
+      const curStart = new Date(session.startTime).getTime();
+      const curEnd = new Date(session.endTime).getTime();
+      const matchingSessions = daySessions.filter((s) => {
+        const sStart = new Date(s.startTime).getTime();
+        const sEnd = new Date(s.endTime).getTime();
+        return sStart < curEnd && sEnd > curStart;
+      });
+      const laneIndex = matchingSessions.findIndex((s) => s.id === session.id);
+      const totalLanes = Math.max(matchingSessions.length, 1);
+      const laneWidthPercent = 100 / totalLanes;
+
       return (
         <div
           key={`session-${session.id}`}
@@ -170,8 +194,8 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
           style={{
             top: `${top}px`,
             height: `${height}px`,
-            left: '6px',
-            right: '6px',
+            left: totalLanes > 1 ? `calc(${laneIndex * laneWidthPercent}% + 3px)` : '6px',
+            width: totalLanes > 1 ? `calc(${laneWidthPercent}% - 6px)` : 'calc(100% - 12px)',
           }}
           className={cn(
             'absolute rounded-[10px] p-2 text-xs transition-all duration-150 cursor-pointer overflow-hidden shadow-2xs select-none group hover:shadow-md hover:scale-[1.01] hover:z-20 focus:outline-hidden focus:ring-2 z-10',

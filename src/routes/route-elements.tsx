@@ -1,4 +1,4 @@
-import { Navigate, Outlet, useSearchParams, useLocation } from 'react-router'
+import { Navigate, Outlet, useSearchParams, useLocation, useRouteError } from 'react-router'
 import type { ReactNode } from 'react'
 import type { UserRole } from '@/types'
 import { useSession } from '../auth/session-context'
@@ -37,12 +37,26 @@ export function StaffGuard({ roles }: { roles: UserRole[] }) {
   )
 }
 export function PortalErrorFallback() {
+  const error = useRouteError()
+  console.error('[PortalErrorFallback] Caught render error:', error)
+  const errorMessage =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'string'
+      ? error
+      : (error as any)?.data?.message || ''
+
   return (
     <div className="p-8 max-w-xl mx-auto text-center space-y-4 bg-rose-50 rounded-2xl border border-rose-200 shadow-sm mt-8 text-rose-900">
       <h2 className="text-base font-bold">Đã xảy ra sự cố khi tải dữ liệu</h2>
       <p className="text-xs text-rose-700">
-        Dữ liệu nhận từ server có thể thiếu một số trường thông tin liên kết.
+        Dữ liệu nhận từ server có thể thiếu một số trường thông tin liên kết hoặc xảy ra lỗi xử lý giao diện.
       </p>
+      {errorMessage && (
+        <pre className="text-[11px] p-2.5 bg-rose-100/80 rounded-xl text-rose-900 text-left font-mono overflow-x-auto max-h-36 border border-rose-200">
+          {errorMessage}
+        </pre>
+      )}
       <button
         type="button"
         onClick={() => window.location.reload()}

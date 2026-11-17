@@ -1,10 +1,18 @@
 import apiClient from "@/services/api-client";
 import type { Attendance } from "../types/front-desk.types";
 import { getMemberSubscriptions } from "./pos.service";
-import type { MemberDetail, MemberInvoice, MemberProfileUpdate } from "../types/member-management.types";
+import type {
+  CreateMemberPayload,
+  MemberDetail,
+  MemberInvoice,
+  MemberProfileUpdate,
+} from "../types/member-management.types";
 
 export const getMemberDetail = async (id: string): Promise<MemberDetail> =>
   (await apiClient.get<MemberDetail>(`/users/${encodeURIComponent(id)}`)).data;
+
+export const createMember = async (payload: CreateMemberPayload): Promise<MemberDetail> =>
+  (await apiClient.post<MemberDetail>("/users/members", payload)).data;
 
 export const updateMemberDetail = async (id: string, payload: MemberProfileUpdate): Promise<MemberDetail> =>
   (await apiClient.put<MemberDetail>(`/users/members/${encodeURIComponent(id)}`, payload)).data;

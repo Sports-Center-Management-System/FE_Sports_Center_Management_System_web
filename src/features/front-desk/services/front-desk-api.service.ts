@@ -4,6 +4,7 @@ import type {
   Booking,
   CancellationRequest,
   CancellationReviewResponse,
+  CreateCancellationOnBehalfPayload,
   Locker,
   Schedule,
   UserSummary,
@@ -36,3 +37,8 @@ export const reviewCancellation = async (
     `/cancellation-requests/${encodeURIComponent(id)}/review`,
     { action, rejectionReason: action === "REJECT" ? rejectionReason : null },
   )).data;
+
+export const createCancellationOnBehalf = async (
+  payload: CreateCancellationOnBehalfPayload,
+): Promise<CancellationRequest> =>
+  (await apiClient.post<CancellationRequest>("/cancellation-requests/on-behalf", payload)).data;

@@ -53,8 +53,17 @@ export interface CancellationRequest {
   scheduleId: string | null;
   reasonMessage: string;
   internalNote: string | null;
-  status: "PENDING" | "APPROVED" | "REJECTED";
+  status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
   createdAt: string;
+}
+
+export interface CreateCancellationOnBehalfPayload {
+  coachId: string;
+  bookingId?: string;
+  scheduleId?: string;
+  targetType?: "PERSONAL_TRAINING" | "GROUP_CLASS";
+  reasonMessage: string;
+  internalNote?: string;
 }
 
 export interface Booking {

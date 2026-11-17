@@ -1,5 +1,5 @@
 import { Navigate, createBrowserRouter } from "react-router";
-import { PublicLayout, MemberLayout, CoachLayout, ReceptionistLayout } from "@/layouts";
+import { PublicLayout, MemberLayout, CoachLayout, ReceptionistLayout, ManagerLayout } from "@/layouts";
 import { LoginPage, NotFoundPage } from "@/features/auth";
 import { PublicPlansPage, MockPaymentPage } from "@/features/public";
 import { PlansPage, QuotePage } from "@/features/plans";
@@ -29,6 +29,22 @@ import {
   CoachRequestsPage,
   CoachProfilePage,
 } from "@/features/coach-portal";
+import {
+  ManagerDashboardPage,
+  ManagerStaffPage,
+  ManagerStaffShiftsPage,
+  ManagerCoachesPage,
+  ManagerPenaltiesPage,
+  ManagerPlansPage,
+  ManagerClassesPage,
+  ManagerFacilitiesPage,
+  ManagerMembersPage,
+  ManagerReportsPage,
+  ManagerExercisesPage,
+  ManagerPosPage,
+  ManagerBookingsPage,
+  ManagerAttendancesPage,
+} from "@/features/manager";
 import { mondayInVietnam } from "@/lib/date";
 import {
   MemberGuard,
@@ -102,29 +118,7 @@ export const router = createBrowserRouter([
         ],
       },
 
-      // 3. DESK PORTAL
-      {
-        path: "portal/desk",
-        children: [
-          {
-            element: <StaffGuard roles={["RECEPTIONIST", "CENTER_MANAGER"]} />,
-            children: [
-              { index: true, element: <PortalPlaceholder title="Quầy lễ tân" /> },
-              { path: "gate-checkin", element: <PortalPlaceholder title="Check-in cổng" /> },
-              { path: "pos", element: <PortalPlaceholder title="Bán gói tập" /> },
-              { path: "subscriptions", element: <PortalPlaceholder title="Gia hạn gói tập" /> },
-              { path: "members", element: <PortalPlaceholder title="Hội viên" /> },
-              { path: "members/:memberId", element: <PortalPlaceholder title="Hội viên" /> },
-            ],
-          },
-          {
-            element: <StaffGuard roles={["RECEPTIONIST", "COACH"]} />,
-            children: [{ path: "inbody", element: <PortalPlaceholder title="Đo InBody" /> }],
-          },
-        ],
-      },
-
-      // 4. COACH PORTAL (/portal/coach and /coach)
+      // 3. COACH PORTAL (/portal/coach and /coach)
       {
         path: "portal/coach",
         element: <StaffGuard roles={["COACH"]} />,
@@ -161,6 +155,59 @@ export const router = createBrowserRouter([
               { path: "profile", element: <CoachProfilePage /> },
             ],
           },
+        ],
+      },
+    ],
+  },
+
+  // Front-desk pages render their own full-screen layout, so they sit outside PublicLayout.
+  {
+    path: "/portal/desk",
+    element: <ReceptionistLayout />,
+    children: [
+      {
+        element: <StaffGuard roles={["RECEPTIONIST", "CENTER_MANAGER"]} />,
+        children: [
+          { index: true, element: <FrontDeskPage /> },
+          { path: "gate-checkin", element: <GateCheckinPage /> },
+          { path: "pos", element: <PosPage key="sale" /> },
+          { path: "subscriptions", element: <PosPage key="subscriptions" initialMode="RENEW" /> },
+          { path: "members", element: <MembersPage /> },
+          { path: "members/:memberId", element: <MembersPage /> },
+        ],
+      },
+      {
+        element: <StaffGuard roles={["RECEPTIONIST", "COACH"]} />,
+        children: [{ path: "inbody", element: <InbodyPage /> }],
+      },
+    ],
+  },
+  { path: "/desk", element: <Navigate to="/portal/desk" replace /> },
+
+  // 4. CENTER MANAGER PORTAL
+  {
+    path: "/portal/manager",
+    element: <StaffGuard roles={["CENTER_MANAGER"]} />,
+    errorElement: <PortalErrorFallback />,
+    children: [
+      {
+        element: <ManagerLayout />,
+        children: [
+          { index: true, element: <Navigate to="/portal/manager/dashboard" replace /> },
+          { path: "dashboard", element: <ManagerDashboardPage /> },
+          { path: "staff", element: <ManagerStaffPage /> },
+          { path: "staff-shifts", element: <ManagerStaffShiftsPage /> },
+          { path: "coaches", element: <ManagerCoachesPage /> },
+          { path: "penalties", element: <ManagerPenaltiesPage /> },
+          { path: "plans", element: <ManagerPlansPage /> },
+          { path: "classes", element: <ManagerClassesPage /> },
+          { path: "facilities", element: <ManagerFacilitiesPage /> },
+          { path: "members", element: <ManagerMembersPage /> },
+          { path: "reports", element: <ManagerReportsPage /> },
+          { path: "exercises", element: <ManagerExercisesPage /> },
+          { path: "pos", element: <ManagerPosPage /> },
+          { path: "bookings", element: <ManagerBookingsPage /> },
+          { path: "attendances", element: <ManagerAttendancesPage /> },
         ],
       },
     ],
