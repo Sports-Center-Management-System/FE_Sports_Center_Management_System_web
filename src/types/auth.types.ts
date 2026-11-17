@@ -10,6 +10,7 @@ export interface AuthUser {
   email: string;
   fullName: string;
   role: UserRole;
+  gender?: "MALE" | "FEMALE" | "OTHER";
   phone?: string;
   avatarUrl?: string | null;
   memberProfile?: {

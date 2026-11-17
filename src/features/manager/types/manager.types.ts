@@ -51,6 +51,7 @@ export interface UserRow {
   fullName: string
   phone: string | null
   role: 'MEMBER' | 'COACH' | 'RECEPTIONIST' | 'CENTER_MANAGER' | 'ADMIN'
+  gender?: 'MALE' | 'FEMALE' | 'OTHER'
   isActive: boolean
   avatarUrl: string | null
   createdAt: string
@@ -62,6 +63,7 @@ export interface CreateStaffPayload {
   fullName: string
   phone: string
   role: StaffRole
+  gender?: 'MALE' | 'FEMALE' | 'OTHER'
 }
 
 export interface UpdateStaffPayload {
@@ -309,11 +311,13 @@ export interface CreateMemberPayload {
   password: string
   fullName: string
   phone: string
+  gender?: 'MALE' | 'FEMALE' | 'OTHER'
 }
 
 export interface MemberProfilePayload {
   fullName?: string
   phone?: string
+  gender?: 'MALE' | 'FEMALE' | 'OTHER'
   fitnessGoals?: string
   medicalHistory?: string
   heightCm?: number
