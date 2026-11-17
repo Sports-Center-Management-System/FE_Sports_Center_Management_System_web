@@ -62,6 +62,10 @@ export const managerApi = {
   summary: () => get<ManagerSummary>('/analytics/manager-summary'),
   revenue: () => get<RevenueReport>('/analytics/revenue'),
   kpi: () => get<KpiReport>('/analytics/kpi'),
+  topPlans: () => get<any[]>('/analytics/top-plans'),
+  topCoaches: () => get<any[]>('/analytics/top-coaches'),
+  dssSummary: () => get<any>('/analytics/dss-summary'),
+  systemMetrics: () => get<any>('/analytics/system-metrics'),
 
   staff: () => get<UserRow[]>('/users/staff'),
   createStaff: (body: CreateStaffPayload) => post<UserRow>('/users', body),
@@ -70,6 +74,10 @@ export const managerApi = {
 
   shifts: () => get<StaffShift[]>('/staff-shifts'),
   createShift: (body: ShiftPayload) => post<StaffShift>('/staff-shifts', body),
+  createShiftsBulk: (body: { shifts: ShiftPayload[] }) =>
+    post<{ count: number; shifts: StaffShift[] }>('/staff-shifts/bulk', body),
+  cloneWeeklyShifts: (body: { sourceWeekStart: string; targetWeekStart: string }) =>
+    post<{ clonedCount: number; shifts: StaffShift[] }>('/staff-shifts/clone-weekly', body),
   updateShift: (id: string, body: ShiftPayload) => put<StaffShift>(`/staff-shifts/${id}`, body),
   deleteShift: (id: string) => del<{ id: string }>(`/staff-shifts/${id}`),
 

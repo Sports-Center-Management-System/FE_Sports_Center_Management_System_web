@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Copy, Sparkles } from 'lucide-react'
 import { managerApi, managerKeys } from '../api/manager-api'
 import type { StaffShift } from '../types/manager.types'
+import { BulkShiftModal } from '../components/bulk-shift-modal'
+import { FridayCloneShiftModal } from '../components/friday-clone-shift-modal'
 import {
   addDaysToDay,
   dayOnly,
@@ -34,6 +36,8 @@ export function ManagerStaffShiftsPage() {
   const staff = useQuery({ queryKey: managerKeys.staff, queryFn: managerApi.staff })
   const [week, setWeek] = useState(() => mondayOf(vnDay()))
   const [editing, setEditing] = useState<StaffShift | { day: string } | null>(null)
+  const [showBulkModal, setShowBulkModal] = useState(false)
+  const [showCloneModal, setShowCloneModal] = useState(false)
 
   const names = new Map((staff.data ?? []).map((user) => [user.id, user.fullName]))
   const receptionists = (staff.data ?? []).filter(
@@ -48,16 +52,31 @@ export function ManagerStaffShiftsPage() {
   for (const list of byDay.values()) list.sort((a, b) => a.startTime.localeCompare(b.startTime))
   const today = vnDay()
 
+  const shiftCountThisWeek = (shifts.data ?? []).filter((s) => {
+    const d = dayOnly(s.shiftDate)
+    return d >= week && d <= addDaysToDay(week, 6)
+  }).length
+
   return (
     <>
       <PageHeader
         title="Ca trực lễ tân"
         description="Xếp ca theo tuần. Ca trùng giờ của cùng một người sẽ bị từ chối."
         actions={
-          <Btn tone="primary" onClick={() => setEditing({ day: today < week ? week : today })}>
-            <Plus className="h-4 w-4" />
-            Xếp ca
-          </Btn>
+          <div className="flex flex-wrap items-center gap-2">
+            <Btn tone="secondary" onClick={() => setShowCloneModal(true)}>
+              <Copy className="h-4 w-4" />
+              Lên lịch tuần tới (Thứ 6)
+            </Btn>
+            <Btn tone="secondary" onClick={() => setShowBulkModal(true)}>
+              <Sparkles className="h-4 w-4" />
+              Xếp ca hàng loạt
+            </Btn>
+            <Btn tone="primary" onClick={() => setEditing({ day: today < week ? week : today })}>
+              <Plus className="h-4 w-4" />
+              Tạo ca lẻ
+            </Btn>
+          </div>
         }
       />
       <Panel
@@ -154,6 +173,18 @@ export function ManagerStaffShiftsPage() {
           }}
         />
       ) : null}
+      <BulkShiftModal
+        isOpen={showBulkModal}
+        onClose={() => setShowBulkModal(false)}
+        staffList={staff.data ?? []}
+        currentWeek={week}
+      />
+      <FridayCloneShiftModal
+        isOpen={showCloneModal}
+        onClose={() => setShowCloneModal(false)}
+        currentWeek={week}
+        shiftCountThisWeek={shiftCountThisWeek}
+      />
     </>
   )
 }

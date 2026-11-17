@@ -42,3 +42,15 @@ export const createCancellationOnBehalf = async (
   payload: CreateCancellationOnBehalfPayload,
 ): Promise<CancellationRequest> =>
   (await apiClient.post<CancellationRequest>("/cancellation-requests/on-behalf", payload)).data;
+
+export interface StaffShiftItem {
+  id: string;
+  staffId: string;
+  shiftDate: string;
+  startTime: string;
+  endTime: string;
+  notes?: string | null;
+}
+
+export const getMyShifts = async (): Promise<StaffShiftItem[]> =>
+  (await apiClient.get<StaffShiftItem[]>("/staff-shifts/mine")).data;
