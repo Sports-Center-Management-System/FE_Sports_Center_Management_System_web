@@ -12,6 +12,7 @@ import {
   Flame,
   Music,
   Activity,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -222,11 +223,18 @@ export const PlanCarousel: React.FC<PlanCarouselProps> = ({
                   "flex-1 h-10 rounded-md font-bold text-xs tracking-wide flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md active:scale-[0.98]",
                   isVip
                     ? "bg-amber-400 hover:bg-amber-300 text-slate-950"
-                    : "bg-[#008b74] hover:bg-emerald-600 text-white"
+                    : "bg-[#008b74] hover:bg-emerald-600 text-white",
+                  isOrdering && "opacity-80 cursor-wait"
                 )}
               >
-                <span>{isVip ? "Chọn HLV & báo giá" : " Mua gói"}</span>
-               
+                {isOrdering ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Đang khởi tạo đơn hàng...</span>
+                  </>
+                ) : (
+                  <span>{isVip ? "Chọn HLV & báo giá" : "Mua gói ngay"}</span>
+                )}
               </button>
 
               <button

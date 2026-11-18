@@ -12,6 +12,12 @@ import { vietnamDate } from "@/lib/date";
 import { memberKeys } from "@/lib/keys";
 import type { Checkout, CheckoutStatus, Coach } from "@/lib/types";
 import {
+  formatCheckoutKind,
+  formatCheckoutStatus,
+  formatPlanName,
+  formatTierLabel,
+} from "@/features/plans/lib/plan-formatter";
+import {
   ArrowLeft,
   ArrowRight,
   Clock,
@@ -22,7 +28,10 @@ import {
   ExternalLink,
   RefreshCw,
   Loader2,
+  CreditCard,
+  FileText,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 function isPending(status: CheckoutStatus) {
   return status === "PENDING_PAYMENT";
@@ -141,15 +150,18 @@ export const CheckoutPage: React.FC = () => {
     (import.meta.env.VITE_PUBLIC_WEB_URL || window.location.origin).replace(/\/$/, "") +
     "/mock-payment";
 
-  const planName = String(snapshot?.planName ?? order.data?.kind ?? "Gói tập");
+  const rawPlanName = String(snapshot?.planName ?? order.data?.kind ?? "Gói tập");
+  const planName = formatPlanName(rawPlanName);
+  const statusMeta = formatCheckoutStatus(order.data?.status);
+  const kindLabel = formatCheckoutKind(order.data?.kind);
 
-  // Compute breakdown descriptions
+  // Compute breakdown descriptions in concise Vietnamese
   const planPerks: string[] = [];
   if (snapshot?.durationDays) {
     planPerks.push(`${snapshot.durationDays} ngày hiệu lực`);
   }
   if (snapshot?.unlimitedGymEntry) {
-    planPerks.push("Ra vào phòng tập tự do");
+    planPerks.push("Ra vào phòng tập tự do 24/7");
   }
   if (snapshot?.groupQuota) {
     planPerks.push(`${snapshot.groupQuota} buổi lớp nhóm`);
@@ -165,35 +177,33 @@ export const CheckoutPage: React.FC = () => {
   if (assignedCoach?.fullName) {
     ptPerks.push(`HLV: ${assignedCoach.fullName}`);
   } else if (snapshot?.coachId) {
-    ptPerks.push("HLV kèm riêng");
+    ptPerks.push("Huấn luyện viên kèm riêng");
   }
   if (snapshot?.ratePerSession) {
     ptPerks.push(`(${money(String(snapshot.ratePerSession))}/buổi)`);
   }
-  const ptText = ptPerks.length > 0 ? ptPerks.join(" · ") : "Huấn luyện viên cá nhân";
+  const ptText = ptPerks.length > 0 ? ptPerks.join(" · ") : "Huấn luyện viên cá nhân kèm riêng";
 
   return (
-    <div className="w-full max-w-4xl mx-auto flex flex-col h-[calc(100vh-2.5rem)] sm:h-[calc(100vh-4.5rem)] min-h-0 py-0">
-      {/* Top Bar: Sharp-Cornered Back Button & Title */}
-      <div className="shrink-0 flex items-center justify-between gap-3 mb-2">
-        <div className="flex items-center gap-3">
-          <Link
-            to="/portal/member/plans"
-            className="h-8 px-3 rounded-none bg-white border border-slate-900 hover:bg-slate-100 text-slate-900 inline-flex items-center gap-1.5 text-xs font-bold transition-colors shrink-0"
-            title="Quay lại danh mục gói tập"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Quay lại</span>
-          </Link>
-          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 leading-tight">
-            Trạng thái thanh toán
-          </h1>
-        </div>
+    <div className="w-full max-w-5xl mx-auto py-4 sm:py-6 space-y-6 pb-20">
+      {/* Top Bar: Back Button & Order Reference */}
+      <div className="flex items-center justify-between gap-4">
+        <Link
+          to="/portal/member/plans"
+          className="h-9 px-3.5 rounded-md bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 inline-flex items-center gap-2 text-xs font-bold transition-all shadow-2xs hover:border-slate-300 cursor-pointer"
+          title="Quay lại danh mục gói tập"
+        >
+          <ArrowLeft className="w-3.5 h-3.5 text-slate-500" />
+          <span>Quay lại danh mục gói</span>
+        </Link>
 
         {order.data && (
-          <span className="text-[11px] font-mono text-slate-600 uppercase tracking-widest hidden sm:inline-block">
-            SỐ CHỨNG TỪ: #{order.data.checkoutId.slice(0, 16).toUpperCase()}
-          </span>
+          <div className="flex items-center gap-2 text-xs font-mono text-slate-500">
+            <span className="font-semibold text-slate-600 hidden sm:inline">Số chứng từ:</span>
+            <span className="bg-slate-100 border border-slate-200 px-2 py-0.5 rounded text-slate-900 font-bold select-all">
+              #{order.data.checkoutId.slice(0, 16).toUpperCase()}
+            </span>
+          </div>
         )}
       </div>
 
@@ -204,159 +214,193 @@ export const CheckoutPage: React.FC = () => {
       />
 
       {order.data && (
-        <article className="card flex-1 min-h-0 flex flex-col justify-between bg-white rounded-none border-2 border-slate-900 p-4 sm:p-5 text-slate-900 shadow-none">
-          {/* Invoice Header Block */}
-          <div className="shrink-0 flex flex-col sm:flex-row sm:items-start justify-between pb-3 border-b border-slate-900 gap-2">
-            <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 mb-0.5">
-                TRUNG TÂM THỂ THAO CAO CẤP · PHIẾU XÁC NHẬN THANH TOÁN
-              </p>
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase">
-                {String(snapshot?.planName ?? order.data.kind)}
-              </h2>
-              <div className="flex flex-wrap items-center gap-2 mt-1">
-                <span
-                  className={`status status-${order.data.status.toLowerCase()} inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-none font-mono text-xs font-black tracking-wider uppercase ${
-                    order.data.status === "FULFILLED"
-                      ? "bg-slate-900 text-white border border-slate-900"
-                      : "bg-slate-100 text-slate-900 border border-slate-900"
-                  }`}
-                >
-                  {order.data.status === "PENDING_PAYMENT" && (
-                    <Clock className="w-3 h-3 text-slate-700 animate-pulse" />
-                  )}
-                  {order.data.status === "FULFILLED" && (
-                    <CheckCircle2 className="w-3 h-3 text-white" />
-                  )}
-                  {order.data.status === "PAYMENT_FAILED" && (
-                    <AlertCircle className="w-3 h-3 text-rose-700" />
-                  )}
-                  <span>{order.data.status}</span>
-                </span>
+        <article className="bg-white rounded-lg border border-slate-200/90 shadow-sm overflow-hidden text-slate-900">
+          {/* 1. Invoice Header Banner */}
+          <div className="p-6 sm:p-8 border-b border-slate-200 bg-slate-50/60">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-5">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded bg-[#008b74] text-white flex items-center justify-center font-black text-xs tracking-wider shadow-2xs">
+                    3TC
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-900">
+                      3TC Fitness Center
+                    </h3>
+                    <p className="text-[11px] text-slate-500">Trung tâm Thể dục Thể thao & Thể hình</p>
+                  </div>
+                </div>
 
-                {snapshot?.packageTier && (
-                  <span className="px-2 py-0.5 rounded-none text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-800 border border-slate-300">
-                    {String(snapshot.packageTier)}
+                <div className="pt-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+                    Phiếu xác nhận đơn hàng & hóa đơn dịch vụ
                   </span>
-                )}
+                  <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-0.5">
+                    {planName}
+                  </h1>
+                </div>
+              </div>
+
+              {/* Status Badge & Tier Chips */}
+              <div className="flex flex-col sm:items-end gap-2.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Status Badge */}
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold tracking-wide border shadow-2xs",
+                      statusMeta.variant === "success" && "bg-emerald-50 text-emerald-800 border-emerald-300",
+                      statusMeta.variant === "pending" && "bg-amber-50 text-amber-900 border-amber-300",
+                      statusMeta.variant === "failed" && "bg-rose-50 text-rose-900 border-rose-300",
+                      statusMeta.variant === "neutral" && "bg-slate-100 text-slate-800 border-slate-300"
+                    )}
+                  >
+                    {statusMeta.variant === "pending" && <Clock className="w-3.5 h-3.5 text-amber-600 animate-pulse" />}
+                    {statusMeta.variant === "success" && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+                    {statusMeta.variant === "failed" && <AlertCircle className="w-3.5 h-3.5 text-rose-600" />}
+                    <span>{statusMeta.label}</span>
+                  </span>
+
+                  {/* Tier Badge translated */}
+                  {snapshot?.packageTier && (
+                    <span className="px-2.5 py-1.5 rounded-md text-xs font-bold bg-slate-900 text-white shadow-2xs">
+                      {formatTierLabel(snapshot.packageTier)}
+                    </span>
+                  )}
+                </div>
+
+                <p className="text-xs text-slate-500 font-medium">
+                  Loại giao dịch: <strong className="text-slate-800">{kindLabel}</strong>
+                </p>
               </div>
             </div>
 
-            <div className="text-left sm:text-right text-xs text-slate-700 space-y-0.5 font-medium">
-              <p>
-                Hội viên:{" "}
-                <strong className="text-slate-900">{user?.fullName ?? user?.email}</strong>
-              </p>
-              <p>
-                Ngày lập:{" "}
-                <strong className="text-slate-900">
+            {/* Structured 4-Col Meta Bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 mt-6 border-t border-slate-200 text-xs">
+              <div>
+                <span className="text-slate-400 block font-medium">Hội viên đăng ký</span>
+                <strong className="text-slate-900 text-sm font-semibold truncate block mt-0.5">
+                  {user?.fullName || user?.email || "Hội viên"}
+                </strong>
+                <span className="text-slate-500 text-[11px] truncate block">{user?.email}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block font-medium">Mã đơn thanh toán</span>
+                <strong className="text-slate-900 font-mono text-xs block select-all mt-0.5 break-all">
+                  {order.data.checkoutId}
+                </strong>
+              </div>
+              <div>
+                <span className="text-slate-400 block font-medium">Thời gian lập</span>
+                <strong className="text-slate-800 block mt-0.5">
                   {vietnamDate(order.data.createdAt || new Date().toISOString())}
                 </strong>
-              </p>
-              <p>
-                Hết hạn:{" "}
-                <strong className="text-slate-900">
+              </div>
+              <div>
+                <span className="text-slate-400 block font-medium">Hạn thanh toán</span>
+                <strong className="text-slate-800 block mt-0.5">
                   {vietnamDate(order.data.expiresAt)}
                 </strong>
-              </p>
+              </div>
             </div>
           </div>
 
-          {/* Full-width Line Items Table with scroll support */}
-          <div className="flex-1 min-h-0 overflow-y-auto py-2.5 my-1">
-            <table className="w-full text-xs sm:text-sm border-collapse border border-slate-300">
-              <thead>
-                <tr className="bg-slate-100 text-slate-800 text-[11px] uppercase font-bold tracking-wider text-left sticky top-0 z-10">
-                  <th className="border border-slate-300 p-2 text-center w-10 bg-slate-100">STT</th>
-                  <th className="border border-slate-300 p-2 bg-slate-100">Hạng mục dịch vụ</th>
-                  <th className="border border-slate-300 p-2 text-center w-28 bg-slate-100">Số lượng</th>
-                  <th className="border border-slate-300 p-2 text-right w-36 bg-slate-100">Thành tiền</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="border border-slate-300 p-2 text-center text-slate-500 font-mono">01</td>
-                  <td className="border border-slate-300 p-2">
-                    <p className="font-bold text-slate-900">{planName}</p>
-                    <p className="text-xs text-slate-600 mt-0.5">{perksText}</p>
-                  </td>
-                  <td className="border border-slate-300 p-2 text-center text-slate-700 font-medium whitespace-nowrap">
-                    1 gói ({snapshot?.durationDays ? `${snapshot.durationDays} ngày` : "Tiêu chuẩn"})
-                  </td>
-                  <td className="border border-slate-300 p-2 text-right font-bold text-slate-900 whitespace-nowrap">
-                    {money(order.data.baseAmount)}
-                  </td>
-                </tr>
+          {/* 2. Detailed Line Items Table */}
+          <div className="p-6 sm:p-8">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
+              Chi tiết các hạng mục thanh toán
+            </h4>
 
-                {hasPt && (
+            <div className="overflow-x-auto rounded-md border border-slate-200">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-700 text-xs font-bold uppercase tracking-wider border-b border-slate-200">
+                    <th className="py-3 px-4 text-center w-12">STT</th>
+                    <th className="py-3 px-4">Hạng mục dịch vụ & Quyền lợi</th>
+                    <th className="py-3 px-4 text-center w-44">Số lượng / Thời hạn</th>
+                    <th className="py-3 px-4 text-right w-44">Thành tiền</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 text-sm">
                   <tr>
-                    <td className="border border-slate-300 p-2 text-center text-slate-500 font-mono">02</td>
-                    <td className="border border-slate-300 p-2">
-                      <p className="font-bold text-slate-900">Huấn luyện viên cá nhân (PT 1:1) kèm riêng</p>
-                      <p className="text-xs text-slate-600 mt-0.5">{ptText}</p>
+                    <td className="py-4 px-4 text-center text-slate-400 font-mono font-bold text-xs">01</td>
+                    <td className="py-4 px-4">
+                      <p className="font-bold text-slate-900 text-base">{planName}</p>
+                      <p className="text-xs text-slate-600 mt-1 leading-relaxed">{perksText}</p>
                     </td>
-                    <td className="border border-slate-300 p-2 text-center text-slate-700 font-medium whitespace-nowrap">
-                      {ptCount} buổi PT
+                    <td className="py-4 px-4 text-center text-slate-700 font-medium whitespace-nowrap">
+                      1 gói ({snapshot?.durationDays ? `${snapshot.durationDays} ngày` : "Tiêu chuẩn"})
                     </td>
-                    <td className="border border-slate-300 p-2 text-right font-bold text-slate-900 whitespace-nowrap">
-                      {money(order.data.ptAmount)}
+                    <td className="py-4 px-4 text-right font-bold text-slate-900 font-mono text-base whitespace-nowrap">
+                      {money(order.data.baseAmount)}
                     </td>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
 
-          {/* Invoice Bottom: Attached to bottom with Totals on the Left and QR on the Right */}
-          <div className="shrink-0 mt-auto pt-3 border-t border-slate-900">
-            <div className="flex flex-col md:flex-row items-stretch justify-between gap-4">
-              {/* Left Column: Financial Totals & CTA */}
-              <div className="w-full md:w-80 shrink-0 space-y-1 text-xs text-left">
-                <div className="flex justify-between text-slate-700">
-                  <span className="font-medium">Giá gốc gói tập:</span>
-                  <span className="font-bold text-slate-900">{money(order.data.baseAmount)}</span>
+                  {hasPt && (
+                    <tr>
+                      <td className="py-4 px-4 text-center text-slate-400 font-mono font-bold text-xs">02</td>
+                      <td className="py-4 px-4">
+                        <p className="font-bold text-slate-900 text-base">Huấn luyện viên cá nhân (PT 1:1) kèm riêng</p>
+                        <p className="text-xs text-slate-600 mt-1 leading-relaxed">{ptText}</p>
+                      </td>
+                      <td className="py-4 px-4 text-center text-slate-700 font-medium whitespace-nowrap">
+                        {ptCount} buổi kèm riêng
+                      </td>
+                      <td className="py-4 px-4 text-right font-bold text-slate-900 font-mono text-base whitespace-nowrap">
+                        {money(order.data.ptAmount)}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Financial Summary & Settlement Row */}
+            <div className="mt-8 pt-6 border-t border-slate-200 grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+              {/* Left / Center Summary */}
+              <div className="md:col-span-6 space-y-3">
+                <div className="bg-slate-50/80 rounded-lg p-5 border border-slate-200 space-y-3">
+                  <div className="flex justify-between text-sm text-slate-600">
+                    <span>Giá niêm yết gói tập:</span>
+                    <span className="font-bold text-slate-900 font-mono">{money(order.data.baseAmount)}</span>
+                  </div>
+
+                  {hasPt && (
+                    <div className="flex justify-between text-sm text-slate-600">
+                      <span>Phí dịch vụ Huấn luyện viên kèm riêng:</span>
+                      <span className="font-bold text-slate-900 font-mono">{money(order.data.ptAmount)}</span>
+                    </div>
+                  )}
+
+                  {changed && (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded text-amber-900 text-xs">
+                      Giá tại bước thanh toán có cập nhật so với báo giá xem trước. Vui lòng kiểm tra kỹ số tiền.
+                    </div>
+                  )}
+
+                  <div className="pt-3 border-t border-slate-200 flex items-baseline justify-between">
+                    <span className="font-black text-slate-900 text-base uppercase tracking-wide">
+                      Tổng tiền thanh toán:
+                    </span>
+                    <span className="text-2xl sm:text-3xl font-black text-[#008b74] font-mono tracking-tight">
+                      {money(order.data.amount)}
+                    </span>
+                  </div>
                 </div>
 
-                {hasPt && (
-                  <div className="flex justify-between text-slate-700">
-                    <span className="font-medium">Phí dịch vụ HLV (PT):</span>
-                    <span className="font-bold text-slate-900">{money(order.data.ptAmount)}</span>
-                  </div>
-                )}
-
-                {changed && (
-                  <div className="p-1.5 bg-slate-100 border border-slate-900 text-slate-900 text-[11px] text-left">
-                    <p className="notice warning m-0 font-medium">
-                      Giá tại checkout khác báo giá xem trước. Hãy kiểm tra lại số tiền.
-                    </p>
-                  </div>
-                )}
-
-                <div className="pt-2 border-t-2 border-slate-900 flex items-baseline justify-between">
-                  <span className="font-black text-slate-900 text-sm uppercase tracking-wide">
-                    Tổng thanh toán:
-                  </span>
-                  <p
-                    className="price text-xl sm:text-2xl font-black !text-slate-950 font-mono m-0 whitespace-nowrap"
-                    style={{ color: "#020617" }}
-                  >
-                    {money(order.data.amount)}
-                  </p>
-                </div>
-
-                <div className="pt-1.5">
+                {/* Primary Action Button Bar */}
+                <div className="space-y-2 pt-2">
                   {order.data.status === "PAYMENT_FAILED" && (
                     <Button
                       type="button"
                       variant="default"
                       disabled={retry.isPending}
                       onClick={() => retry.mutate()}
-                      className="w-full h-10 rounded-none bg-slate-900 hover:bg-black text-white font-bold text-xs tracking-wide flex items-center justify-center gap-2 shadow-none cursor-pointer"
+                      className="w-full h-11 rounded-md bg-slate-900 hover:bg-black text-white font-bold text-sm tracking-wide flex items-center justify-center gap-2 shadow-sm cursor-pointer"
                     >
                       {retry.isPending ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
-                        <RefreshCw className="w-3.5 h-3.5" />
+                        <RefreshCw className="w-4 h-4" />
                       )}
                       <span>Thử thanh toán lại</span>
                     </Button>
@@ -368,129 +412,153 @@ export const CheckoutPage: React.FC = () => {
                       variant="default"
                       disabled={reconcile.isPending}
                       onClick={() => reconcile.mutate()}
-                      className="w-full h-10 rounded-none bg-slate-900 hover:bg-black text-white font-bold text-xs tracking-wide flex items-center justify-center gap-2 shadow-none cursor-pointer disabled:opacity-50"
+                      className="w-full h-11 rounded-md bg-[#008b74] hover:bg-[#007360] text-white font-bold text-sm tracking-wide flex items-center justify-center gap-2 shadow-sm cursor-pointer disabled:opacity-50"
                     >
                       {reconcile.isPending ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
-                        <RefreshCw className="w-3.5 h-3.5" />
+                        <RefreshCw className="w-4 h-4" />
                       )}
-                      <span>Kiểm tra lại thanh toán</span>
+                      <span>Kiểm tra & Cập nhật thanh toán</span>
                     </Button>
                   )}
 
                   {order.data.status === "FULFILLED" && (
-                    <div className="flex gap-2 w-full">
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <Link
-                        className="button flex-1 h-10 rounded-none bg-slate-900 hover:bg-black text-white font-bold text-xs tracking-wide flex items-center justify-center gap-1.5 shadow-none"
+                        className="flex-1 h-11 rounded-md bg-[#008b74] hover:bg-[#007360] text-white font-bold text-sm tracking-wide flex items-center justify-center gap-2 shadow-sm transition-all"
                         to="/portal/member/subscriptions"
                       >
-                        <span>Xem gói tập</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
+                        <span>Vào gói tập của tôi</span>
+                        <ArrowRight className="w-4 h-4" />
                       </Link>
                       <Link
-                        className="button secondary flex-1 h-10 rounded-none bg-white border border-slate-900 hover:bg-slate-100 text-slate-900 font-bold text-xs tracking-wide flex items-center justify-center gap-1.5 shadow-none"
+                        className="flex-1 h-11 rounded-md bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 font-bold text-sm tracking-wide flex items-center justify-center gap-2 shadow-2xs transition-all"
                         to="/portal/member/invoices"
                       >
-                        <span>Xem hóa đơn</span>
+                        <FileText className="w-4 h-4 text-slate-500" />
+                        <span>Xem lịch sử hóa đơn</span>
                       </Link>
                     </div>
                   )}
-                </div>
 
-                {(retry.error || reconcile.error) && (
-                  <p role="alert" className="text-error text-[11px] text-rose-700 font-semibold mt-1">
-                    {errorText(retry.error ?? reconcile.error)}
-                  </p>
-                )}
+                  {(retry.error || reconcile.error) && (
+                    <p role="alert" className="text-xs text-rose-700 font-semibold mt-1">
+                      {errorText(retry.error ?? reconcile.error)}
+                    </p>
+                  )}
+                </div>
               </div>
 
-              {/* Right Column: QR Payment / Confirmation / Failure */}
-              <div className="flex-1 min-w-0 md:max-w-lg ml-auto">
+              {/* Right Side: QR Code / Payment Instructions */}
+              <div className="md:col-span-6">
                 {isPending(order.data.status) && demoEnabled && order.data.paymentId && (
-                  <div className="bg-slate-50 border border-slate-300 p-2.5 sm:p-3 flex flex-col sm:flex-row items-center gap-3.5 h-full">
-                    {/* Compact QR Code */}
-                    <div className="p-1.5 bg-white border border-slate-900 shrink-0">
-                      <QRCodeSVG value={mockUrl} size={96} />
+                  <div className="bg-slate-50/80 rounded-lg border border-slate-200 p-5 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                        <CreditCard className="w-4 h-4 text-[#008b74]" />
+                        <span>Kênh thanh toán trực tuyến</span>
+                      </span>
+                      <Link
+                        to="/mock-payment"
+                        target="_blank"
+                        className="inline-flex items-center gap-1 text-xs font-bold text-[#008b74] hover:underline"
+                      >
+                        <span>Mở trang thanh toán</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </Link>
                     </div>
 
-                    {/* Payment Info */}
-                    <div className="flex-1 min-w-0 space-y-1.5 text-left w-full">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-600">
-                          THANH TOÁN DEMO (MOCK QR)
-                        </span>
-                        <Link
-                          to="/mock-payment"
-                          target="_blank"
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-900 underline hover:text-black"
-                        >
-                          <span>Mở Mock Payment</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </Link>
+                    <div className="flex flex-col sm:flex-row items-center gap-5 pt-1">
+                      {/* Large Crisp QR Code */}
+                      <div className="p-3 bg-white rounded-md border border-slate-300 shadow-2xs shrink-0 flex items-center justify-center">
+                        <QRCodeSVG value={mockUrl} size={140} />
                       </div>
 
-                      <p className="text-[11px] text-slate-600 leading-snug">
-                        Quét mã QR bằng điện thoại hoặc sao chép Payment ID bên dưới:
-                      </p>
+                      {/* Payment ID & instructions */}
+                      <div className="flex-1 min-w-0 space-y-2 text-left w-full">
+                        <p className="text-xs text-slate-600 leading-relaxed">
+                          Quét mã QR bằng ứng dụng ngân hàng hoặc sao chép mã <strong>Payment ID</strong> để hoàn tất:
+                        </p>
 
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center justify-between bg-white border border-slate-900 px-2 py-1 flex-1 max-w-[260px]">
-                          <span className="payment-id font-mono font-black text-xs tracking-wider text-slate-950 select-all">
-                            {order.data.paymentId}
+                        <div className="space-y-1">
+                          <span className="text-[11px] font-bold text-slate-500 block uppercase">
+                            Mã thanh toán (Payment ID):
                           </span>
-                          <button
-                            type="button"
-                            onClick={handleCopyPaymentId}
-                            className="p-0.5 hover:bg-slate-100 text-slate-700 hover:text-black transition-colors cursor-pointer border-l border-slate-200 pl-1.5 ml-1 flex items-center gap-1 text-[10px] font-bold"
-                            title="Sao chép Payment ID"
-                          >
-                            {copied ? (
-                              <Check className="w-3 h-3 text-slate-900" />
-                            ) : (
-                              <Copy className="w-3 h-3" />
-                            )}
-                            <span>{copied ? "Đã chép" : "Chép mã"}</span>
-                          </button>
+                          <div className="flex items-center justify-between bg-white border border-slate-300 rounded px-3 py-2">
+                            <span className="font-mono font-black text-sm tracking-wider text-slate-950 select-all">
+                              {order.data.paymentId}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleCopyPaymentId}
+                              className="px-2 py-1 hover:bg-slate-100 text-slate-700 hover:text-black rounded transition-colors cursor-pointer border border-slate-200 flex items-center gap-1 text-xs font-bold"
+                              title="Sao chép Payment ID"
+                            >
+                              {copied ? (
+                                <>
+                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span className="text-emerald-700">Đã chép</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3.5 h-3.5" />
+                                  <span>Sao chép</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
+
+                    <p className="text-[11px] text-slate-500 leading-snug border-t border-slate-200/80 pt-3">
+                      Hệ thống tự động kích hoạt gói tập ngay khi nhận được tín hiệu xác nhận thanh toán thành công.
+                    </p>
                   </div>
                 )}
 
                 {isPending(order.data.status) && !demoEnabled && (
-                  <div className="p-3 bg-slate-50 border border-slate-300 text-slate-800 text-xs">
-                    <p className="notice warning m-0 font-medium">
-                      Kênh thanh toán demo chưa được bật trong môi trường này.
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-md text-slate-700 text-xs">
+                    <p className="m-0 font-medium">
+                      Kênh thanh toán trực tuyến hiện đang được kết nối với cổng ngân hàng.
                     </p>
                   </div>
                 )}
 
                 {order.data.status === "FULFILLED" && (
-                  <div className="bg-slate-50 border border-slate-900 p-3 flex items-center gap-3 h-full">
-                    <div className="p-2 bg-white border border-slate-900 shrink-0">
-                      <CheckCircle2 className="w-6 h-6 text-slate-900" />
+                  <div className="bg-emerald-50/70 rounded-lg border border-emerald-200 p-6 flex items-start gap-4 h-full">
+                    <div className="p-2.5 bg-emerald-600 text-white rounded-md shrink-0 shadow-2xs">
+                      <CheckCircle2 className="w-7 h-7" />
                     </div>
-                    <div className="space-y-0.5">
-                      <div className="border border-slate-900 bg-white px-2 py-0.5 inline-block font-mono font-black text-[10px] uppercase tracking-wider text-slate-900">
-                        ĐÃ XÁC NHẬN THANH TOÁN
+                    <div className="space-y-1.5">
+                      <div className="inline-block px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-900 font-bold text-xs uppercase tracking-wider">
+                        ĐÃ HOÀN TẤT THANH TOÁN
                       </div>
-                      <p role="status" className="notice success text-xs text-slate-800 font-semibold m-0">
-                        Thanh toán đã được máy chủ xác nhận. Gói tập và hóa đơn đã được cập nhật.
+                      <h4 className="text-base font-bold text-emerald-950">
+                        Gói tập của bạn đã được kích hoạt thành công!
+                      </h4>
+                      <p className="text-xs text-emerald-800 leading-relaxed">
+                        Cảm ơn bạn đã lựa chọn 3TC Fitness Center. Bạn có thể sử dụng mã vạch hoặc thẻ hội viên để bắt đầu tập luyện ngay hôm nay.
                       </p>
                     </div>
                   </div>
                 )}
 
                 {order.data.status === "PAYMENT_FAILED" && (
-                  <div className="bg-slate-50 border border-slate-900 p-3 flex items-center gap-3 h-full">
-                    <AlertCircle className="w-6 h-6 text-rose-700 shrink-0" />
-                    <div className="space-y-0.5">
-                      <p className="font-mono font-black text-xs uppercase tracking-wider text-rose-800 m-0">
-                        GIAO DỊCH THẤT BẠI
-                      </p>
-                      <p className="text-xs text-slate-700 m-0">
-                        {order.data.failureReason || "Giao dịch không thành công hoặc phiên thanh toán đã hết hạn."}
+                  <div className="bg-rose-50/80 rounded-lg border border-rose-200 p-6 flex items-start gap-4 h-full">
+                    <div className="p-2.5 bg-rose-600 text-white rounded-md shrink-0 shadow-2xs">
+                      <AlertCircle className="w-7 h-7" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="inline-block px-2.5 py-0.5 rounded bg-rose-100 text-rose-900 font-bold text-xs uppercase tracking-wider">
+                        GIAO DỊCH CHƯA THÀNH CÔNG
+                      </div>
+                      <h4 className="text-base font-bold text-rose-950">
+                        Không thể hoàn tất giao dịch
+                      </h4>
+                      <p className="text-xs text-rose-800 leading-relaxed">
+                        {order.data.failureReason || "Giao dịch không thành công hoặc phiên thanh toán đã hết thời gian hiệu lực. Vui lòng bấm thử lại để tạo phiên thanh toán mới."}
                       </p>
                     </div>
                   </div>

@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "@/auth/session-context";
 import { StateMessage } from "@/components/feedback/state-message";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ import {
   ChevronRight,
   ChevronLeft,
   LayoutGrid,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -103,9 +104,16 @@ interface PlanCardProps {
   onOpenDetail: (plan: Plan) => void;
   onSelectPlan: (plan: Plan, e?: React.MouseEvent) => void;
   isOrdering: boolean;
+  isCurrentOrdering?: boolean;
 }
 
-const PlanCard: React.FC<PlanCardProps> = ({ plan, onOpenDetail, onSelectPlan, isOrdering }) => {
+const PlanCard: React.FC<PlanCardProps> = ({
+  plan,
+  onOpenDetail,
+  onSelectPlan,
+  isOrdering,
+  isCurrentOrdering = false,
+}) => {
   const isVip = plan.packageTier === "VIP";
   const isPlus = plan.packageTier === "PLUS";
   const planImg = getPlanImage(
@@ -246,11 +254,21 @@ const PlanCard: React.FC<PlanCardProps> = ({ plan, onOpenDetail, onSelectPlan, i
               "w-full h-10 rounded-md font-bold text-xs tracking-wide flex items-center justify-center gap-1.5 transition-all shadow-2xs cursor-pointer",
               isVip
                 ? "bg-slate-900 hover:bg-black text-white"
-                : "bg-[#008b74] hover:bg-[#007360] text-white"
+                : "bg-[#008b74] hover:bg-[#007360] text-white",
+              isCurrentOrdering && "opacity-80 cursor-wait"
             )}
           >
-            <span>{isVip ? "Chọn HLV & báo giá" : "Tiếp tục mua gói"}</span>
-            <ChevronRight className="w-3.5 h-3.5" />
+            {isCurrentOrdering ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Đang tạo đơn hàng...</span>
+              </>
+            ) : (
+              <>
+                <span>{isVip ? "Chọn HLV & báo giá" : "Tiếp tục mua gói"}</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -263,6 +281,7 @@ interface DisciplinePlanSectionProps {
   onOpenDetail: (plan: Plan) => void;
   onSelectPlan: (plan: Plan, e?: React.MouseEvent) => void;
   isOrdering: boolean;
+  orderingPlanId?: string | null;
 }
 
 const DisciplinePlanSection: React.FC<DisciplinePlanSectionProps> = ({
@@ -270,6 +289,7 @@ const DisciplinePlanSection: React.FC<DisciplinePlanSectionProps> = ({
   onOpenDetail,
   onSelectPlan,
   isOrdering,
+  orderingPlanId = null,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScroll, setCanScroll] = useState(false);
@@ -398,6 +418,7 @@ const DisciplinePlanSection: React.FC<DisciplinePlanSectionProps> = ({
               onOpenDetail={onOpenDetail}
               onSelectPlan={onSelectPlan}
               isOrdering={isOrdering}
+              isCurrentOrdering={orderingPlanId === plan.id}
             />
           ))}
         </div>
@@ -460,11 +481,23 @@ export const PlanCatalog: React.FC<PlanCatalogProps> = () => {
     });
   }, [rawPlans.data]);
 
+  const cache = useQueryClient();
+  const [orderingPlanId, setOrderingPlanId] = useState<string | null>(null);
+
   const order = useMutation({
     mutationFn: (plan: Plan) =>
       createCheckout(user!.id, { kind: "NEW_SUBSCRIPTION", planId: plan.id }),
-    onSuccess: (value) => navigate(`/portal/member/checkouts/${value.checkoutId}`),
+    onMutate: (plan) => {
+      setOrderingPlanId(plan.id);
+    },
+    onSuccess: (value) => {
+      cache.setQueryData(memberKeys.checkout(user!.id, value.checkoutId), value);
+      navigate(`/portal/member/checkouts/${value.checkoutId}`);
+    },
     onError: (error) => setActionError(errorText(error)),
+    onSettled: () => {
+      setOrderingPlanId(null);
+    },
   });
 
   function choose(plan: Plan, e?: React.MouseEvent) {
@@ -688,6 +721,7 @@ export const PlanCatalog: React.FC<PlanCatalogProps> = () => {
                 onOpenDetail={setSelectedPlanForModal}
                 onSelectPlan={choose}
                 isOrdering={order.isPending}
+                orderingPlanId={orderingPlanId}
               />
             ))}
           </div>

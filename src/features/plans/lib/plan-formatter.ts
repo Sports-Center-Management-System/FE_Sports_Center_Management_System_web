@@ -13,6 +13,45 @@ export function formatTierLabel(tier?: string | null): string {
   return tier;
 }
 
+export function formatCheckoutStatus(status?: string | null): {
+  label: string;
+  variant: 'pending' | 'success' | 'failed' | 'neutral';
+} {
+  if (!status) return { label: 'Chưa xác định', variant: 'neutral' };
+  switch (status.toUpperCase()) {
+    case 'PENDING_PAYMENT':
+      return { label: 'Chờ thanh toán', variant: 'pending' };
+    case 'FULFILLED':
+      return { label: 'Đã thanh toán thành công', variant: 'success' };
+    case 'PAYMENT_FAILED':
+      return { label: 'Thanh toán thất bại', variant: 'failed' };
+    case 'EXPIRED':
+      return { label: 'Đã hết hạn thanh toán', variant: 'failed' };
+    case 'PAYMENT_REVIEW':
+      return { label: 'Đang rà soát thanh toán', variant: 'pending' };
+    case 'REFUND_PENDING':
+      return { label: 'Chờ hoàn tiền', variant: 'pending' };
+    case 'REFUNDED':
+      return { label: 'Đã hoàn tiền', variant: 'neutral' };
+    default:
+      return { label: status, variant: 'neutral' };
+  }
+}
+
+export function formatCheckoutKind(kind?: string | null): string {
+  if (!kind) return 'Gói tập';
+  switch (kind.toUpperCase()) {
+    case 'NEW_SUBSCRIPTION':
+      return 'Đăng ký gói tập mới';
+    case 'RENEWAL':
+      return 'Gia hạn gói tập';
+    case 'PT_ADDON':
+      return 'Mua thêm buổi tập HLV kèm riêng';
+    default:
+      return kind;
+  }
+}
+
 export function formatPlanName(name?: string | null): string {
   if (!name) return '';
   return name
