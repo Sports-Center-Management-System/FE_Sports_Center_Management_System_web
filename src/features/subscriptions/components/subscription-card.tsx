@@ -29,6 +29,8 @@ import { cn } from '@/lib/utils'
 import { getPlanImage } from '@/features/plans/components/plan-images'
 import { SubscriptionDetailModal } from './subscription-detail-modal'
 import {
+  formatSubscriptionPlanName,
+  formatSubscriptionTier,
   getSubscriptionBenefits,
   getSubscriptionExpiration,
   isActiveDropIn,
@@ -145,7 +147,7 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ item, discip
                   : 'bg-slate-700/80 text-white border-slate-500',
               )}
             >
-              {isVip ? 'VIP ĐẶC QUYỀN' : isPlus ? 'PLUS TOÀN DIỆN' : item.packageTier}
+              {formatSubscriptionTier(item.packageTier)}
             </span>
           </div>
 
@@ -182,7 +184,7 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ item, discip
         {/* Plan Name & Expiry Overlay */}
         <div className="absolute bottom-3 left-3 right-3">
           <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight leading-snug drop-shadow-md truncate">
-            {item.plan?.name ?? 'Gói tập'}
+            {formatSubscriptionPlanName(item.plan?.name)}
           </h2>
           <div className="flex items-center gap-2 text-xs text-white/80 font-medium mt-0.5">
             <span className="font-semibold">{daysRemaining.text}</span>
@@ -333,12 +335,7 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ item, discip
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <span>Hết hạn:</span>
-            <span className="font-semibold text-slate-700 tabular-nums font-mono">
-              {displayDate(expiration, isActiveDropIn(item))}
-            </span>
-          </div>
+          
         </div>
 
         {/* 3. CARD ACTION BUTTONS */}

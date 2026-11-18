@@ -16,6 +16,28 @@ export function getSubscriptionExpiration(item: Subscription): string | null {
   return new Date(purchasedAt + DROP_IN_VALIDITY_MS).toISOString()
 }
 
+export function formatSubscriptionTier(tier?: string | null): string {
+  if (!tier) return 'Gói tập'
+  const t = tier.toUpperCase().replace(/[-\s]/g, '_')
+  if (t === 'VIP') return 'VIP ĐẶC QUYỀN'
+  if (t === 'PLUS') return 'PLUS TOÀN DIỆN'
+  if (t === 'DROP_IN' || t === 'DROPIN') return 'VÉ BUỔI LẺ'
+  if (t === 'TRIAL') return 'GÓI TRẢI NGHIỆM'
+  if (t === 'STANDARD') return 'GÓI TIÊU CHUẨN'
+  return tier.replace(/_/g, ' ')
+}
+
+export function formatSubscriptionPlanName(name?: string | null): string {
+  if (!name) return 'Gói tập'
+  return name
+    .replace(/\bDrop-?in\b/gi, 'Vé Buổi Lẻ')
+    .replace(/\bDROP_IN\b/gi, 'Vé Buổi Lẻ')
+    .replace(/\bGroup\s*Classes?\b/gi, 'Lớp Nhóm')
+    .replace(/\bPT\s*Sessions?\b/gi, 'Kèm PT 1:1')
+    .replace(/\bTrial\b/gi, 'Trải Nghiệm')
+    .trim()
+}
+
 export function getSubscriptionBenefits(item: Subscription) {
   // A subscription's explicit entitlement takes precedence over the catalog plan.
   const unlimitedGym = item.hasUnlimitedGymAccess ?? item.plan?.unlimitedGymEntry ?? false

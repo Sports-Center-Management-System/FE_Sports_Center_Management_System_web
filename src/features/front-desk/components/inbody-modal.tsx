@@ -97,7 +97,7 @@ export const InbodyModal: React.FC<{
   };
 
   return <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#142923]/60 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busyRef.current) onClose(); }}>
-    <section role="dialog" aria-modal="true" aria-labelledby="inbody-dialog-title" className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-md bg-white p-5 shadow-2xl sm:p-6">
+    <section role="dialog" aria-modal="true" aria-labelledby="inbody-dialog-title" className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-none bg-white p-5 shadow-2xl sm:p-6 border-2 border-slate-900">
       <div className="flex items-start justify-between gap-3 border-b border-[#e3eee7] pb-4">
         <div><h2 id="inbody-dialog-title" className="text-lg font-semibold text-[#172b28]">{log ? "Chỉnh sửa phiếu InBody" : "Nhập chỉ số InBody"}</h2><p className="mt-1 text-sm text-[#61756f]">{memberName}</p></div>
         <button ref={closeRef} type="button" disabled={busy} onClick={onClose} title="Đóng" aria-label="Đóng" className="rounded p-1 text-[#61756f] hover:bg-[#edf5f0] disabled:opacity-50"><X className="h-5 w-5" /></button>

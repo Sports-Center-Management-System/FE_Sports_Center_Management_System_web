@@ -141,9 +141,7 @@ export const HistoryPage: React.FC = () => {
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
               Lịch sử đặt lịch &amp; Hoạt động tập luyện
             </h1>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Theo dõi toàn bộ các buổi tập lớp nhóm và lịch kèm riêng 1:1 của bạn tại 3TC
-            </p>
+            
           </div>
           <div className="h-10 w-10 rounded-md bg-emerald-50 text-[#008b74] flex items-center justify-center shrink-0 border border-emerald-100">
             <CalendarDays className="w-5 h-5" />
@@ -339,9 +337,7 @@ export const HistoryPage: React.FC = () => {
                                   ? item.schedule?.class?.name ?? "Lớp tập nhóm"
                                   : "Buổi tập kèm riêng (PT 1:1)"}
                               </p>
-                              <span className="text-[11px] text-slate-500 font-medium">
-                                {isGroupClass ? "Huấn luyện nhóm chuyên sâu" : "Kèm cá nhân theo giáo án riêng"}
-                              </span>
+                            
                             </div>
                           </div>
                         </td>

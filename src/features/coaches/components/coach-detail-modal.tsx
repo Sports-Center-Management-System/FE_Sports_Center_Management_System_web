@@ -322,8 +322,8 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
                   </div>
                   {sessionRate > 0 && (
                     <div className="text-left sm:text-right">
-                      <span className="text-[11px] font-semibold text-slate-500 uppercase block">Gói tuần (3 buổi):</span>
-                      <span className="text-base font-extrabold text-slate-900">{money(weeklyRate)}/tuần</span>
+                      <span className="text-[11px] font-semibold text-slate-500 uppercase block">Gói tháng (12 buổi):</span>
+                      <span className="text-base font-extrabold text-slate-900">{money(weeklyRate * 4)}/tháng</span>
                     </div>
                   )}
                 </div>
@@ -378,11 +378,7 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
                           {item.specialty.name}
                         </span>
                       </div>
-                      {item.specialty.code && (
-                        <p className="text-[10px] text-slate-400 pl-8 font-mono">
-                          Mã môn: {item.specialty.code}
-                        </p>
-                      )}
+                      
                     </div>
                   ))
                 ) : (
@@ -468,7 +464,7 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
                 ) : (
                   <>
                     <CreditCard className="w-4 h-4" />
-                    <span>Thanh toán gói HLV ({weeklyPriceDisplay})</span>
+                    <span>Thanh toán </span>
                     <ChevronRight className="w-4 h-4" />
                   </>
                 )}

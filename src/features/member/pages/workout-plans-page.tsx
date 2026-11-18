@@ -378,50 +378,10 @@ export const WorkoutPlansPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 3 Summary Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-slate-50/70 rounded-md border border-slate-200 p-4 shadow-2xs flex items-center justify-between">
-            <div>
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                Giáo án cá nhân
-              </span>
-              <p className="text-xl font-black text-slate-900 font-mono mt-1">
-                {rawPlans.length} <span className="text-xs font-normal text-slate-500">giáo án</span>
-              </p>
-            </div>
-            <div className="h-10 w-10 rounded-md bg-white text-[#008b74] flex items-center justify-center shrink-0 border border-slate-200 shadow-2xs">
-              <BookOpen className="w-5 h-5" />
-            </div>
-          </div>
+        
 
-          <div className="bg-slate-50/70 rounded-md border border-slate-200 p-4 shadow-2xs flex items-center justify-between">
-            <div>
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                Tổng bài tập được giao
-              </span>
-              <p className="text-xl font-black text-emerald-700 font-mono mt-1">
-                {totalExercisesCount} <span className="text-xs font-normal text-slate-500">bài tập</span>
-              </p>
-            </div>
-            <div className="h-10 w-10 rounded-md bg-white text-emerald-600 flex items-center justify-center shrink-0 border border-slate-200 shadow-2xs">
-              <Target className="w-5 h-5" />
-            </div>
-          </div>
-
-          <div className="bg-slate-50/70 rounded-md border border-slate-200 p-4 shadow-2xs flex items-center justify-between">
-            <div>
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                Lộ trình mẫu chuẩn
-              </span>
-              <p className="text-xl font-black text-slate-900 font-mono mt-1">
-                {rawTemplates.length || 12} <span className="text-xs font-normal text-slate-500">buổi tập</span>
-              </p>
-            </div>
-            <div className="h-10 w-10 rounded-md bg-white text-slate-600 flex items-center justify-center shrink-0 border border-slate-200 shadow-2xs">
-              <Layers className="w-5 h-5" />
-            </div>
-          </div>
-        </div>
+          
+        
 
         {/* Tab Switcher */}
         <div className="flex border-b border-slate-200 gap-2">

@@ -27,13 +27,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
         {/* Soft, light gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/40 to-slate-950/25 pointer-events-none" />
 
-        {/* Brand Logo in Top Banner */}
-        <div className="relative z-10 flex items-center gap-2.5">
-          <img src={logo3tc} alt="3TC FITNESS" className="h-8 w-auto object-contain brightness-0 invert" />
-          <span className="font-extrabold text-lg tracking-tight text-white">
-            3TC <span className="text-emerald-400">FITNESS</span>
-          </span>
-        </div>
+        
 
         {/* Middle Feature Highlights */}
         <div className="relative z-10 my-auto py-10 space-y-7">

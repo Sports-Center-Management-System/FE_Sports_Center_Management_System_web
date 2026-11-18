@@ -156,50 +156,7 @@ export const InvoicesPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 3 Summary Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-slate-50/70 rounded-md border border-slate-200 p-4 shadow-2xs flex items-center justify-between">
-            <div>
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                Tổng tiền đã thanh toán
-              </span>
-              <p className="text-xl font-black text-slate-900 font-mono mt-1">
-                {money(stats.totalPaid)}
-              </p>
-            </div>
-            <div className="h-10 w-10 rounded-md bg-white text-[#008b74] flex items-center justify-center shrink-0 border border-slate-200 shadow-2xs">
-              <DollarSign className="w-5 h-5" />
-            </div>
-          </div>
 
-          <div className="bg-slate-50/70 rounded-md border border-slate-200 p-4 shadow-2xs flex items-center justify-between">
-            <div>
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                Hóa đơn thành công
-              </span>
-              <p className="text-xl font-black text-emerald-700 font-mono mt-1">
-                {stats.paidCount} <span className="text-xs font-normal text-slate-500">hóa đơn</span>
-              </p>
-            </div>
-            <div className="h-10 w-10 rounded-md bg-white text-emerald-600 flex items-center justify-center shrink-0 border border-slate-200 shadow-2xs">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-          </div>
-
-          <div className="bg-slate-50/70 rounded-md border border-slate-200 p-4 shadow-2xs flex items-center justify-between">
-            <div>
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                Chờ thanh toán / Khác
-              </span>
-              <p className="text-xl font-black text-amber-700 font-mono mt-1">
-                {stats.pendingCount} <span className="text-xs font-normal text-slate-500">hóa đơn</span>
-              </p>
-            </div>
-            <div className="h-10 w-10 rounded-md bg-white text-amber-600 flex items-center justify-center shrink-0 border border-slate-200 shadow-2xs">
-              <Clock className="w-5 h-5" />
-            </div>
-          </div>
-        </div>
 
         {/* Structured Table Section with Filter & Sorting Controls */}
         <div className="rounded-md border border-slate-200 overflow-hidden">
@@ -314,9 +271,7 @@ export const InvoicesPage: React.FC = () => {
                               <p className="font-bold text-slate-900 leading-snug">
                                 {invoiceTypeLabels[item.type] ?? item.type}
                               </p>
-                              <span className="text-[11px] text-slate-500 font-medium">
-                                Hóa đơn dịch vụ thể thao 3TC
-                              </span>
+                              
                             </div>
                           </div>
                         </td>

@@ -24,6 +24,8 @@ import { memberKeys } from '@/lib/keys'
 import type { Booking, Discipline, Subscription } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import {
+  formatSubscriptionPlanName,
+  formatSubscriptionTier,
   getSubscriptionBenefits,
   getSubscriptionExpiration,
   isActiveDropIn,
