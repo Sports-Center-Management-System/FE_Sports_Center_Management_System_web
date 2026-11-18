@@ -13,7 +13,6 @@ import {
   FileText,
   UserCheck,
   CalendarClock,
-  Sparkles,
   Dumbbell,
   RotateCcw,
 } from 'lucide-react';
@@ -95,10 +94,10 @@ export const CoachSessionDrawer: React.FC<CoachSessionDrawerProps> = ({
   const timeInfo = formatTimeRange(session.startTime, session.endTime);
 
   const primaryTitle = isEmptySlot
-    ? 'Slot trống (Chưa có học viên)'
+    ? 'Slot trống (Chưa có lịch đặt)'
     : isPt
-    ? session.studentName || 'Học viên PT'
-    : session.title || 'Lớp tập nhóm';
+      ? session.studentName || 'Học viên PT'
+      : session.title || 'Lớp tập nhóm';
 
   // Find primary booking for PT
   const primaryBooking = session.bookings?.[0];
@@ -336,18 +335,7 @@ export const CoachSessionDrawer: React.FC<CoachSessionDrawerProps> = ({
             </div>
           )}
 
-          {/* Empty slot message */}
-          {isEmptySlot && (
-            <div className="rounded-xl border border-dashed border-amber-300 dark:border-amber-700/60 bg-amber-50/40 dark:bg-amber-950/20 p-4 space-y-2">
-              <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300 font-bold text-xs">
-                <Sparkles className="w-4 h-4 text-amber-600" />
-                Khung giờ đang mở nhận hội viên
-              </div>
-              <p className="text-xs text-amber-900/80 dark:text-amber-200/80 leading-relaxed">
-                Slot này hiện chưa có học viên đặt chỗ. Hội viên có thể đăng ký trực tuyến qua app hội viên hoặc bạn có thể chỉ định học viên trực tiếp.
-              </p>
-            </div>
-          )}
+
 
           {/* Session Notes Section */}
           <div className="rounded-xl border border-slate-200/90 dark:border-slate-800 p-4 space-y-2 bg-white dark:bg-[#131b26]">

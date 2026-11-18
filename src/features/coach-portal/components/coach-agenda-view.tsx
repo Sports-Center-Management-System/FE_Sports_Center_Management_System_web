@@ -4,7 +4,7 @@ import {
   getWeekDays,
   formatDateToYMD,
 } from '@/features/calendar/utils/calendar-date.utils';
-import { MapPin, CheckCircle2, ChevronRight } from 'lucide-react';
+import { MapPin, CheckCircle2, ChevronRight, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface CoachAgendaViewProps {
@@ -100,26 +100,40 @@ export const CoachAgendaView: React.FC<CoachAgendaViewProps> = ({
                 </div>
               </div>
 
-              {(() => {
-                const bookedCount = daySessions.filter((s) => s.type !== 'EMPTY_SLOT' && !s.isSlotEmpty).length;
-                return (
-                  <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                    {bookedCount > 0 ? `${bookedCount} ca dạy` : 'Trống lịch'}
-                  </div>
-                );
-              })()}
+              <div className="flex items-center gap-2">
+                {(() => {
+                  const bookedCount = daySessions.filter((s) => s.type !== 'EMPTY_SLOT' && !s.isSlotEmpty).length;
+                  return (
+                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      {bookedCount > 0 ? `${bookedCount} ca dạy` : 'Trống lịch'}
+                    </span>
+                  );
+                })()}
+                {onOpenCreateSlot && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenCreateSlot(day.dateString)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 transition shadow-2xs cursor-pointer active:scale-95"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Thêm slot</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Sessions list */}
             {daySessions.length === 0 ? (
-              <div className="py-4 text-center text-xs text-slate-400 italic flex items-center justify-center gap-2">
+              <div className="py-6 text-center text-xs text-slate-400 flex flex-col items-center justify-center gap-2">
                 <span>Không có ca dạy nào trong ngày này.</span>
                 {onOpenCreateSlot && (
                   <button
+                    type="button"
                     onClick={() => onOpenCreateSlot(day.dateString)}
-                    className="text-teal-600 dark:text-teal-400 hover:underline font-semibold"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 transition shadow-2xs cursor-pointer"
                   >
-                    + Mở khung giờ
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Mở khung giờ rảnh</span>
                   </button>
                 )}
               </div>

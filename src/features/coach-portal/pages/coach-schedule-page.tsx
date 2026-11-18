@@ -1,14 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Clock,
   ChevronLeft,
   ChevronRight,
   Plus,
   CalendarDays,
   CalendarRange,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { coachPortalApi } from '../api/coach-portal-api';
 import { AttendanceModal } from '../components/attendance-modal';
 import { SessionWorkoutPlanModal } from '../components/session-workout-plan-modal';
@@ -107,10 +105,10 @@ export const CoachSchedulePage: React.FC = () => {
           status: apiS.isEmergencyCancelled
             ? 'CANCELLED'
             : isLive
-            ? 'LIVE'
-            : isEnded
-            ? 'COMPLETED'
-            : 'UPCOMING',
+              ? 'LIVE'
+              : isEnded
+                ? 'COMPLETED'
+                : 'UPCOMING',
           title: apiS.title,
           studentName: firstStudent?.fullName || (isPt && apiS.isBooked ? 'Học viên PT' : undefined),
           studentPhone: firstStudent?.phone,
@@ -220,180 +218,97 @@ export const CoachSchedulePage: React.FC = () => {
     return map;
   }, [sessionList]);
 
-  const coachDisplayName = user?.fullName || 'HLV Alex';
-
   return (
-    <div className="min-h-screen bg-[#f8fafc] dark:bg-[#0b0f17] text-slate-900 dark:text-slate-100 p-4 sm:p-6 lg:p-8 space-y-6">
-      {/* 1. TOP BAR: Title, Coach Info, Week Nav, Primary Actions */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200/90 dark:border-slate-800">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-slate-50">
+    <div className="min-h-screen bg-[#f8fafc] dark:bg-[#0b0f17] text-slate-900 dark:text-slate-100 px-4 sm:px-6 lg:px-8 pt-2 pb-10 space-y-5">
+      {/* 1. TOP STUDIO HERO HEADER */}
+      <div className="w-full rounded-3xl bg-slate-950 text-white p-6 sm:p-8 shadow-xl border border-slate-800/80 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-slate-950 flex items-center justify-center shrink-0 font-black shadow-md">
+            <CalendarDays className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
               Lịch Dạy Theo Tuần
             </h1>
-            <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300 border border-teal-200 dark:border-teal-800/60">
-              {coachDisplayName} · HLV Trưởng
-            </span>
+            <p className="text-xs sm:text-sm text-slate-300 font-medium mt-0.5">
+              Quản lý ca trực rảnh, lịch dạy kèm PT 1-1 và các lớp học nhóm trong tuần
+            </p>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Quản lý ca dạy cá nhân PT 1:1, lớp nhóm và khung giờ nhận học viên trung tâm
-          </p>
         </div>
 
         {/* Navigation & Action Controls */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
           {/* Jump to This Week */}
-          <Button
-            variant="outline"
-            size="sm"
+          <button
+            type="button"
             onClick={handleGoToCurrentWeek}
-            className="text-xs font-bold border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 shadow-2xs cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700 text-xs font-bold transition shadow-xs cursor-pointer active:scale-95"
           >
             Tuần này
-          </Button>
+          </button>
 
           {/* Week Range Nav: ‹ 19/10 – 25/10/2026 › */}
-          <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#131b26] p-0.5 shadow-2xs">
+          <div className="flex items-center rounded-xl border border-slate-800 bg-slate-900 p-1 shadow-xs">
             <button
+              type="button"
               onClick={() => handleWeekChange('prev')}
               aria-label="Tuần trước"
-              className="p-1.5 rounded-md text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="px-3 text-xs font-bold text-slate-800 dark:text-slate-200 tabular-nums">
+            <span className="px-3 text-xs font-black text-white tabular-nums tracking-tight">
               {weekRangeLabel}
             </span>
             <button
+              type="button"
               onClick={() => handleWeekChange('next')}
               aria-label="Tuần kế tiếp"
-              className="p-1.5 rounded-md text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
           {/* Open Date Picker Modal */}
-          <Button
-            variant="outline"
-            size="sm"
+          <button
+            type="button"
             onClick={() => setIsDatePickerOpen(true)}
-            className="text-xs font-bold border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 shadow-2xs gap-1.5 cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700 text-xs font-bold transition shadow-xs cursor-pointer active:scale-95 flex items-center gap-1.5"
           >
-            <CalendarDays className="w-3.5 h-3.5 text-slate-500" />
+            <CalendarDays className="w-3.5 h-3.5 text-slate-400" />
             <span>Chọn ngày</span>
-          </Button>
+          </button>
 
           {/* Mở slot nhận học viên PT */}
-          <Button
-            size="sm"
-            onClick={() => setIsCreateSlotOpen(true)}
-            className="bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs gap-1.5 shadow-xs shadow-teal-600/20 cursor-pointer"
+          <button
+            type="button"
+            onClick={() => {
+              setCreateSlotDate(undefined);
+              setIsCreateSlotOpen(true);
+            }}
+            className="px-4 sm:px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs sm:text-sm shadow-md transition active:scale-95 cursor-pointer flex items-center gap-2"
           >
-            <Plus className="w-4 h-4" />
-            <span>Mở slot PT</span>
-          </Button>
+            <Plus className="w-4 h-4 stroke-[3]" />
+            <span>Thêm slot rảnh</span>
+          </button>
         </div>
       </div>
 
-      {/* 2. STATS & METRICS SUMMARY CARDS */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* Metric 1: Ca kế tiếp */}
-        <div className="col-span-2 sm:col-span-1 rounded-xl border border-teal-200/90 dark:border-teal-800/60 bg-gradient-to-br from-teal-50/60 to-white dark:from-teal-950/20 dark:to-[#131b26] p-4 shadow-2xs space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-teal-800 dark:text-teal-300 uppercase tracking-wider">
-              Ca kế tiếp
-            </span>
-            {stats.nextSession && (
-              <button
-                onClick={() => setSelectedSession(stats.nextSession)}
-                className="text-[11px] font-semibold text-teal-700 dark:text-teal-400 hover:underline inline-flex items-center gap-0.5 cursor-pointer"
-              >
-                Chi tiết
-                <ChevronRight className="w-3 h-3" />
-              </button>
-            )}
-          </div>
-
-          {stats.nextSession ? (
-            <div className="space-y-1">
-              <div className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
-                {stats.nextSession.type === 'PT'
-                  ? `${stats.nextSession.studentName || 'Học viên PT'} (PT 1:1)`
-                  : `${stats.nextSession.title} (Lớp nhóm)`}
-              </div>
-              <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 tabular-nums">
-                <Clock className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-                {new Date(stats.nextSession.startTime).toLocaleTimeString('vi-VN', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}{' '}
-                –{' '}
-                {new Date(stats.nextSession.endTime).toLocaleTimeString('vi-VN', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}{' '}
-                · {new Date(stats.nextSession.startTime).toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' })}
-              </div>
-            </div>
-          ) : (
-            <p className="text-xs text-slate-400 italic pt-1">
-              Không có ca dạy nào sắp diễn ra trong tuần này.
-            </p>
-          )}
-        </div>
-
-        {/* Metric 2: Tổng số ca tuần */}
-        <div className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#131b26] p-4 shadow-2xs space-y-1">
-          <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-            Tổng số ca dạy
-          </div>
-          <div className="text-2xl font-black text-slate-900 dark:text-slate-50 tabular-nums">
-            {stats.totalSessions} <span className="text-sm font-semibold text-slate-500">ca</span>
-          </div>
-          <div className="text-[11px] text-slate-400">
-            {stats.totalPt} ca PT 1:1 · {stats.totalGroup} lớp nhóm
-          </div>
-        </div>
-
-        {/* Metric 3: Tổng giờ dạy */}
-        <div className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#131b26] p-4 shadow-2xs space-y-1">
-          <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-            Tổng thời lượng dạy
-          </div>
-          <div className="text-2xl font-black text-slate-900 dark:text-slate-50 tabular-nums">
-            {stats.totalHours} <span className="text-sm font-semibold text-slate-500">giờ</span>
-          </div>
-          <div className="text-[11px] text-slate-400">
-            Tính theo các buổi tập thực tế
-          </div>
-        </div>
-
-        {/* Metric 4: Số học viên PT */}
-        <div className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#131b26] p-4 shadow-2xs space-y-1">
-          <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-            Học viên PT cá nhân
-          </div>
-          <div className="text-2xl font-black text-slate-900 dark:text-slate-50 tabular-nums">
-            {stats.ptStudentsCount} <span className="text-sm font-semibold text-slate-500">học viên</span>
-          </div>
-          <div className="text-[11px] text-slate-400">
-            Theo dõi giáo án và thể lực riêng
-          </div>
-        </div>
-      </div>
+      {/* 2. STATS KPI CARDS */}
+ 
 
       {/* 3. FILTER CHIPS & VIEW MODE SWITCHER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
         {/* Category Filter Chips */}
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           {/* Tất cả */}
           <button
             onClick={() => setFilterType('ALL')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               filterType === 'ALL'
-                ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
-                : 'bg-white dark:bg-[#131b26] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'
+                ? 'bg-slate-950 text-white shadow-xs'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
             }`}
           >
             Tất cả ({stats.totalSessions})
@@ -402,38 +317,38 @@ export const CoachSchedulePage: React.FC = () => {
           {/* PT 1:1 */}
           <button
             onClick={() => setFilterType('PT')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
               filterType === 'PT'
-                ? 'bg-purple-600 text-white shadow-2xs shadow-purple-600/30'
-                : 'bg-white dark:bg-[#131b26] text-purple-900 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60 hover:bg-purple-50/60'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'bg-white text-emerald-900 border border-emerald-200 hover:bg-emerald-50/60'
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-purple-500" />
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
             PT 1:1 ({stats.totalPt})
           </button>
 
           {/* Lớp nhóm */}
           <button
             onClick={() => setFilterType('CLASS')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
               filterType === 'CLASS'
-                ? 'bg-emerald-600 text-white shadow-2xs shadow-emerald-600/30'
-                : 'bg-white dark:bg-[#131b26] text-emerald-900 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-50/60'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-white text-blue-900 border border-blue-200 hover:bg-blue-50/60'
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span className="w-2 h-2 rounded-full bg-blue-500" />
             Lớp nhóm ({stats.totalGroup})
           </button>
         </div>
 
         {/* View Switcher: Lưới tuần / Lịch trình */}
-        <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#131b26] p-0.5 shadow-2xs self-start sm:self-auto">
+        <div className="flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-2xs self-start sm:self-auto">
           <button
             onClick={() => setViewMode('WEEK_GRID')}
-            className={`px-3 py-1 rounded-md text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
               viewMode === 'WEEK_GRID'
-                ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
-                : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-100'
+                ? 'bg-slate-950 text-white shadow-xs'
+                : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             <CalendarRange className="w-3.5 h-3.5" />
@@ -441,10 +356,10 @@ export const CoachSchedulePage: React.FC = () => {
           </button>
           <button
             onClick={() => setViewMode('AGENDA')}
-            className={`px-3 py-1 rounded-md text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
               viewMode === 'AGENDA'
-                ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
-                : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-100'
+                ? 'bg-slate-950 text-white shadow-xs'
+                : 'text-slate-500 hover:text-slate-900'
             }`}
           >
             <CalendarDays className="w-3.5 h-3.5" />

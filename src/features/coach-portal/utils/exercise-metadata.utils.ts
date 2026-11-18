@@ -170,3 +170,36 @@ export function parseExerciseInstructions(raw?: string): ParsedExerciseMetadata 
     instructionsText,
   };
 }
+
+export function getExerciseDiscipline(ex?: {
+  instructions?: string;
+  category?: string;
+  title?: string;
+}): 'BOXING' | 'YOGA' | 'GYM' {
+  if (!ex) return 'GYM';
+  const meta = parseExerciseInstructions(ex.instructions);
+  if (meta.discipline) {
+    const d = meta.discipline.toUpperCase();
+    if (d === 'BOXING' || d === 'YOGA' || d === 'GYM') return d;
+  }
+  const cat = (ex.category || '').toLowerCase();
+  if (cat.includes('boxing') || cat === 'sparring') return 'BOXING';
+  if (cat.includes('yoga') || cat === 'yoga_pose') return 'YOGA';
+  const title = (ex.title || '').toLowerCase();
+  if (
+    title.includes('boxing') ||
+    title.includes('đấm') ||
+    title.includes('jab') ||
+    title.includes('hook') ||
+    title.includes('uppercut') ||
+    title.includes('mitt') ||
+    title.includes('găng') ||
+    title.includes('bao cát')
+  ) {
+    return 'BOXING';
+  }
+  if (title.includes('yoga') || title.includes('chiến binh') || title.includes('tư thế')) {
+    return 'YOGA';
+  }
+  return 'GYM';
+}

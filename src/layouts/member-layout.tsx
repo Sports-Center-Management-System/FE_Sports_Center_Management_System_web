@@ -1,11 +1,10 @@
 import React, { useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router'
+import { Link, NavLink, Outlet, useNavigate } from 'react-router'
 import { useAuth } from '@/context/auth-context'
 import {
   Calendar,
   CreditCard,
   History,
-  User,
   Activity,
   BookOpen,
   CheckCircle2,
@@ -30,7 +29,6 @@ const memberNavLinks = [
   { label: 'Giao dịch', path: '/portal/member/transactions', icon: History },
   { label: 'Hóa đơn', path: '/portal/member/invoices', icon: FileText },
   { label: 'Lịch sử', path: '/portal/member/history', icon: CheckCircle2 },
-  { label: 'Hồ sơ', path: '/portal/member/profile', icon: User },
   { label: 'InBody', path: '/portal/member/progress', icon: Activity },
   { label: 'Giáo án', path: '/portal/member/workout-plans', icon: BookOpen },
 ]
@@ -88,21 +86,25 @@ export const MemberLayout: React.FC = () => {
             ))}
           </nav>
           <div className="mt-4 pt-3 border-t border-slate-200">
-            <div className="flex items-center gap-3 px-2 py-2 mb-2">
-              <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-xs uppercase overflow-hidden">
+            <Link
+              to="/portal/member/profile"
+              onClick={(event) => event.currentTarget.closest('details')?.removeAttribute('open')}
+              className="flex items-center gap-3 px-2 py-2 mb-2 rounded-xl hover:bg-slate-100 transition-colors"
+            >
+              <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-xs uppercase overflow-hidden shrink-0">
                 {user?.avatarUrl ? (
                   <img src={user.avatarUrl} alt={user.fullName} className="h-full w-full object-cover" />
                 ) : (
                   user?.fullName?.charAt(0) || 'H'
                 )}
               </div>
-              <div className="truncate">
-                <p className="text-xs font-bold text-slate-900 truncate">
+              <div className="truncate min-w-0">
+                <p className="text-xs font-bold text-slate-900 truncate hover:text-emerald-700">
                   {user?.fullName || 'Hội viên'}
                 </p>
                 <p className="text-[11px] text-slate-500 truncate">{user?.email}</p>
               </div>
-            </div>
+            </Link>
             <Button
               type="button"
               variant="outline"
@@ -191,7 +193,11 @@ export const MemberLayout: React.FC = () => {
         <div className="pt-2 border-t border-slate-200/90 shrink-0">
           {!isCollapsed ? (
             <div className="flex items-center justify-between gap-2.5 p-2 rounded-2xl bg-slate-50 border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all">
-              <div className="flex items-center gap-2.5 min-w-0">
+              <Link
+                to="/portal/member/profile"
+                title="Xem hồ sơ cá nhân"
+                className="flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-85 transition-opacity"
+              >
                 <div className="h-9 w-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white font-bold text-xs uppercase overflow-hidden shrink-0 ring-2 ring-emerald-500/20">
                   {user?.avatarUrl ? (
                     <img
@@ -204,14 +210,14 @@ export const MemberLayout: React.FC = () => {
                   )}
                 </div>
                 <div className="truncate min-w-0">
-                  <p className="text-xs font-bold text-slate-900 truncate leading-tight">
+                  <p className="text-xs font-bold text-slate-900 truncate leading-tight hover:text-emerald-700 transition-colors">
                     {user?.fullName || 'Hội viên'}
                   </p>
                   <span className="inline-block text-[10px] font-semibold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.2 rounded mt-0.5">
                     Hội Viên
                   </span>
                 </div>
-              </div>
+              </Link>
 
               {/* Logout Button directly inside character border */}
               <button
@@ -225,9 +231,10 @@ export const MemberLayout: React.FC = () => {
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2 p-1">
-              <div
-                title={`${user?.fullName || 'Hội viên'} (Hội Viên)`}
-                className="h-9 w-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white font-bold text-xs uppercase overflow-hidden shrink-0 ring-2 ring-emerald-500/20"
+              <Link
+                to="/portal/member/profile"
+                title={`${user?.fullName || 'Hội viên'} (Xem hồ sơ)`}
+                className="h-9 w-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white font-bold text-xs uppercase overflow-hidden shrink-0 ring-2 ring-emerald-500/20 hover:opacity-85 transition-opacity"
               >
                 {user?.avatarUrl ? (
                   <img
@@ -238,7 +245,7 @@ export const MemberLayout: React.FC = () => {
                 ) : (
                   user?.fullName?.charAt(0) || 'H'
                 )}
-              </div>
+              </Link>
               <button
                 type="button"
                 onClick={() => void handleLogout()}

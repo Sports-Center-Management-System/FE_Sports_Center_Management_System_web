@@ -1,22 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ShieldAlert,
-  Clock,
-  CheckCircle2,
-  XCircle,
   RefreshCw,
   RotateCcw,
   Loader2,
+  FileText,
   AlertCircle,
-  Info,
+  CheckCircle2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { coachPortalApi } from '../api/coach-portal-api';
+import { TablePagination } from '@/components/common/table-pagination';
+
+const ITEMS_PER_PAGE = 10;
 
 export const CoachRequestsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'REQUESTS' | 'PENALTIES'>('REQUESTS');
+  const [reqPage, setReqPage] = useState<number>(1);
+  const [penPage, setPenPage] = useState<number>(1);
   const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -40,32 +43,50 @@ export const CoachRequestsPage: React.FC = () => {
     queryFn: () => coachPortalApi.getMyPenalties(),
   });
 
+  const paginatedRequests = useMemo(() => {
+    const start = (reqPage - 1) * ITEMS_PER_PAGE;
+    return requests.slice(start, start + ITEMS_PER_PAGE);
+  }, [requests, reqPage]);
+
+  const paginatedPenalties = useMemo(() => {
+    const start = (penPage - 1) * ITEMS_PER_PAGE;
+    return penalties.slice(start, start + ITEMS_PER_PAGE);
+  }, [penalties, penPage]);
+
+  const isCurrentLoading = activeTab === 'REQUESTS' ? isReqLoading : isPenLoading;
+  const isCurrentRefetching = activeTab === 'REQUESTS' ? isReqRefetching : isPenRefetching;
+
+  const handleRefetch = () => {
+    if (activeTab === 'REQUESTS') void refetchRequests();
+    else void refetchPenalties();
+  };
+
   const withdrawMutation = useMutation({
     mutationFn: (id: string) => coachPortalApi.withdrawCancellationRequest(id),
     onSuccess: async () => {
       setActionMessage({
         type: 'success',
-        text: 'Đã rút lại yêu cầu hủy lịch thành công. Lịch dạy của bạn vẫn được bảo toàn nguyên vẹn.',
+        text: 'Đã rút lại yêu cầu hủy lịch thành công. Ca dạy vẫn được giữ nguyên.',
       });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['coach', 'cancellation-requests'] }),
         queryClient.invalidateQueries({ queryKey: ['coach', 'today-schedule'] }),
         queryClient.invalidateQueries({ queryKey: ['coach', 'multi-day-schedule'] }),
       ]);
-      setTimeout(() => setActionMessage(null), 5000);
+      setTimeout(() => setActionMessage(null), 4000);
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message || err.message || 'Lỗi khi rút lại yêu cầu hủy';
+      const msg = err.response?.data?.message || err.message || 'Lỗi khi rút lại yêu cầu';
       const formatted =
         msg === 'CANNOT_CANCEL_NON_PENDING_REQUEST'
-          ? 'Chỉ có thể rút yêu cầu khi đơn đang ở trạng thái Chờ duyệt.'
+          ? 'Chỉ có thể rút đơn khi đang ở trạng thái chờ duyệt.'
           : msg === 'REQUEST_ALREADY_REVIEWED'
-          ? 'Yêu cầu này đã được Quản lý duyệt hoặc từ chối trước đó.'
+          ? 'Yêu cầu này đã được quản lý xử lý trước đó.'
           : typeof msg === 'string'
           ? msg
           : JSON.stringify(msg);
       setActionMessage({ type: 'error', text: formatted });
-      setTimeout(() => setActionMessage(null), 5000);
+      setTimeout(() => setActionMessage(null), 4000);
     },
     onSettled: () => {
       setWithdrawingId(null);
@@ -73,304 +94,347 @@ export const CoachRequestsPage: React.FC = () => {
   });
 
   const handleWithdraw = (id: string) => {
-    if (
-      window.confirm(
-        'Bạn có chắc chắn muốn rút lại yêu cầu hủy lịch này? Ca dạy / hẹn PT sẽ tiếp tục được giữ nguyên trạng thái CONFIRMED.'
-      )
-    ) {
+    if (window.confirm('Bạn có chắc chắn muốn rút lại đơn xin hủy lịch này không?')) {
       setWithdrawingId(id);
       withdrawMutation.mutate(id);
     }
   };
 
+  const getSuggestedActionLabel = (action: string) => {
+    switch (action) {
+      case 'NONE':
+        return 'Không áp dụng';
+      case 'WARNING':
+        return 'Cảnh cáo nhắc nhở';
+      case 'SUGGEST_RATE_REDUCTION_15PCT':
+        return 'Giảm 15% rate';
+      case 'TEMP_SUSPEND':
+        return 'Tạm đình chỉ mở ca';
+      default:
+        return action || 'Chưa xác định';
+    }
+  };
+
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-6 pb-12">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black tracking-tight text-white">
-            Đơn Hủy Khẩn Cấp & Kỷ Luật
+    <div className="w-full max-w-7xl mx-auto space-y-6 pb-24">
+      {/* 1. Header */}
+      <div className="p-6 sm:p-8 rounded-3xl bg-slate-950 text-white shadow-xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1.5">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold tracking-wide uppercase">
+            <ShieldAlert className="h-3.5 w-3.5" />
+            <span>Kỷ Luật &amp; Yêu Cầu Hủy Ca</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+            Đơn Hủy &amp; Kỷ Luật
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Theo dõi tiến trình phê duyệt và các thông tin kỷ luật liên quan đến ca dạy
-          </p>
+        
         </div>
 
         <Button
           variant="outline"
-          onClick={() => {
-            void refetchRequests();
-            void refetchPenalties();
-          }}
-          disabled={isReqLoading || isPenLoading || isReqRefetching || isPenRefetching}
-          className="self-start sm:self-auto text-xs font-bold border-slate-200 bg-white shadow-xs"
+          onClick={handleRefetch}
+          disabled={isCurrentLoading || isCurrentRefetching}
+          className="self-start sm:self-auto text-xs font-bold border-slate-700 bg-slate-900/80 hover:bg-slate-800 text-slate-200 cursor-pointer h-10 px-4 rounded-xl"
         >
-          <RefreshCw
-            className={`h-3.5 w-3.5 ${
-              isReqRefetching || isPenRefetching ? 'animate-spin' : ''
-            }`}
-          />
+          <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isCurrentRefetching ? 'animate-spin' : ''}`} />
           <span>Làm mới</span>
         </Button>
       </div>
 
-      {/* Policy Explainer Banner */}
-      <div className="flex items-start gap-3 rounded-2xl border border-amber-200/90 bg-amber-50/70 p-4 text-xs text-amber-950 shadow-xs">
-        <Info className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-        <div className="space-y-1">
-          <p className="font-bold">Quy trình xử lý yêu cầu Hủy lịch khẩn cấp:</p>
-          <p className="text-[11px] leading-relaxed text-amber-900">
-            • <strong>Quản lý Trung Tâm:</strong> Trực tiếp duyệt trên hệ thống Dashboard.<br />
-            • <strong>Lễ tân trực quầy:</strong> Hỗ trợ phê duyệt khi Quản lý vắng mặt.<br />
-            • <strong>Quyền lợi học viên:</strong> 100% học viên bị ảnh hưởng đều được tự động hoàn lại 01 lượt tập đầy đủ.
-          </p>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
-        <button
-          onClick={() => setActiveTab('REQUESTS')}
-          className={`rounded-t-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-2 ${
-            activeTab === 'REQUESTS'
-              ? 'bg-white shadow-xs'
-              : 'text-white hover:bg-slate-100 hover:text-black'
+      {/* 2. Feedback Message */}
+      {actionMessage && (
+        <div
+          className={`flex items-center gap-2.5 rounded-2xl p-4 text-xs font-bold border ${
+            actionMessage.type === 'success'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+              : 'bg-rose-50 border-rose-200 text-rose-900'
           }`}
         >
-          <span>Đơn xin hủy khẩn cấp</span>
-          <span className="rounded-full bg-slate-700 text-white px-2 py-0.2 text-[10px]">
+          {actionMessage.type === 'success' ? (
+            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+          ) : (
+            <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
+          )}
+          <span>{actionMessage.text}</span>
+        </div>
+      )}
+
+      {/* 3. Navigation Tabs */}
+      <div className="flex items-center gap-2 p-1.5 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 w-full sm:w-fit shadow-sm">
+        <button
+          type="button"
+          onClick={() => setActiveTab('REQUESTS')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+            activeTab === 'REQUESTS'
+              ? 'bg-slate-950 text-white shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white'
+          }`}
+        >
+          <FileText className={`h-4 w-4 ${activeTab === 'REQUESTS' ? 'text-emerald-400' : 'text-slate-500'}`} />
+          <span>Đơn xin hủy ca</span>
+          <span
+            className={`text-[10px] px-2 py-0.5 rounded-full font-bold ml-1 ${
+              activeTab === 'REQUESTS'
+                ? 'bg-emerald-500 text-slate-950 font-black'
+                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+            }`}
+          >
             {requests.length}
           </span>
         </button>
 
         <button
+          type="button"
           onClick={() => setActiveTab('PENALTIES')}
-          className={`rounded-t-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-2 ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
             activeTab === 'PENALTIES'
-              ? 'bg-white shadow-xs'
-              : 'text-white hover:bg-slate-100 hover:text-black'
+              ? 'bg-slate-950 text-white shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white'
           }`}
         >
+          <ShieldAlert className={`h-4 w-4 ${activeTab === 'PENALTIES' ? 'text-emerald-400' : 'text-slate-500'}`} />
           <span>Chế tài kỷ luật</span>
-          <span className="rounded-full bg-amber-700 text-white px-2 py-0.2 text-[10px]">
+          <span
+            className={`text-[10px] px-2 py-0.5 rounded-full font-bold ml-1 ${
+              activeTab === 'PENALTIES'
+                ? 'bg-emerald-500 text-slate-950 font-black'
+                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+            }`}
+          >
             {penalties.length}
           </span>
         </button>
       </div>
 
-      {/* TAB 1: Cancellation Requests */}
+      {/* 4. TAB 1: Cancellation Requests Table */}
       {activeTab === 'REQUESTS' && (
-        <div className="space-y-4">
-          {actionMessage && (
-            <div
-              className={`flex items-center gap-2.5 rounded-xl p-3.5 text-xs font-semibold animate-in fade-in duration-200 ${
-                actionMessage.type === 'success'
-                  ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
-                  : 'bg-rose-50 border border-rose-200 text-rose-800'
-              }`}
-            >
-              {actionMessage.type === 'success' ? (
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-              ) : (
-                <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
-              )}
-              <span>{actionMessage.text}</span>
-            </div>
-          )}
-
+        <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
           {isReqLoading ? (
             <div className="py-20 text-center space-y-3">
               <RefreshCw className="h-8 w-8 text-emerald-600 animate-spin mx-auto" />
               <p className="text-xs font-bold text-slate-500">Đang tải danh sách đơn hủy...</p>
             </div>
           ) : requests.length === 0 ? (
-            <div className="py-16 text-center space-y-3 rounded-2xl border border-dashed border-slate-200 bg-white p-8">
-              <CheckCircle2 className="h-12 w-12 text-emerald-400 mx-auto" />
-              <h3 className="text-base font-bold text-slate-800">Không có đơn hủy khẩn cấp nào</h3>
+            <div className="py-16 text-center space-y-3 p-8">
+              <FileText className="h-10 w-10 text-slate-300 mx-auto" />
+              <h3 className="text-sm font-black text-slate-900 dark:text-slate-100">Chưa có đơn xin hủy ca nào</h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Bạn chưa từng nộp yêu cầu hủy lịch khẩn cấp nào. Tỷ lệ chuyên cần của bạn đang ở mức hoàn hảo!
+                Hiện tại bạn không có yêu cầu hủy ca khẩn cấp nào trong hệ thống.
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {requests.map((req) => (
-                <div
-                  key={req.id}
-                  className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs space-y-3 transition-all hover:border-slate-300"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`rounded-md px-2 py-0.5 text-[10px] font-black uppercase ${
-                          req.targetType === 'GROUP_CLASS'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-emerald-100 text-emerald-800'
-                        }`}
-                      >
-                        {req.targetType === 'GROUP_CLASS' ? 'LỚP NHÓM' : 'CA PT 1-1'}
-                      </span>
-                      <span className="text-xs text-slate-400 font-semibold">
-                        Gửi lúc: {new Date(req.createdAt).toLocaleString('vi-VN')}
-                      </span>
-                    </div>
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
+                  <tr>
+                    <th className="py-4 px-5">Thời gian gửi</th>
+                    <th className="py-4 px-4">Loại ca</th>
+                    <th className="py-4 px-5">Lý do hủy gửi học viên</th>
+                    <th className="py-4 px-4">Ghi chú phản hồi</th>
+                    <th className="py-4 px-4 text-center">Trạng thái</th>
+                    <th className="py-4 px-5 text-right">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+                  {paginatedRequests.map((req) => {
+                    const isPending = req.status === 'PENDING';
+                    const isApproved = req.status === 'APPROVED';
+                    const isCancelled = req.status === 'CANCELLED';
 
-                    <div>
-                      {req.status === 'PENDING' ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-xs font-bold text-amber-800">
-                          <Clock className="h-3.5 w-3.5" />
-                          Đang chờ duyệt
-                        </span>
-                      ) : req.status === 'APPROVED' ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-800">
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                          Đã phê duyệt (Đã hoàn buổi cho học viên)
-                        </span>
-                      ) : req.status === 'CANCELLED' ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 border border-slate-300 px-3 py-1 text-xs font-bold text-slate-600">
-                          <RotateCcw className="h-3.5 w-3.5 text-slate-500" />
-                          Đã rút yêu cầu
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 border border-rose-200 px-3 py-1 text-xs font-bold text-rose-800">
-                          <XCircle className="h-3.5 w-3.5" />
-                          Bị từ chối
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Apology Reason Message */}
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                      Lời nhắn xin lỗi gửi học viên:
-                    </span>
-                    <p className="text-xs text-slate-800 bg-slate-50 p-3 rounded-xl border border-slate-100 italic">
-                      "{req.reasonMessage}"
-                    </p>
-                  </div>
-
-                  {/* Internal Notes or Review Note */}
-                  {(req.internalNote || req.reviewNote) && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 text-xs">
-                      {req.internalNote && (
-                        <div>
-                          <span className="text-[10px] font-bold text-slate-400 uppercase">
-                            Ghi chú của bạn:
+                    return (
+                      <tr key={req.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                        <td className="py-4 px-5 whitespace-nowrap">
+                          <span className="font-bold text-slate-900 dark:text-slate-100 block">
+                            {new Date(req.createdAt).toLocaleDateString('vi-VN')}
                           </span>
-                          <p className="text-slate-600 mt-0.5">{req.internalNote}</p>
-                        </div>
-                      )}
-                      {req.reviewNote && (
-                        <div>
-                          <span className="text-[10px] font-bold text-slate-400 uppercase">
-                            Phản hồi từ Quản lý:
+                          <span className="text-[11px] text-slate-400 font-mono block">
+                            {new Date(req.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} 
                           </span>
-                          <p className="text-indigo-700 font-semibold mt-0.5">
-                            {req.reviewNote}
+                        </td>
+
+                        <td className="py-4 px-4 whitespace-nowrap">
+                          <span
+                            className={`inline-block px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide ${
+                              req.targetType === 'GROUP_CLASS'
+                                ? 'bg-slate-950 text-white'
+                                : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800'
+                            }`}
+                          >
+                            {req.targetType === 'GROUP_CLASS' ? 'Lớp nhóm' : 'Ca PT 1-1'}
+                          </span>
+                        </td>
+
+                        <td className="py-4 px-5 max-w-sm">
+                          <p className="text-slate-800 dark:text-slate-200 line-clamp-2 leading-relaxed">
+                            {req.reasonMessage || '--'}
                           </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                          {req.internalNote && (
+                            <span className="text-[11px] text-slate-400 block mt-0.5">
+                              Ghi chú nội bộ: {req.internalNote}
+                            </span>
+                          )}
+                        </td>
 
-                  {/* Action for Coach: Withdraw Pending Request */}
-                  {req.status === 'PENDING' && (
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-3 border-t border-slate-100 bg-slate-50/50 -mx-5 -mb-5 px-5 py-3 rounded-b-2xl">
-                      <p className="text-[11px] text-slate-500">
-                        * Bạn có thể rút lại đơn trước khi Quản lý duyệt. Lịch dạy sẽ tiếp tục giữ nguyên.
-                      </p>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleWithdraw(req.id)}
-                        disabled={withdrawingId === req.id}
-                        className="text-xs font-bold text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300 gap-1.5 shadow-none self-end sm:self-auto"
-                      >
-                        {withdrawingId === req.id ? (
-                          <>
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            <span>Đang xử lý...</span>
-                          </>
-                        ) : (
-                          <>
-                            <RotateCcw className="h-3.5 w-3.5" />
-                            <span>Rút yêu cầu hủy</span>
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              ))}
+                        <td className="py-4 px-4 max-w-xs">
+                          {req.reviewNote ? (
+                            <span className="text-slate-700 dark:text-slate-300 font-semibold block line-clamp-2">
+                              {req.reviewNote}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">--</span>
+                          )}
+                        </td>
+
+                        <td className="py-4 px-4 text-center whitespace-nowrap">
+                          {isPending ? (
+                            <span className="inline-block px-3 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800 text-xs font-bold">
+                              Chờ duyệt
+                            </span>
+                          ) : isApproved ? (
+                            <span className="inline-block px-3 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800 text-xs font-bold">
+                              Đã phê duyệt
+                            </span>
+                          ) : isCancelled ? (
+                            <span className="inline-block px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-bold">
+                              Đã rút đơn
+                            </span>
+                          ) : (
+                            <span className="inline-block px-3 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border border-rose-200/80 dark:border-rose-800 text-xs font-bold">
+                              Từ chối
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="py-4 px-5 text-right whitespace-nowrap">
+                          {isPending ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleWithdraw(req.id)}
+                              disabled={withdrawingId === req.id}
+                              className="text-xs font-bold text-rose-600 hover:text-rose-700 border-rose-200 hover:bg-rose-50 h-8 px-3 rounded-xl cursor-pointer"
+                            >
+                              {withdrawingId === req.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                              )}
+                              <span>Rút đơn</span>
+                            </Button>
+                          ) : (
+                            <span className="text-slate-400 text-xs">--</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          )}
+
+            {/* Table Pagination */}
+            <TablePagination
+              currentPage={reqPage}
+              totalItems={requests.length}
+              itemsPerPage={ITEMS_PER_PAGE}
+              onPageChange={setReqPage}
+              itemName="đơn hủy"
+            />
+          </>
+        )}
         </div>
       )}
 
-      {/* TAB 2: Penalties & DSS */}
+      {/* 5. TAB 2: Penalties Table */}
       {activeTab === 'PENALTIES' && (
-        <div className="space-y-4">
+        <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
           {isPenLoading ? (
             <div className="py-20 text-center space-y-3">
-              <RefreshCw className="h-8 w-8 text-amber-600 animate-spin mx-auto" />
+              <RefreshCw className="h-8 w-8 text-emerald-600 animate-spin mx-auto" />
               <p className="text-xs font-bold text-slate-500">Đang tải lịch sử kỷ luật...</p>
             </div>
           ) : penalties.length === 0 ? (
-            <div className="py-16 text-center space-y-3 rounded-2xl border border-dashed border-slate-200 bg-white p-8">
-              <ShieldAlert className="h-12 w-12 text-emerald-400 mx-auto" />
-              <h3 className="text-base font-bold text-slate-800">Không có bản ghi kỷ luật nào</h3>
+            <div className="py-16 text-center space-y-3 p-8">
+              <ShieldAlert className="h-10 w-10 text-slate-300 mx-auto" />
+              <h3 className="text-sm font-black text-slate-900 dark:text-slate-100">Không có bản ghi kỷ luật nào</h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Hệ thống DSS không ghi nhận bất kỳ cảnh báo hoặc vi phạm kỷ luật nào đối với bạn. Hãy tiếp tục duy trì!
+                Tỷ lệ chuyên cần tốt, chưa ghi nhận vi phạm kỷ luật nào.
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {penalties.map((item) => (
-                <div
-                  key={item.id}
-                  className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs space-y-3"
-                >
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <div>
-                      <h4 className="text-sm font-extrabold text-slate-900">
-                        Tháng ghi nhận: {item.month}
-                      </h4>
-                      <p className="text-xs text-slate-500">
-                        Số ca hủy khẩn cấp trong tháng: {item.cancellationCount} ca
-                      </p>
-                    </div>
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
+                  <tr>
+                    <th className="py-4 px-5">Kỳ đánh giá</th>
+                    <th className="py-4 px-4 text-center">Số ca hủy</th>
+                    <th className="py-4 px-5">Chế tài áp dụng</th>
+                    <th className="py-4 px-4 text-center">Trạng thái</th>
+                    <th className="py-4 px-5 text-right">Ngày ghi nhận</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+                  {paginatedPenalties.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="py-4 px-5 whitespace-nowrap">
+                        <span className="font-bold text-slate-900 dark:text-slate-100 block">
+                          Tháng {item.month}
+                        </span>
+                      </td>
 
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-black uppercase ${
-                        item.suggestedAction === 'NONE'
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : item.suggestedAction === 'WARNING'
-                          ? 'bg-amber-100 text-amber-800'
-                          : 'bg-rose-100 text-rose-800'
-                      }`}
-                    >
-                      {item.suggestedAction}
-                    </span>
-                  </div>
+                      <td className="py-4 px-4 text-center whitespace-nowrap">
+                        <span className="font-bold text-slate-900 dark:text-slate-100">
+                          {item.cancellationCount} ca
+                        </span>
+                      </td>
 
-                  <div className="rounded-xl bg-slate-50 p-3 text-xs space-y-1">
-                    <p className="font-bold text-slate-700">Khuyến nghị xử lý của hệ thống:</p>
-                    <p className="text-slate-600">
-                      {item.suggestedAction === 'NONE' && 'Không áp dụng chế tài kỷ luật.'}
-                      {item.suggestedAction === 'WARNING' && 'Cảnh cáo nhắc nhở do hủy lịch khẩn cấp.'}
-                      {item.suggestedAction === 'SUGGEST_RATE_REDUCTION_15PCT' &&
-                        'Đề xuất giảm 15% biểu phí dạy kèm do vượt ngưỡng hủy lịch.'}
-                      {item.suggestedAction === 'TEMP_SUSPEND' &&
-                        'Tạm đình chỉ mở slot rảnh mới trong 1 tuần.'}
-                    </p>
-                    <p className="text-[11px] text-slate-400 italic pt-1">
-                      * Quyết định cuối cùng do Center Manager trực tiếp xem xét tại kỳ họp giao ban cuối tháng.
-                    </p>
-                  </div>
-                </div>
-              ))}
+                      <td className="py-4 px-5">
+                        <span
+                          className={`inline-block px-3 py-1 rounded-lg text-xs font-bold ${
+                            item.suggestedAction === 'NONE'
+                              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800'
+                              : item.suggestedAction === 'WARNING'
+                              ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800'
+                              : 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border border-rose-200/80 dark:border-rose-800'
+                          }`}
+                        >
+                          {getSuggestedActionLabel(item.suggestedAction)}
+                        </span>
+                      </td>
+
+                      <td className="py-4 px-4 text-center whitespace-nowrap">
+                        <span
+                          className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                            item.isReviewed
+                              ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                              : 'bg-amber-50 text-amber-800'
+                          }`}
+                        >
+                          {item.isReviewed ? 'Đã xem xét' : 'Đang xem xét'}
+                        </span>
+                      </td>
+
+                      <td className="py-4 px-5 text-right whitespace-nowrap text-slate-500">
+                        {new Date(item.updatedAt || item.createdAt).toLocaleDateString('vi-VN')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
+
+            {/* Table Pagination */}
+            <TablePagination
+              currentPage={penPage}
+              totalItems={penalties.length}
+              itemsPerPage={ITEMS_PER_PAGE}
+              onPageChange={setPenPage}
+              itemName="bản ghi kỷ luật"
+            />
+          </>
+        )}
         </div>
       )}
     </div>

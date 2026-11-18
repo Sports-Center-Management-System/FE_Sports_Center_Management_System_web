@@ -13,7 +13,7 @@ export interface AuthLayoutProps {
 export const AuthLayout: React.FC<AuthLayoutProps> = ({
   children,
   title = "Chào mừng đến với Trung Tâm Thể Thao",
-  subtitle = "Hệ thống quản lý và dịch vụ hội viên thể thao đa bộ môn",
+  subtitle = "",
 }) => {
   return (
     <div className="h-screen w-full overflow-hidden flex bg-[#f8fafc] text-slate-800">
