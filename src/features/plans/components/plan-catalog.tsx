@@ -565,21 +565,21 @@ export const PlanCatalog: React.FC<PlanCatalogProps> = () => {
   }, [disciplineId, tabDisciplines, filteredPlans]);
 
   return (
-    <div className="w-full max-w-7xl mx-auto pb-16">
-      {/* White Card Container wrapping the entire plans view */}
-      <div className="bg-white rounded-lg border border-slate-200/90 shadow-sm p-4 sm:p-6 md:p-8 space-y-8">
-        {/* FEATURED PLANS AUTO-SLIDING CAROUSEL */}
-        {filteredPlans.length > 0 && (
-          <section className="space-y-3">
-            <PlanCarousel
-              plans={filteredPlans}
-              onOpenDetail={setSelectedPlanForModal}
-              onSelectPlan={choose}
-              isOrdering={order.isPending}
-            />
-          </section>
-        )}
+    <div className="w-full max-w-7xl mx-auto space-y-6 pb-16">
+      {/* FEATURED PLANS AUTO-SLIDING CAROUSEL (outside white box) */}
+      {filteredPlans.length > 0 && (
+        <section className="space-y-3">
+          <PlanCarousel
+            plans={filteredPlans}
+            onOpenDetail={setSelectedPlanForModal}
+            onSelectPlan={choose}
+            isOrdering={order.isPending}
+          />
+        </section>
+      )}
 
+      {/* WHITE CARD WRAPPER FOR LOWER CATALOG CONTENT */}
+      <div className="bg-white rounded-lg border border-slate-200/90 shadow-sm p-4 sm:p-6 md:p-8 space-y-8">
         {/* FILTER & DISCIPLINE TABS CONTROLS */}
         <section className="space-y-3">
           {/* Discipline Tabs */}

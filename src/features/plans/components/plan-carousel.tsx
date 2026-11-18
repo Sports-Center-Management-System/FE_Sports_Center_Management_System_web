@@ -7,6 +7,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Maximize2,
+  Sparkles,
+  Dumbbell,
+  Flame,
+  Music,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +20,15 @@ export interface PlanCarouselProps {
   onOpenDetail: (plan: Plan) => void;
   onSelectPlan: (plan: Plan, e?: React.MouseEvent) => void;
   isOrdering?: boolean;
+}
+
+function PlanDisciplineIcon({ name, className }: { name?: string; className?: string }) {
+  const lower = (name || "").toLowerCase();
+  if (lower.includes("yoga")) return <Sparkles className={className} />;
+  if (lower.includes("box") || lower.includes("combat")) return <Flame className={className} />;
+  if (lower.includes("dance") || lower.includes("zumba")) return <Music className={className} />;
+  if (lower.includes("gym")) return <Dumbbell className={className} />;
+  return <Activity className={className} />;
 }
 
 const INTERVAL_TIME = 5000; // 5 seconds per slide
@@ -109,7 +123,8 @@ export const PlanCarousel: React.FC<PlanCarouselProps> = ({
           <div className="flex flex-wrap items-center gap-2">
             
 
-            <span className="px-2.5 py-1 rounded text-[11px] font-bold tracking-wide uppercase bg-black/60 text-slate-200 border border-white/20 backdrop-blur-md">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-bold tracking-wide uppercase bg-black/50 text-slate-200 border border-white/20 backdrop-blur-md">
+              <PlanDisciplineIcon name={activePlan.discipline?.name} className="w-3.5 h-3.5 text-emerald-400" />
               {activePlan.discipline?.name || "Bộ môn"}
             </span>
 
@@ -131,7 +146,7 @@ export const PlanCarousel: React.FC<PlanCarouselProps> = ({
           <button
             type="button"
             onClick={() => onOpenDetail(activePlan)}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-black/60 hover:bg-black/80 text-white backdrop-blur-md border border-white/25 transition-all cursor-pointer shadow-md"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold bg-black/60 hover:bg-black/80 text-white backdrop-blur-md border border-white/25 transition-all cursor-pointer shadow-md"
             title="Mở toàn màn hình xem ảnh và chi tiết"
           >
             <Maximize2 className="w-3.5 h-3.5 text-emerald-400" />
@@ -149,12 +164,12 @@ export const PlanCarousel: React.FC<PlanCarouselProps> = ({
               {formatPlanDescription(activePlan.description)}
             </p>
 
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-300 pt-1 font-medium">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-slate-200 pt-1 font-medium">
               <span>{activePlan.unlimitedGymEntry ? "Ra vào phòng tập tự do 24/7" : "Tập theo ca linh hoạt"}</span>
-              <span className="text-slate-600">·</span>
-              <span>Xông hơi Sauna & Tủ đồ thông minh</span>
-              <span className="text-slate-600">·</span>
-              <span>Đo chỉ số InBody định kỳ</span>
+              <span className="text-slate-400">·</span>
+              <span>Xông hơi Sauna & Tủ đồ</span>
+              <span className="text-slate-400">·</span>
+              <span>Đo chỉ số InBody</span>
             </div>
           </div>
 
@@ -179,20 +194,20 @@ export const PlanCarousel: React.FC<PlanCarouselProps> = ({
               )}
             </div>
 
-            {/* Quick Metrics - Clean & Quiet without rainbow icons */}
+            {/* Quick Metrics */}
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
-              <div className="p-2.5 rounded bg-white/5 border border-white/10">
-                <span className="text-[10px] text-slate-400 block font-bold uppercase mb-0.5">Thời hạn</span>
+              <div className="p-2 rounded bg-white/5 border border-white/10">
+                <span className="text-[10px] text-slate-400 block font-bold uppercase">Thời hạn</span>
                 <strong className="text-white font-mono text-sm">{activePlan.durationDays} ngày</strong>
               </div>
 
-              <div className="p-2.5 rounded bg-white/5 border border-white/10">
-                <span className="text-[10px] text-slate-400 block font-bold uppercase mb-0.5">Lớp nhóm</span>
+              <div className="p-2 rounded bg-white/5 border border-white/10">
+                <span className="text-[10px] text-slate-400 block font-bold uppercase">Lớp nhóm</span>
                 <strong className="text-white font-mono text-sm">{activePlan.groupSessionQuota ?? 0} buổi</strong>
               </div>
 
-              <div className="p-2.5 rounded bg-white/5 border border-white/10">
-                <span className="text-[10px] text-slate-400 block font-bold uppercase mb-0.5">Kèm 1:1</span>
+              <div className="p-2 rounded bg-white/5 border border-white/10">
+                <span className="text-[10px] text-slate-400 block font-bold uppercase">Kèm 1:1</span>
                 <strong className="text-white font-mono text-sm">{activePlan.ptSessionQuota ?? 0} buổi</strong>
               </div>
             </div>
@@ -204,13 +219,14 @@ export const PlanCarousel: React.FC<PlanCarouselProps> = ({
                 disabled={isOrdering}
                 onClick={(e) => onSelectPlan(activePlan, e)}
                 className={cn(
-                  "flex-1 h-10 rounded-md font-bold text-xs tracking-wide flex items-center justify-center transition-all cursor-pointer shadow-md active:scale-[0.98]",
+                  "flex-1 h-10 rounded-md font-bold text-xs tracking-wide flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md active:scale-[0.98]",
                   isVip
                     ? "bg-amber-400 hover:bg-amber-300 text-slate-950"
                     : "bg-[#008b74] hover:bg-emerald-600 text-white"
                 )}
               >
-                <span>{isVip ? "Chọn HLV & báo giá" : "Mua gói ngay"}</span>
+                <span>{isVip ? "Chọn HLV & báo giá" : " Mua gói"}</span>
+               
               </button>
 
               <button
