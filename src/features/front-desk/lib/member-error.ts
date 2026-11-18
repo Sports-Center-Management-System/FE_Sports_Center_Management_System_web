@@ -1,4 +1,5 @@
 import axios from "axios";
+import { validationText } from "@/lib/validation-message";
 
 export const memberError = (error: unknown, fallback: string): string => {
   if (!axios.isAxiosError(error)) return fallback;
@@ -21,7 +22,7 @@ export const memberError = (error: unknown, fallback: string): string => {
   if (data?.errorCode && messages[data.errorCode]) return messages[data.errorCode];
   if (error.response.status === 401) return "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
   if (error.response.status === 403) return "Tài khoản không có quyền thực hiện thao tác này.";
-  if (Array.isArray(data?.message)) return data.message.join(" ");
-  if (data?.message && !/^[A-Z][A-Z0-9_]+$/.test(data.message)) return data.message;
+  if (Array.isArray(data?.message)) return validationText(data.message) ?? fallback;
+  if (data?.message && !/^[A-Z][A-Z0-9_]+$/.test(data.message)) return validationText(data.message) ?? fallback;
   return fallback;
 };

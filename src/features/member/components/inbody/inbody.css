@@ -31,16 +31,70 @@
   border-radius: 1.5rem;
   padding: 1rem;
 }
-.inbody-model-stage {
-  height: 360px;
-  min-height: 360px;
+.inbody-overview-side {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+/* Charts keep their natural height; the shape card fills the rest beside the body map. */
+.inbody-dashboard .inbody-overview-side > .inbody-visual-card {
+  min-height: 0;
+}
+.inbody-overview-side > .inbody-visual-card:last-child {
   flex: 1;
 }
-.inbody-chart-plot {
-  height: 340px;
-  min-height: 340px;
-  min-width: 0;
+.inbody-body-stage {
+  height: 420px;
+  min-height: 420px;
   flex: 1;
+}
+/* Each part of the figure widens or narrows around its own centre line. */
+.inbody-body-shape {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 600ms ease;
+}
+.inbody-body-path {
+  transition: fill 150ms ease;
+}
+.inbody-body-region {
+  cursor: pointer;
+  outline: none;
+}
+.inbody-body-region:focus-visible path {
+  stroke: #0f172a;
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+@media (prefers-reduced-motion: reduce) {
+  .inbody-body-shape,
+  .inbody-body-path {
+    transition: none;
+  }
+}
+/* Four wide charts stacked one per row; each row puts its numbers left of the plot. */
+.inbody-chart-grid {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+}
+.inbody-metric-row {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.5rem 0.75rem;
+}
+@media (min-width: 480px) {
+  .inbody-metric-row {
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+    align-items: center;
+  }
+}
+.inbody-chart-plot {
+  height: 110px;
+  min-width: 0;
 }
 .inbody-history-table {
   min-width: 0;
@@ -74,9 +128,9 @@
   .inbody-dashboard .inbody-visual-card {
     padding: 1.5rem;
   }
-  .inbody-model-stage {
-    height: 400px;
-    min-height: 400px;
+  .inbody-body-stage {
+    height: 460px;
+    min-height: 460px;
   }
 }
 
@@ -86,7 +140,7 @@
     gap: 1.5rem;
   }
   .inbody-dashboard .inbody-visual-card {
-    min-height: 610px;
+    min-height: 480px;
   }
 }
 

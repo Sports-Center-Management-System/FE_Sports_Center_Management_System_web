@@ -1,3 +1,4 @@
+import type { InbodyPayload } from '@/lib/inbody-entry';
 export type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'LATE' | 'ATTENDED';
 
 export interface StudentBookingItem {
@@ -143,12 +144,17 @@ export interface CoachPenaltyItem {
 
 export interface InbodyLogItem {
   id: string;
-  memberId: string;
+  userId: string;
   measuredAt: string;
-  weightKg: number;
-  muscleMassKg?: number | null;
-  bodyFatKg?: number | null;
-  score?: number | null;
+  heightCm?: number | string | null;
+  weightKg: number | string;
+  muscleMassKg?: number | string | null;
+  skeletalMuscleMassKg?: number | string | null;
+  bodyFatPct?: number | string | null;
+  bodyFatMassKg?: number | string | null;
+  visceralFatLevel?: number | null;
+  inbodyScore?: number | null;
+  segmentalLean?: Record<string, number | string | null> | null;
   notes?: string | null;
 }
 
@@ -173,13 +179,61 @@ export interface AssignedMemberItem {
   };
 }
 
-export interface InbodyLogPayload {
+export type InbodyLogPayload = InbodyPayload & { userId: string };
+
+/** `GET /workout-plans/recommendations/:memberId` (InBody-based workout assistant). */
+export interface WorkoutRecommendation {
   memberId: string;
-  weightKg: number;
-  muscleMassKg?: number;
-  bodyFatKg?: number;
-  score?: number;
-  notes?: string;
+  memberName?: string;
+  hasInbodyData: boolean;
+  lastMeasuredAt?: string;
+  bodyShape: 'TYPE_C' | 'TYPE_I' | 'TYPE_D' | 'UNKNOWN';
+  bodyShapeDescription?: string;
+  weightKg?: number | null;
+  bodyFatPct?: number | null;
+  skeletalMuscleMassKg?: number | null;
+  visceralFatLevel?: number | null;
+  primaryGoal: string;
+  primaryGoalTitle?: string;
+  hasSignificantImbalance: boolean;
+  imbalances: Array<{
+    zone: 'ARMS' | 'LEGS';
+    leftValue: number;
+    rightValue: number;
+    imbalancePct: number;
+    weakerSide: 'LEFT' | 'RIGHT' | 'BALANCED';
+    severity: 'BALANCED' | 'MILD' | 'SIGNIFICANT';
+  }>;
+  suggestedTemplate?: {
+    id: string;
+    title: string;
+    disciplineCode?: string;
+    description?: string | null;
+    exerciseCount: number;
+  } | null;
+  recommendedExercises: Array<{
+    exerciseId: string;
+    exerciseName: string;
+    category?: string;
+    sets: number;
+    reps: number;
+    unilateral: boolean;
+    targetZone?: 'ARMS' | 'LEGS';
+    targetSide?: string;
+    notes?: string;
+  }>;
+  cardioPrescription?: {
+    targetZone: string;
+    durationMinutes: number;
+    frequencyPerWeek?: number;
+    reason: string;
+  } | null;
+  nutritionAdvice?: {
+    estimatedTdeeKcal: number;
+    targetDailyCalories: number;
+    proteinTargetGrams: number;
+    guideline: string;
+  } | null;
 }
 
 export interface ExerciseKnowledgeItem {

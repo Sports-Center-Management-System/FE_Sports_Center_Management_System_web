@@ -282,7 +282,8 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     selectedDays.forEach((dayIndex) => {
       const targetDate = new Date(monday);
       targetDate.setDate(monday.getDate() + (dayIndex - 1));
-      const dateStr = targetDate.toISOString().slice(0, 10);
+      // Local date: toISOString() is UTC and would shift Vietnam's midnight to the previous day.
+      const dateStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`;
 
       selectedBulkTimeSlots.forEach((slotRange) => {
         const [s, e] = slotRange.split('-');
