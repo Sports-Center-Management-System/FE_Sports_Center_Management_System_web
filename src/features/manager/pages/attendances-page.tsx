@@ -58,7 +58,7 @@ export function ManagerAttendancesPage() {
   }, [queryClient])
 
   return (
-    <>
+    <div className="rounded-md bg-white border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-6">
       <PageHeader
         title="Cổng vào & điểm danh"
         description="Check-in cổng cho hội viên và tra lịch sử điểm danh."
@@ -109,7 +109,7 @@ export function ManagerAttendancesPage() {
         </Panel>
       </div>
       <HistoryPanel />
-    </>
+    </div>
   )
 }
 

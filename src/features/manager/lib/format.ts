@@ -124,10 +124,10 @@ export function errorMessage(error: unknown): string {
 }
 
 export const tierLabel: Record<string, string> = {
-  TRIAL: 'Trial',
-  DROP_IN: 'Drop-in',
-  PLUS: 'Plus',
-  VIP: 'VIP',
+  TRIAL: 'Dùng thử',
+  DROP_IN: 'Vé buổi lẻ',
+  PLUS: 'Gói Plus',
+  VIP: 'Gói VIP',
 }
 export const trainingModeLabel: Record<string, string> = {
   GROUP_CLASS: 'Lớp nhóm',

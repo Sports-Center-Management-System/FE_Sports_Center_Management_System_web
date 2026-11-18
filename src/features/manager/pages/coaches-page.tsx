@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useRef, useEffect, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query'
-import { Plus } from 'lucide-react'
+import { Plus, Search, ChevronDown, Check, X } from 'lucide-react'
 import { money } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { managerApi, managerKeys } from '../api/manager-api'
@@ -40,7 +40,7 @@ export function ManagerCoachesPage() {
   })
 
   return (
-    <>
+    <div className="rounded-md bg-white border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-6">
       <PageHeader
         title="HLV & biểu phí"
         description="Gán chuyên môn và đặt giá dạy 1-1 cho từng huấn luyện viên."
@@ -66,7 +66,7 @@ export function ManagerCoachesPage() {
           disciplines={disciplines.data ?? []}
         />
       )}
-    </>
+    </div>
   )
 }
 
@@ -88,10 +88,42 @@ function CoachesTab({
   specialties: Specialty[]
   disciplines: Discipline[]
 }) {
-  const [selectedId, setSelectedId] = useState<string | null>(null)
   const list = coaches.data ?? []
+  const [selectedId, setSelectedId] = useState<string | null>(() => list[0]?.id ?? null)
+  const [search, setSearch] = useState('')
+  const [isOpen, setIsOpen] = useState(false)
+  const comboboxRef = useRef<HTMLDivElement>(null)
+
+  // Auto select first coach if none selected and list loaded
+  useEffect(() => {
+    if (!selectedId && list.length > 0) {
+      setSelectedId(list[0].id)
+    }
+  }, [list, selectedId])
+
+  // Handle outside click to close dropdown
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (comboboxRef.current && !comboboxRef.current.contains(e.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutsideClick)
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [])
+
   const selected = list.find((coach) => coach.id === selectedId) ?? null
-  const { items: pageCoaches, pager } = usePagination(list, 15)
+
+  // Filter coaches matching user input in real-time
+  const term = search.trim().toLowerCase()
+  const filteredCoaches = list.filter((coach) => {
+    if (!term) return true
+    const nameMatch = coach.fullName.toLowerCase().includes(term)
+    const specMatch = (coach.coachProfile?.coachSpecialties ?? []).some((s) =>
+      s.specialty.name.toLowerCase().includes(term),
+    )
+    return nameMatch || specMatch
+  })
 
   if (coaches.isLoading || coaches.isError)
     return (
@@ -105,45 +137,125 @@ function CoachesTab({
     )
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-      <Panel title="Huấn luyện viên đang làm">
-        <ul className="divide-y divide-slate-100">
-          {list.length === 0 ? (
-            <li className="px-4 py-8 text-center text-sm text-slate-400">Chưa có HLV.</li>
-          ) : null}
-          {pageCoaches.map((coach) => {
-            const specs = coach.coachProfile?.coachSpecialties ?? []
-            const rates = currentRate(coach.coachRates)
-            return (
-              <li key={coach.id}>
+    <div className="space-y-6">
+      {/* Searchable Coach Combobox Input */}
+      <Panel className="p-4 sm:p-5">
+        <div className="space-y-2">
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+            Tìm và chọn Huấn luyện viên
+          </label>
+          <div ref={comboboxRef} className="relative max-w-xl">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={search}
+                placeholder={
+                  selected
+                    ? `Đang chọn: ${selected.fullName} (Nhập để lọc danh sách HLV...)`
+                    : 'Nhập tên hoặc chuyên môn để tìm HLV...'
+                }
+                onFocus={() => setIsOpen(true)}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setIsOpen(true)
+                }}
+                className="w-full h-10 pl-9 pr-10 text-sm bg-white border border-slate-300 rounded-md shadow-2xs focus:border-[#008b74] focus:ring-1 focus:ring-[#008b74] focus:outline-none transition-colors"
+              />
+              {search ? (
                 <button
                   type="button"
-                  onClick={() => setSelectedId(coach.id)}
-                  className={cn(
-                    'w-full px-4 py-3 text-left hover:bg-slate-50',
-                    coach.id === selectedId && 'bg-emerald-50/60',
-                  )}
+                  onClick={() => setSearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
-                  <span className="block text-sm font-medium text-slate-900">{coach.fullName}</span>
-                  <span className="block text-xs text-slate-500">
-                    {specs.length
-                      ? specs.map((s) => s.specialty.name).join(', ')
-                      : 'Chưa gán chuyên môn'}
-                  </span>
-                  <span className="block text-xs text-slate-400">
-                    {rates.length
-                      ? `Đang áp dụng: ${rates.map((r) => money(r.ratePerSession)).join(' / ')} mỗi buổi`
-                      : 'Chưa có biểu phí hiệu lực'}
-                  </span>
+                  <X className="w-3.5 h-3.5" />
                 </button>
-              </li>
-            )
-          })}
-        </ul>
-        <Pagination pager={pager} />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsOpen((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Dropdown with live filtering */}
+            {isOpen && (
+              <div className="absolute z-50 left-0 right-0 mt-1 max-h-72 overflow-y-auto bg-white border border-slate-200 rounded-md shadow-lg divide-y divide-slate-100 animate-in fade-in-50 duration-100">
+                {filteredCoaches.length === 0 ? (
+                  <div className="p-4 text-center text-xs text-slate-400">
+                    Không tìm thấy Huấn luyện viên nào khớp với "{search}"
+                  </div>
+                ) : (
+                  filteredCoaches.map((coach) => {
+                    const specs = coach.coachProfile?.coachSpecialties ?? []
+                    const rates = currentRate(coach.coachRates)
+                    const isSelected = coach.id === selectedId
+                    return (
+                      <button
+                        key={coach.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedId(coach.id)
+                          setSearch('')
+                          setIsOpen(false)
+                        }}
+                        className={cn(
+                          'w-full px-4 py-2.5 text-left flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer',
+                          isSelected && 'bg-emerald-50/70',
+                        )}
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-slate-900 truncate">
+                              {coach.fullName}
+                            </span>
+                            {isSelected && (
+                              <span className="text-[11px] font-bold text-[#008b74] bg-emerald-100/70 px-1.5 py-0.2 rounded">
+                                Đang chọn
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-500 truncate mt-0.5">
+                            {specs.length
+                              ? specs.map((s) => s.specialty.name).join(', ')
+                              : 'Chưa gán chuyên môn'}
+                          </p>
+                          <p className="text-[11px] text-slate-400 truncate">
+                            {rates.length
+                              ? `Phí: ${rates.map((r) => money(r.ratePerSession)).join(' / ')} / buổi`
+                              : 'Chưa có biểu phí hiệu lực'}
+                          </p>
+                        </div>
+                        {isSelected && <Check className="w-4 h-4 text-[#008b74] shrink-0" />}
+                      </button>
+                    )
+                  })
+                )}
+              </div>
+            )}
+          </div>
+
+          {selected && (
+            <div className="flex items-center gap-2 pt-1 text-xs text-slate-600">
+              <span className="font-medium">HLV hiện tại:</span>
+              <span className="font-bold text-slate-900">{selected.fullName}</span>
+              <span className="text-slate-400">•</span>
+              <span className="text-slate-500">
+                {selected.coachProfile?.yearsExperience
+                  ? `${selected.coachProfile.yearsExperience} năm kinh nghiệm`
+                  : 'Huấn luyện viên'}
+              </span>
+            </div>
+          )}
+        </div>
       </Panel>
+
+      {/* Full-width Detail Panels */}
       {selected ? (
-        <div className="min-w-0 space-y-6">
+        <div className="space-y-6">
           <CoachSpecialties key={`s-${selected.id}`} coach={selected} specialties={specialties} />
           <CoachRates key={`r-${selected.id}`} coach={selected} disciplines={disciplines} />
           <CoachSlots key={`a-${selected.id}`} coach={selected} />
@@ -151,7 +263,7 @@ function CoachesTab({
       ) : (
         <Panel>
           <p className="px-4 py-12 text-center text-sm text-slate-400">
-            Chọn một HLV để xem chuyên môn và biểu phí.
+            Chọn một Huấn luyện viên ở trên để xem chuyên môn và biểu phí.
           </p>
         </Panel>
       )}

@@ -134,9 +134,9 @@ export const MemberLayout: React.FC = () => {
                 className="flex items-center gap-2 hover:opacity-85 transition-opacity min-w-0"
                 title="3TC Fitness - Hội Viên"
               >
-                <img src={logo3tc} alt="3TC FITNESS" className="h-7 w-auto object-contain" />
-                <span className="rounded-md bg-emerald-100/80 px-1.5 py-0.5 text-[10px] font-extrabold tracking-wider text-emerald-800 uppercase">
-                  MEMBER
+                
+                <span className=" px-20 py-0.5 text-[10px] font-extrabold tracking-wider text-emerald-800 uppercase">
+                      MEMBER
                 </span>
               </Link>
               <button
@@ -158,13 +158,7 @@ export const MemberLayout: React.FC = () => {
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
-              <Link
-                to="/portal/member/plans"
-                title="3TC Fitness - Hội Viên"
-                className="hover:opacity-85 transition-opacity"
-              >
-                <img src={logo3tc} alt="3TC" className="h-5 w-auto object-contain max-w-[50px]" />
-              </Link>
+             
             </div>
           )}
 

@@ -106,7 +106,7 @@ function PaymentFields({
 export function ManagerPosPage() {
   const [tab, setTab] = useState<Tab>('sell')
   return (
-    <>
+    <div className="rounded-md bg-white border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-6">
       <PageHeader
         title="Bán hàng tại quầy"
         description="Bán gói, gia hạn, bán thêm buổi PT và tra cứu hóa đơn. Hóa đơn tại quầy được ghi nhận đã thanh toán ngay."
@@ -123,7 +123,7 @@ export function ManagerPosPage() {
       {tab === 'sell' ? <SellTab /> : null}
       {tab === 'renew' ? <RenewTab /> : null}
       {tab === 'invoices' ? <InvoicesTab /> : null}
-    </>
+    </div>
   )
 }
 

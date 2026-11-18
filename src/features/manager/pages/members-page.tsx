@@ -54,7 +54,7 @@ export function ManagerMembersPage() {
   }
 
   return (
-    <>
+    <div className="rounded-md bg-white border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-6">
       <PageHeader
         title="Hội viên & InBody"
         description="Tra cứu hội viên, hồ sơ, hợp đồng gói tập và chỉ số InBody."
@@ -143,7 +143,7 @@ export function ManagerMembersPage() {
           }}
         />
       ) : null}
-    </>
+    </div>
   )
 }
 

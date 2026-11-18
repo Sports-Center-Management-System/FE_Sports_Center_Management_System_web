@@ -41,7 +41,7 @@ function planProblem(form: PlanPayload, discipline?: Discipline): string | null 
   if (form.packageTier === 'VIP' && form.ptSessionQuota !== 12)
     return 'Gói VIP phải có đúng 12 buổi PT.'
   if (form.packageTier === 'TRIAL' && (form.price !== 0 || form.ptSessionQuota !== 0))
-    return 'Gói Trial phải có giá 0 và 0 buổi PT.'
+    return 'Gói dùng thử (Trial) phải có giá 0 và 0 buổi PT.'
   return null
 }
 
@@ -112,6 +112,7 @@ export function ManagerPlansPage() {
     queryFn: managerApi.disciplines,
   })
   const [filter, setFilter] = useState('')
+  const [detailPlan, setDetailPlan] = useState<MembershipPlan | null>(null)
   const [editing, setEditing] = useState<{
     plan: MembershipPlan | null
     disciplineId?: string
@@ -155,7 +156,7 @@ export function ManagerPlansPage() {
   const failed = plans.isError ? plans.error : disciplines.isError ? disciplines.error : null
 
   return (
-    <>
+    <div className="rounded-md bg-white border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-6">
       <PageHeader
         title="Môn học & gói tập"
         description="Gói đang bán theo từng môn. Ngừng bán gói không ảnh hưởng hợp đồng hội viên đã mua."
@@ -227,7 +228,7 @@ export function ManagerPlansPage() {
                 </p>
               ) : (
                 <>
-                  <div className="hidden grid-cols-[4.5rem_minmax(0,1fr)_5rem_8rem_10rem] gap-x-4 border-b border-slate-100 bg-slate-50 px-4 py-1.5 text-xs text-slate-500 sm:grid">
+                  <div className="hidden grid-cols-[4.5rem_minmax(0,1fr)_5rem_8rem_12rem] gap-x-4 border-b border-slate-100 bg-slate-50 px-4 py-1.5 text-xs text-slate-500 sm:grid">
                     <span>Hạng</span>
                     <span>Gói và quyền lợi</span>
                     <span className="text-right">Thời hạn</span>
@@ -240,7 +241,7 @@ export function ManagerPlansPage() {
                       return (
                         <li
                           key={plan.id}
-                          className="grid grid-cols-[4.5rem_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-4 py-3 sm:grid-cols-[4.5rem_minmax(0,1fr)_5rem_8rem_10rem]"
+                          className="grid grid-cols-[4.5rem_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-4 py-3 sm:grid-cols-[4.5rem_minmax(0,1fr)_5rem_8rem_12rem]"
                         >
                           <div>
                             <Pill tone={tierTone[plan.packageTier]}>
@@ -279,6 +280,9 @@ export function ManagerPlansPage() {
                             {Number(plan.price) === 0 ? 'Miễn phí' : money(plan.price)}
                           </p>
                           <div className="col-span-3 flex justify-end gap-1.5 sm:col-span-1">
+                            <Btn size="sm" tone="ghost" onClick={() => setDetailPlan(plan)}>
+                              Chi tiết
+                            </Btn>
                             <Btn size="sm" onClick={() => setEditing({ plan })}>
                               Sửa
                             </Btn>
@@ -317,6 +321,26 @@ export function ManagerPlansPage() {
         </div>
       )}
 
+      {detailPlan ? (
+        <PlanDetailModal
+          plan={detailPlan}
+          discipline={disciplineList.find((d) => d.id === detailPlan.disciplineId)}
+          onClose={() => setDetailPlan(null)}
+          onEdit={() => {
+            const p = detailPlan
+            setDetailPlan(null)
+            setEditing({ plan: p })
+          }}
+          onDisable={() => {
+            if (window.confirm(`Ngừng bán gói ${detailPlan.name}?`)) {
+              disable.mutate(detailPlan.id)
+              setDetailPlan(null)
+            }
+          }}
+          isDisabling={disable.isPending}
+        />
+      ) : null}
+
       {editing ? (
         <PlanForm
           plan={editing.plan}
@@ -338,7 +362,144 @@ export function ManagerPlansPage() {
           }}
         />
       ) : null}
-    </>
+    </div>
+  )
+}
+
+function PlanDetailModal({
+  plan,
+  discipline,
+  onClose,
+  onEdit,
+  onDisable,
+  isDisabling,
+}: {
+  plan: MembershipPlan
+  discipline?: Discipline | null
+  onClose: () => void
+  onEdit: () => void
+  onDisable: () => void
+  isDisabling?: boolean
+}) {
+  return (
+    <Modal
+      wide
+      title={`Chi tiết gói: ${plan.name}`}
+      onClose={onClose}
+      footer={
+        <div className="flex flex-wrap items-center justify-between w-full gap-2">
+          <Btn
+            size="sm"
+            tone="danger"
+            disabled={isDisabling}
+            onClick={onDisable}
+          >
+            {isDisabling ? 'Đang ngừng bán…' : 'Ngừng bán gói này'}
+          </Btn>
+          <div className="flex items-center gap-2">
+            <Btn size="sm" onClick={onClose}>
+              Đóng
+            </Btn>
+            <Btn
+              size="sm"
+              tone="primary"
+              onClick={() => {
+                onClose()
+                onEdit()
+              }}
+            >
+              Sửa gói tập
+            </Btn>
+          </div>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        {/* Info Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 bg-slate-50 border border-slate-200 rounded-md text-xs">
+          <div>
+            <span className="text-slate-500 font-medium block">Hạng gói:</span>
+            <span className="mt-1 inline-block">
+              <Pill tone={tierTone[plan.packageTier]}>
+                {tierLabel[plan.packageTier]}
+              </Pill>
+            </span>
+          </div>
+
+          <div>
+            <span className="text-slate-500 font-medium block">Bộ môn áp dụng:</span>
+            <strong className="text-slate-900 text-sm font-semibold mt-0.5 block">
+              {discipline?.name ?? 'Chưa gắn môn'}
+            </strong>
+          </div>
+
+          <div>
+            <span className="text-slate-500 font-medium block">Giá niêm yết:</span>
+            <strong className="text-slate-900 text-base font-bold font-mono mt-0.5 block text-emerald-800">
+              {Number(plan.price) === 0 ? 'Miễn phí' : money(plan.price)}
+            </strong>
+          </div>
+
+          <div>
+            <span className="text-slate-500 font-medium block">Thời hạn sử dụng:</span>
+            <strong className="text-slate-900 text-sm font-semibold font-mono mt-0.5 block">
+              {plan.durationDays} ngày
+            </strong>
+          </div>
+
+          <div>
+            <span className="text-slate-500 font-medium block">Hình thức tập:</span>
+            <span className="text-slate-800 font-medium mt-0.5 block">
+              {trainingModeLabel[plan.trainingMode]}
+            </span>
+          </div>
+
+          <div>
+            <span className="text-slate-500 font-medium block">Loại hình:</span>
+            <span className="text-slate-800 font-medium mt-0.5 block">
+              {plan.planType === 'PERSONAL_TRAINING' ? 'Kèm huấn luyện cá nhân (PT)' : 'Gói thông thường'}
+            </span>
+          </div>
+        </div>
+
+        {/* Quotas & Entitlements */}
+        <div className="space-y-2">
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+            Quyền lợi & Số buổi quy định
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="p-3 bg-white border border-slate-200 rounded-md text-center">
+              <span className="text-[11px] text-slate-400 block font-medium">Lớp học nhóm</span>
+              <strong className="text-base font-bold font-mono text-slate-900">
+                {plan.groupSessionQuota} buổi
+              </strong>
+            </div>
+            <div className="p-3 bg-white border border-slate-200 rounded-md text-center">
+              <span className="text-[11px] text-slate-400 block font-medium">Kèm HLV PT 1:1</span>
+              <strong className="text-base font-bold font-mono text-slate-900">
+                {plan.ptSessionQuota} buổi
+              </strong>
+            </div>
+            <div className="p-3 bg-white border border-slate-200 rounded-md text-center">
+              <span className="text-[11px] text-slate-400 block font-medium">Vào cửa</span>
+              <span className="text-xs font-semibold text-slate-800 block mt-1">
+                {plan.unlimitedGymEntry ? 'Không giới hạn' : 'Theo buổi'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Description */}
+        <div className="space-y-1.5">
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+            Mô tả chi tiết gói tập
+          </label>
+          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-700 whitespace-pre-line leading-relaxed">
+            {plan.description?.trim() || 'Chưa có thông tin mô tả chi tiết cho gói tập này.'}
+          </div>
+        </div>
+      </div>
+    </Modal>
   )
 }
 

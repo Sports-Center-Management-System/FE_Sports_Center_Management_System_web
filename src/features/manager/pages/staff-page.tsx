@@ -57,10 +57,10 @@ export function ManagerStaffPage() {
         (user.phone ?? '').includes(term)),
   )
 
-  const { items: pageRows, pager } = usePagination(visible, 15, `${filter}|${term}`)
+  const { items: pageRows, pager } = usePagination(visible, 10, `${filter}|${term}`)
 
   return (
-    <>
+    <div className="rounded-md bg-white border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-6">
       <PageHeader
         title="Nhân sự"
         description="Tài khoản lễ tân và huấn luyện viên của trung tâm."
@@ -177,7 +177,7 @@ export function ManagerStaffPage() {
           }}
         />
       ) : null}
-    </>
+    </div>
   )
 }
 
