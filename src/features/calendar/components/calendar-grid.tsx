@@ -397,7 +397,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
               width: totalLanes > 1 ? `calc(${laneWidthPercent}% - 4px)` : 'calc(100% - 12px)',
             }}
             className={cn(
-              'absolute rounded-lg transition-all duration-150 cursor-pointer overflow-hidden shadow-2xs select-none group hover:shadow-md hover:scale-[1.02] hover:z-30 focus:outline-hidden focus:ring-2 z-10',
+              'absolute rounded-sm transition-all duration-150 cursor-pointer overflow-hidden shadow-xs select-none group hover:shadow-md hover:scale-[1.01] hover:z-30 focus:outline-hidden focus:ring-2 z-10 border',
               isCompact ? 'p-1' : 'p-2',
               !item.isBooked && item.isPast && 'opacity-60 saturate-50',
               item.cardClass,
@@ -529,7 +529,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
   }
 
   return (
-    <div className="flex flex-col flex-1 h-full min-h-[580px] bg-white dark:bg-[#131b26] rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-xs overflow-hidden">
+    <div className="flex flex-col flex-1 h-full min-h-[580px] bg-white dark:bg-[#131b26] rounded-md border border-slate-200 shadow-xs overflow-hidden">
       {/* Scrollable Container with Sticky Day Headers */}
       <div
         ref={scrollContainerRef}

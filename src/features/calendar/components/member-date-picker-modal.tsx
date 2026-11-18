@@ -165,13 +165,13 @@ export const MemberDatePickerModal: React.FC<MemberDatePickerModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden max-h-[90vh] flex flex-col my-auto relative z-10"
+        className="w-full max-w-lg rounded-none bg-white shadow-2xl border-2 border-slate-900 overflow-hidden max-h-[90vh] flex flex-col my-auto relative z-10"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 bg-gradient-to-r from-emerald-50/80 via-slate-50 to-white">
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 bg-slate-50">
           <div className="flex items-center gap-2.5">
-            <div className="h-9 w-9 rounded-xl bg-[#008b74] text-white flex items-center justify-center shadow-sm shadow-[#008b74]/30">
+            <div className="h-9 w-9 rounded-none bg-[#008b74] text-white flex items-center justify-center">
               <CalendarDays className="h-5 w-5" />
             </div>
             <div>
@@ -186,7 +186,7 @@ export const MemberDatePickerModal: React.FC<MemberDatePickerModalProps> = ({
           <button
             onClick={onClose}
             type="button"
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition-colors"
+            className="rounded-none p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -390,7 +390,7 @@ export const MemberDatePickerModal: React.FC<MemberDatePickerModalProps> = ({
             className="bg-[#008b74] hover:bg-[#007461] text-white text-xs font-bold gap-1.5 shadow-sm shadow-[#008b74]/20 cursor-pointer"
           >
             <Clock className="h-3.5 w-3.5" />
-            <span>Xem Lịch Tuần Này</span>
+            <span>Xem Lịch </span>
           </Button>
         </div>
       </div>

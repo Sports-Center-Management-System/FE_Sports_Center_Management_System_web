@@ -419,7 +419,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         <>
           <aside
           aria-label="Chi tiết buổi tập"
-          className="fixed right-5 top-24 z-[9999] flex w-[calc(100vw-2.5rem)] max-w-sm flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl animate-in slide-in-from-right duration-200"
+          className="fixed right-5 top-24 z-[9999] flex w-[calc(100vw-2.5rem)] max-w-sm flex-col overflow-hidden rounded-none border-2 border-slate-900 bg-white shadow-2xl animate-in slide-in-from-right duration-200"
         >
       <div className="flex max-h-[calc(100vh-7rem)] min-h-0 flex-1 flex-col">
         {/* Header */}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useSession } from "@/auth/session-context";
@@ -6,38 +6,88 @@ import { StateMessage } from "@/components/feedback/state-message";
 import { Button } from "@/components/ui/button";
 import { errorText, get, money, query } from "@/lib/api";
 import { createCheckout } from "@/lib/checkout";
-import type { Coach, Plan, Quote } from "@/lib/types";
+import type { Plan, Quote } from "@/lib/types";
+import type { Coach } from "@/features/coaches/types/coach.types";
 import {
   ArrowRight,
   ArrowLeft,
   Info,
   AlertCircle,
   Loader2,
+  CreditCard,
+  ShieldCheck,
+  Award,
+  CheckCircle2,
+  UserCheck,
 } from "lucide-react";
+import logo3tc from "@/assets/images/logo-3tc.png";
 
 export const VipQuotationPage: React.FC = () => {
   const [params] = useSearchParams();
-  const planId = params.get("planId") ?? "";
+  const rawPlanId = params.get("planId") ?? "";
+  const paramCoachId = params.get("coachId") ?? "";
   const { user } = useSession();
   const navigate = useNavigate();
-  const [coachId, setCoachId] = useState("");
+  const [coachId, setCoachId] = useState(paramCoachId);
+  const [planId, setPlanId] = useState(rawPlanId);
 
   const plans = useQuery({
     queryKey: ["catalog", "all"],
     queryFn: () => get<Plan[]>("/memberships/plans", true),
   });
 
-  const plan = plans.data?.find((item) => item.id === planId);
   const coaches = useQuery({ queryKey: ["coaches"], queryFn: () => get<Coach[]>("/coaches") });
 
-  const compatible =
-    coaches.data?.filter((coach) =>
-      coach.coachProfile?.coachSpecialties?.some(
-        (entry) => entry.specialty.disciplineId === plan?.disciplineId
-      )
-    ) ?? [];
+  // Auto-detect matching VIP plan if coachId is passed without planId
+  useEffect(() => {
+    if (!planId && coachId && coaches.data && plans.data) {
+      const targetCoach = coaches.data.find((c) => c.id === coachId);
+      const discIds =
+        targetCoach?.coachProfile?.coachSpecialties?.map((s) => s.specialty.disciplineId) ||
+        targetCoach?.disciplineIds ||
+        [];
+      const match = plans.data.find(
+        (p) =>
+          p.packageTier === "VIP" &&
+          p.isActive &&
+          discIds.includes(p.disciplineId)
+      );
+      if (match) {
+        setPlanId(match.id);
+      } else {
+        const anyVip = plans.data.find((p) => p.packageTier === "VIP" && p.isActive);
+        if (anyVip) setPlanId(anyVip.id);
+      }
+    }
+  }, [coachId, coaches.data, plans.data, planId]);
 
-  const selectedCoach = compatible.find((c) => c.id === coachId);
+  const plan = plans.data?.find((item) => item.id === planId);
+
+  // Compatible coaches based on plan's discipline
+  const compatible = useMemo(() => {
+    if (!coaches.data) return [];
+    if (!plan?.disciplineId) return coaches.data;
+    const discId = plan.disciplineId;
+    const matched = coaches.data.filter(
+      (coach) =>
+        coach.coachProfile?.coachSpecialties?.some(
+          (entry) => entry.specialty.disciplineId === discId
+        ) ||
+        coach.disciplineIds?.includes(discId) ||
+        (plan.discipline?.code && coach.disciplineCodes?.includes(plan.discipline.code))
+    );
+    return matched.length > 0 ? matched : coaches.data;
+  }, [coaches.data, plan]);
+
+  // If coachId is not yet selected, auto-select first compatible coach so quote displays immediately
+  useEffect(() => {
+    if (!coachId && compatible.length > 0) {
+      setCoachId(compatible[0].id);
+    }
+  }, [coachId, compatible]);
+
+  const selectedCoach =
+    coaches.data?.find((c) => c.id === coachId) || compatible.find((c) => c.id === coachId);
 
   const quote = useQuery({
     queryKey: ["quote", planId, coachId],
@@ -57,28 +107,28 @@ export const VipQuotationPage: React.FC = () => {
   });
 
   const currentDate = new Date().toLocaleDateString("vi-VN");
+  const ratePerSession = quote.data?.ratePerSession
+    ? Number(quote.data.ratePerSession)
+    : selectedCoach?.coachRates?.[0]?.ratePerSession ?? 0;
+  const weeklyEstimate = ratePerSession > 0 ? ratePerSession * 3 : 0;
+
+  const coachSpecialties =
+    selectedCoach?.coachProfile?.coachSpecialties?.map((s) => s.specialty.name).join(", ") ||
+    selectedCoach?.coachProfile?.specialties ||
+    "HLV cá nhân chuyên nghiệp";
 
   return (
-    <div className="w-full max-w-4xl mx-auto py-1">
-      {/* Top Bar: Sharp-Cornered Back Button & Title */}
-      <div className="flex items-center justify-between gap-3 mb-2.5">
-        <div className="flex items-center gap-3">
-          <Link
-            to="/portal/member/plans"
-            className="h-8 px-3 rounded-none bg-white border border-slate-900 hover:bg-slate-100 text-slate-900 inline-flex items-center gap-1.5 text-xs font-bold transition-colors shrink-0"
-            title="Quay lại danh mục gói tập"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Quay lại</span>
-          </Link>
-          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 leading-tight">
-            Báo giá VIP theo huấn luyện viên
-          </h1>
-        </div>
-
-        <span className="text-[11px] font-mono text-slate-600 uppercase tracking-widest hidden sm:inline-block">
-          SỐ CHỨNG TỪ: QUOTE-VIP-{planId ? planId.slice(0, 8).toUpperCase() : "DRAFT"}
-        </span>
+    <div className="w-full max-w-4xl mx-auto py-4 px-2 sm:px-0">
+      {/* Top Header Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <Link
+          to={paramCoachId ? "/portal/member/coaches" : "/portal/member/plans"}
+          className="h-9 px-3.5 rounded-md bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 inline-flex items-center gap-1.5 text-xs font-bold transition-colors shrink-0 shadow-xs cursor-pointer"
+          title="Quay lại danh sách"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Quay lại</span>
+        </Link>
       </div>
 
       <StateMessage
@@ -86,169 +136,238 @@ export const VipQuotationPage: React.FC = () => {
         error={plans.error ?? coaches.error}
       />
 
-      {/* Notice States */}
+      {/* Notice State if VIP plan not found */}
       {plans.data && !plan && (
         <div
           role="alert"
-          className="p-3.5 rounded-none bg-slate-50 border border-slate-900 text-slate-900 text-xs sm:text-sm font-medium my-3 flex items-center justify-between"
+          className="p-4 rounded-md bg-white border border-slate-200 text-slate-800 text-xs sm:text-sm font-medium my-4 flex items-center justify-between shadow-xs"
         >
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>Không tìm thấy gói đang bán.</span>
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>Đang tải thông tin gói tập VIP kèm riêng phù hợp với HLV...</span>
           </div>
           <Link
             to="/portal/member/plans"
-            className="font-bold underline text-slate-900 hover:text-black"
+            className="font-bold underline text-[#008b74] hover:text-[#007461]"
           >
-            Xem catalog
+            Xem danh mục gói
           </Link>
         </div>
       )}
 
-      {plan && plan.packageTier !== "VIP" && (
-        <div className="p-3.5 rounded-none bg-slate-50 border border-slate-900 text-slate-900 text-xs sm:text-sm font-medium my-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Info className="w-4 h-4 shrink-0" />
-            <span>Gói này dùng giá catalog thông thường (không cần báo giá riêng).</span>
-          </div>
-          <Link
-            to="/portal/member/plans"
-            className="font-bold underline text-slate-900 hover:text-black"
-          >
-            Quay lại
-          </Link>
-        </div>
-      )}
-
-      {/* Sharp-Cornered Monochromatic White Paper Invoice */}
+      {/* Main Solid White Invoice Sheet */}
       {plan?.packageTier === "VIP" && (
-        <article className="card bg-white rounded-none border-2 border-slate-900 p-4 sm:p-5 text-slate-900 shadow-none">
-          {/* Invoice Header Block */}
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between pb-3 border-b border-slate-900 gap-2">
-            <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 mb-0.5">
-                TRUNG TÂM THỂ THAO CAO CẤP · PHIẾU BÁO GIÁ HỘI VIÊN VIP
-              </p>
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase">
-                {plan.name}
-              </h2>
-              <span className="pill inline-block mt-1 px-2 py-0.5 rounded-none text-[10px] font-extrabold uppercase tracking-wider bg-slate-900 text-white">
-                {plan.discipline?.name} · VIP
-              </span>
+        <article className="bg-white rounded-md border border-slate-200 p-6 sm:p-8 text-slate-900 shadow-sm space-y-6">
+          {/* Invoice Header */}
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between pb-5 border-b border-slate-200 gap-4">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2.5">
+                <img src={logo3tc} alt="3TC FITNESS" className="h-7 w-auto object-contain" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  HỆ THỐNG TRUNG TÂM THỂ THAO 3TC
+                </span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase pt-1">
+                BÁO GIÁ DỊCH VỤ HUẤN LUYỆN KÈM RIÊNG (PT 1:1)
+              </h1>
+              <div className="flex items-center gap-2 pt-0.5">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wide bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>{plan.name}</span>
+                </span>
+                <span className="text-xs text-slate-500 font-medium">
+                  Bộ môn: <strong className="text-slate-700">{plan.discipline?.name || "Fitness"}</strong>
+                </span>
+              </div>
             </div>
 
-            <div className="text-left sm:text-right text-xs text-slate-700 space-y-0.5">
+            <div className="text-left sm:text-right text-xs text-slate-600 space-y-1 bg-slate-50 sm:bg-transparent p-3 sm:p-0 rounded-md border sm:border-0 border-slate-200">
               <p>
-                Ngày lập: <strong>{currentDate}</strong>
+                Ngày lập: <strong className="text-slate-800 font-mono">{currentDate}</strong>
               </p>
               <p>
                 Hội viên: <strong className="text-slate-900">{user?.fullName ?? user?.email}</strong>
               </p>
               <p>
-                Thời hạn gói: <strong className="text-slate-900">{plan.durationDays} ngày hiệu lực</strong>
+                Thời hạn gói: <strong className="text-slate-900 font-mono">{plan.durationDays} ngày</strong>
               </p>
             </div>
           </div>
 
-          {/* Invoice Line Items Table */}
-          <div className="py-2.5">
-            <table className="w-full text-xs sm:text-sm border-collapse border border-slate-300">
-              <thead>
-                <tr className="bg-slate-100 text-slate-800 text-[11px] uppercase font-bold tracking-wider text-left">
-                  <th className="border border-slate-300 p-2 text-center w-10">STT</th>
-                  <th className="border border-slate-300 p-2">Hạng mục dịch vụ</th>
-                  <th className="border border-slate-300 p-2 text-center w-28">Số lượng</th>
-                  <th className="border border-slate-300 p-2 text-right w-36">Thành tiền</th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* Row 1: Base VIP Plan */}
-                <tr>
-                  <td className="border border-slate-300 p-2.5 text-center text-slate-500 font-mono">01</td>
-                  <td className="border border-slate-300 p-2.5">
-                    <p className="font-bold text-slate-900">
-                      Gói tập VIP cơ bản ({plan.discipline?.name})
-                    </p>
-                    <p className="text-xs text-slate-600 mt-0.5">
-                      Bao gồm {plan.groupSessionQuota ?? 0} buổi lớp nhóm + quyền ra vào phòng tập không giới hạn
-                    </p>
-                  </td>
-                  <td className="border border-slate-300 p-2.5 text-center text-slate-700 font-medium whitespace-nowrap">
-                    1 gói
-                  </td>
-                  <td className="border border-slate-300 p-2.5 text-right font-bold text-slate-900 whitespace-nowrap">
-                    {money(plan.price)}
-                  </td>
-                </tr>
+          {/* Coach Selection & Spotlight */}
+          <div className="space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <UserCheck className="w-4 h-4 text-[#008b74]" />
+                <span>Huấn luyện viên phụ trách (PT 1:1):</span>
+              </span>
 
-                {/* Row 2: Coach Selection Line Item */}
-                <tr>
-                  <td className="border border-slate-300 p-2.5 text-center text-slate-500 font-mono">02</td>
-                  <td className="border border-slate-300 p-2.5">
-                    <p className="font-bold text-slate-900">
-                      Huấn luyện viên cá nhân (PT 1:1) kèm riêng
-                    </p>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                      <label className="text-xs font-bold text-slate-800 inline-flex items-center gap-1.5">
-                        <span>Chọn HLV:</span>
-                        <select
-                          aria-label="Chọn HLV"
-                          value={coachId}
-                          onChange={(e) => setCoachId(e.target.value)}
-                          className="h-8 px-2 py-0.5 text-xs font-semibold rounded-none border border-slate-400 bg-white text-slate-900 focus:outline-none focus:border-slate-900 cursor-pointer"
-                        >
-                          <option value="">Chọn HLV phù hợp</option>
-                          {compatible.map((coach) => (
-                            <option key={coach.id} value={coach.id}>
-                              {coach.fullName}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+              {/* Coach Selector Dropdown */}
+              <div className="flex items-center gap-2">
+                <label htmlFor="coach-select" className="text-xs text-slate-500 font-medium whitespace-nowrap">
+                  Chọn HLV khác:
+                </label>
+                <select
+                  id="coach-select"
+                  aria-label="Chọn Huấn luyện viên"
+                  value={coachId}
+                  onChange={(e) => setCoachId(e.target.value)}
+                  className="h-9 px-3 text-xs font-bold rounded-md border border-slate-300 bg-white text-slate-800 focus:outline-none focus:border-[#008b74] cursor-pointer shadow-xs"
+                >
+                  <option value="">-- Chọn Huấn luyện viên --</option>
+                  {compatible.map((c) => {
+                    const r = c.coachRates?.[0]?.ratePerSession ?? 0;
+                    return (
+                      <option key={c.id} value={c.id}>
+                        {c.fullName} - {c.title || "HLV"} {r > 0 ? `(${money(r)}/buổi)` : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+            </div>
 
-                      {selectedCoach && (
-                        <span className="text-xs text-slate-600 italic">
-                          (
-                          {selectedCoach.coachProfile?.coachSpecialties
-                            ?.map((s) => s.specialty.name)
-                            .join(", ") || "HLV chuyên nghiệp"}
-                          )
-                        </span>
-                      )}
+            {selectedCoach ? (
+              <div className="p-4 rounded-md bg-slate-50 border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  {selectedCoach.avatarUrl ? (
+                    <img
+                      src={selectedCoach.avatarUrl}
+                      alt={selectedCoach.fullName}
+                      className="w-12 h-12 rounded-md object-cover object-top border border-slate-300 shrink-0"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-md bg-slate-900 text-emerald-400 font-black text-base flex items-center justify-center border border-slate-800 shrink-0">
+                      {selectedCoach.fullName.charAt(0)}
                     </div>
+                  )}
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-slate-900 leading-tight">
+                        HLV {selectedCoach.fullName}
+                      </h3>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.2 rounded-md">
+                        <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                        HLV Đạt Chuẩn
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">
+                      {selectedCoach.title || "Huấn luyện viên cá nhân"} · {coachSpecialties}
+                    </p>
+                    {selectedCoach.experienceYears > 0 && (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 mt-0.5">
+                        <Award className="w-3 h-3 text-amber-600" /> {selectedCoach.experienceYears} năm kinh nghiệm
+                      </span>
+                    )}
+                  </div>
+                </div>
 
-                    {compatible.length === 0 && (
-                      <p className="muted text-xs text-slate-600 mt-1">
-                        Chưa có HLV phù hợp với môn này.
+                {/* Rate pill */}
+                <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-1 pt-2 md:pt-0 border-t md:border-t-0 border-slate-200 shrink-0">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    Biểu phí kèm 1:1
+                  </span>
+                  <div className="text-right">
+                    <span className="text-sm font-black text-[#008b74] font-mono whitespace-nowrap">
+                      {ratePerSession > 0 ? `${money(ratePerSession)} / buổi` : "Theo gói VIP"}
+                    </span>
+                    {weeklyEstimate > 0 && (
+                      <p className="text-[11px] text-slate-600 font-medium">
+                        Ước tính theo tuần: <strong className="text-emerald-700 font-mono">{money(weeklyEstimate)}/tuần</strong>
                       </p>
                     )}
-                  </td>
-                  <td className="border border-slate-300 p-2.5 text-center text-slate-700 font-medium whitespace-nowrap">
-                    {plan.ptSessionQuota ?? 0} buổi PT
-                  </td>
-                  <td className="border border-slate-300 p-2.5 text-right font-bold text-slate-900 whitespace-nowrap">
-                    {quote.data ? (
-                      money(quote.data.ptAmount)
-                    ) : (
-                      <span className="text-slate-400 font-normal italic">Chờ chọn HLV</span>
-                    )}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 rounded-md bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Info className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Vui lòng chọn 1 Huấn luyện viên ở danh sách trên để tiếp tục báo giá.</span>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Invoice Bottom: Calculation & Action */}
-          <div className="pt-2.5 border-t border-slate-900">
+          {/* Invoice Line Items Table */}
+          <div className="space-y-2">
+            <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+              Chi tiết hạng mục thanh toán
+            </span>
+            <div className="border border-slate-200 rounded-md overflow-hidden">
+              <table className="w-full text-xs sm:text-sm border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-700 text-[11px] uppercase font-bold tracking-wider text-left border-b border-slate-200">
+                    <th className="p-3 text-center w-12">STT</th>
+                    <th className="p-3">Hạng mục dịch vụ</th>
+                    <th className="p-3 text-center w-32">Số lượng</th>
+                    <th className="p-3 text-right w-40">Thành tiền</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {/* Row 1: Base VIP Plan */}
+                  <tr>
+                    <td className="p-3.5 text-center text-slate-400 font-mono text-xs">01</td>
+                    <td className="p-3.5">
+                      <p className="font-bold text-slate-900">
+                        Quyền hội viên &amp; Cơ sở vật chất ({plan.name})
+                      </p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Ra vào phòng tập không giới hạn + {plan.groupSessionQuota ?? 0} buổi lớp nhóm trong {plan.durationDays} ngày
+                      </p>
+                    </td>
+                    <td className="p-3.5 text-center text-slate-700 font-medium whitespace-nowrap font-mono text-xs">
+                      1 gói ({plan.durationDays} ngày)
+                    </td>
+                    <td className="p-3.5 text-right font-bold text-slate-900 whitespace-nowrap font-mono">
+                      {money(plan.price)}
+                    </td>
+                  </tr>
+
+                  {/* Row 2: Coach PT Sessions */}
+                  <tr>
+                    <td className="p-3.5 text-center text-slate-400 font-mono text-xs">02</td>
+                    <td className="p-3.5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-slate-900">
+                          Huấn luyện viên cá nhân (PT 1:1) kèm riêng
+                        </span>
+                        {selectedCoach && (
+                          <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                            HLV: {selectedCoach.fullName}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Giáo án tập luyện cá nhân hóa, theo dõi InBody, hướng dẫn dinh dưỡng và kỹ thuật chuẩn xác
+                      </p>
+                    </td>
+                    <td className="p-3.5 text-center text-slate-700 font-medium whitespace-nowrap font-mono text-xs">
+                      {plan.ptSessionQuota ?? 12} buổi PT
+                    </td>
+                    <td className="p-3.5 text-right font-bold text-slate-900 whitespace-nowrap font-mono">
+                      {quote.data ? (
+                        money(quote.data.ptAmount)
+                      ) : (
+                        <span className="text-slate-400 font-normal italic">Đang tính...</span>
+                      )}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Invoice Summary & Checkout Action */}
+          <div className="pt-4 border-t border-slate-200">
             {!coachId ? (
-              <div className="p-3 rounded-none bg-slate-50 border border-slate-300 text-slate-800 flex items-center justify-between text-xs sm:text-sm">
+              <div className="p-4 rounded-md bg-amber-50 border border-amber-200 text-amber-800 flex items-center justify-between text-xs sm:text-sm">
                 <div className="flex items-center gap-2">
-                  <Info className="w-4 h-4 text-slate-600 shrink-0" />
-                  <p className="muted font-bold m-0 text-slate-900">Chọn HLV để máy chủ tính giá.</p>
+                  <Info className="w-4 h-4 text-amber-600 shrink-0" />
+                  <p className="font-bold m-0 text-amber-900">
+                    Vui lòng chọn Huấn luyện viên ở danh sách phía trên để hoàn tất báo giá gói tập VIP.
+                  </p>
                 </div>
-                <span className="text-xs text-slate-500 hidden sm:inline">
-                  Hệ thống sẽ lấy đơn giá theo từng buổi của HLV để cộng thành tiền
-                </span>
               </div>
             ) : (
               <div>
@@ -259,43 +378,82 @@ export const VipQuotationPage: React.FC = () => {
                 />
 
                 {quote.data && (
-                  <div className="flex flex-col sm:flex-row items-end justify-between gap-4">
-                    {/* Left: Invoice Notes */}
-                    <div className="text-xs text-slate-600 space-y-1 w-full sm:w-auto">
-                      <p className="muted m-0 flex items-start gap-1.5 leading-relaxed">
-                        <Info className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
-                        <span>Giá chỉ để tham khảo; checkout sẽ tính lại và khóa snapshot.</span>
-                      </p>
-                      <p className="text-[11px] text-slate-500 m-0 pl-5">
-                        * Đơn giá PT phụ thuộc vào cấp bậc và kinh nghiệm của Huấn luyện viên đã chọn.
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start pt-2">
+                    {/* Left Column: Notes & Weekly Transparency */}
+                    <div className="space-y-3">
+                      <div className="p-4 bg-slate-50 rounded-md border border-slate-200 space-y-2">
+                        <span className="text-xs font-bold text-slate-800 uppercase tracking-wide block">
+                          Biểu phí kèm riêng &amp; Chu kỳ tập luyện
+                        </span>
+                        <div className="grid grid-cols-2 gap-3 pt-1">
+                          <div className="p-2.5 bg-white rounded-md border border-slate-200">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase block">
+                              Đơn giá 1 buổi
+                            </span>
+                            <span className="text-sm font-black text-slate-900 font-mono whitespace-nowrap mt-0.5 block">
+                              {money(quote.data.ratePerSession)}
+                            </span>
+                          </div>
+
+                          <div className="p-2.5 bg-white rounded-md border border-slate-200">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase block">
+                              Giá tuần (3 buổi)
+                            </span>
+                            <span className="text-sm font-black text-emerald-700 font-mono whitespace-nowrap mt-0.5 block">
+                              {money(weeklyEstimate)}/tuần
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="text-[11.5px] text-slate-600 space-y-1 pt-1">
+                          <div className="flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span>Bao gồm <strong>12 buổi kèm riêng</strong> (tương đương 4 tuần tập luyện 3 buổi/tuần).</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span>Quyền ra vào phòng tập và tham gia lớp nhóm không giới hạn trong {plan.durationDays} ngày.</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <p className="text-[11px] text-slate-500 italic leading-relaxed">
+                        * Giá thanh toán hiển thị đã bao gồm toàn bộ phí hội viên và phí kèm riêng với HLV, không phát sinh phụ phí tại quầy.
                       </p>
                     </div>
 
-                    {/* Right: Subtotal, Total, & Button */}
-                    <div className="w-full sm:w-80 shrink-0 space-y-1 text-xs text-right">
-                      <div className="flex justify-between text-slate-700">
-                        <span className="font-medium">Giá gốc:</span>
-                        <span className="font-bold text-slate-900">
-                          {money(quote.data.baseAmount)}
-                        </span>
-                      </div>
+                    {/* Right Column: Calculations & Big Checkout Button */}
+                    <div className="p-4 sm:p-5 bg-slate-50/70 rounded-md border border-slate-200 space-y-3">
+                      <div className="space-y-2 text-xs">
+                        <div className="flex justify-between items-center text-slate-600">
+                          <span className="font-medium">Phí thẻ hội viên trọn gói:</span>
+                          <span className="font-bold text-slate-900 font-mono whitespace-nowrap">
+                            {money(quote.data.baseAmount)}
+                          </span>
+                        </div>
 
-                      <div className="flex justify-between text-slate-700">
-                        <span className="font-medium">
-                          {quote.data.ptSessions} PT × {money(quote.data.ratePerSession)}:
-                        </span>
-                        <span className="font-bold text-slate-900">
-                          {money(quote.data.ptAmount)}
-                        </span>
-                      </div>
+                        <div className="flex justify-between items-center text-slate-600">
+                          <span className="font-medium">
+                            Phí HLV ({quote.data.ptSessions} buổi kèm riêng):
+                          </span>
+                          <span className="font-bold text-slate-900 font-mono whitespace-nowrap">
+                            {money(quote.data.ptAmount)}
+                          </span>
+                        </div>
 
-                      <div className="pt-2 border-t-2 border-slate-900 flex items-baseline justify-between">
-                        <span className="font-black text-slate-900 text-sm uppercase tracking-wide">
-                          Tổng cộng:
-                        </span>
-                        <p className="price text-xl sm:text-2xl font-black text-slate-950 m-0 whitespace-nowrap">
-                          {money(quote.data.totalAmount)}
-                        </p>
+                        <div className="pt-3 border-t border-slate-300 flex items-baseline justify-between">
+                          <div>
+                            <span className="font-black text-slate-900 text-sm uppercase tracking-wide block">
+                              TỔNG THANH TOÁN:
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-medium block">
+                              (Đã bao gồm VAT &amp; mọi quyền lợi)
+                            </span>
+                          </div>
+                          <p className="price text-2xl font-black text-[#008b74] m-0 whitespace-nowrap font-mono tracking-tight">
+                            {money(quote.data.totalAmount)}
+                          </p>
+                        </div>
                       </div>
 
                       <Button
@@ -304,16 +462,17 @@ export const VipQuotationPage: React.FC = () => {
                         size="default"
                         disabled={checkout.isPending || !quote.data.eligible}
                         onClick={() => checkout.mutate()}
-                        className="w-full mt-2 h-11 rounded-none bg-slate-900 hover:bg-black text-white font-bold text-sm tracking-wide flex items-center justify-center gap-2 shadow-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full mt-2 h-12 rounded-md bg-[#008b74] hover:bg-[#007360] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                       >
                         {checkout.isPending ? (
                           <>
                             <Loader2 className="w-4 h-4 animate-spin" />
-                            <span>Đang xử lý đơn...</span>
+                            <span>ĐANG KHỞI TẠO HÓA ĐƠN...</span>
                           </>
                         ) : (
                           <>
-                            <span>Tạo checkout</span>
+                            <CreditCard className="w-4 h-4" />
+                            <span>TIẾN HÀNH THANH TOÁN</span>
                             <ArrowRight className="w-4 h-4 ml-0.5" />
                           </>
                         )}
@@ -327,7 +486,7 @@ export const VipQuotationPage: React.FC = () => {
             {checkout.error && (
               <div
                 role="alert"
-                className="text-error mt-2.5 p-2.5 rounded-none bg-slate-100 border border-slate-900 text-xs font-semibold text-rose-700 flex items-center gap-2"
+                className="mt-4 p-3.5 rounded-md bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-700 flex items-center gap-2"
               >
                 <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
                 <span>{errorText(checkout.error)}</span>

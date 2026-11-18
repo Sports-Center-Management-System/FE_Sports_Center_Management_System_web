@@ -1,7 +1,6 @@
 import React from "react";
 import {
   Maximize2,
-  Calendar,
   Award,
   ChevronRight,
   ShieldCheck,
@@ -47,7 +46,7 @@ export const CoachCard: React.FC<CoachCardProps> = ({
     <article
       onClick={() => onOpenDetail(coach)}
       className={cn(
-        "group relative flex flex-col justify-between bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-sm hover:shadow-xl hover:border-emerald-500/40 transition-all duration-300 cursor-pointer",
+        "group relative flex flex-col justify-between bg-white rounded-md overflow-hidden border border-slate-200 shadow-xs hover:shadow-md hover:border-[#008b74]/40 transition-all duration-200 cursor-pointer",
         className || "h-full w-full"
       )}
     >
@@ -64,7 +63,7 @@ export const CoachCard: React.FC<CoachCardProps> = ({
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 p-6 text-center select-none">
-            <div className="w-20 h-20 rounded-3xl bg-slate-800/80 border border-slate-700/80 flex items-center justify-center text-emerald-400 font-black text-2xl shadow-xl mb-2 group-hover:scale-105 group-hover:border-emerald-500/40 transition-all">
+            <div className="w-20 h-20 rounded-md bg-slate-800/80 border border-slate-700/80 flex items-center justify-center text-emerald-400 font-black text-2xl shadow-xl mb-2 group-hover:scale-105 group-hover:border-emerald-500/40 transition-all">
               {getInitials(coach.fullName)}
             </div>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
@@ -80,7 +79,7 @@ export const CoachCard: React.FC<CoachCardProps> = ({
         <div className="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between pointer-events-none">
           <span
             className={cn(
-              "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase backdrop-blur-md border",
+              "inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-bold tracking-wide uppercase backdrop-blur-md border",
               discColor
             )}
           >
@@ -88,7 +87,7 @@ export const CoachCard: React.FC<CoachCardProps> = ({
             <span>{targetCode}</span>
           </span>
 
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-black/60 text-white backdrop-blur-md border border-white/20">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold bg-black/60 text-white backdrop-blur-md border border-white/20">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
             <span>HLV Đạt Chuẩn</span>
           </span>
@@ -96,7 +95,7 @@ export const CoachCard: React.FC<CoachCardProps> = ({
 
         {/* Floating Action: Quick Fullscreen Trigger */}
         <div className="absolute bottom-3 right-3 opacity-90 group-hover:opacity-100 transition-opacity">
-          <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold bg-white/20 hover:bg-white/30 text-white backdrop-blur-md border border-white/20 transition-all shadow-md">
+          <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-bold bg-white/20 hover:bg-white/30 text-white backdrop-blur-md border border-white/20 transition-all shadow-md">
             <Maximize2 className="w-3.5 h-3.5 text-emerald-300" />
             <span>Xem chi tiết</span>
           </span>
@@ -132,13 +131,13 @@ export const CoachCard: React.FC<CoachCardProps> = ({
             {specialties.slice(0, 2).map((tag, idx) => (
               <span
                 key={idx}
-                className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200/80"
+                className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200"
               >
                 {tag}
               </span>
             ))}
             {specialties.length > 2 && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-500">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-500">
                 +{specialties.length - 2} môn
               </span>
             )}
@@ -155,7 +154,7 @@ export const CoachCard: React.FC<CoachCardProps> = ({
               <div className="flex items-baseline gap-1 mt-0.5">
                 {rateAmount !== null ? (
                   <>
-                    <span className="text-lg font-extrabold text-[#008b74]">
+                    <span className="text-lg font-extrabold text-[#008b74] font-mono">
                       {money(rateAmount)}
                     </span>
                     <span className="text-xs text-slate-500 font-semibold">/ buổi</span>
@@ -169,7 +168,7 @@ export const CoachCard: React.FC<CoachCardProps> = ({
             </div>
 
             <div className="text-right">
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200/60">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200/60">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span>Nhận dạy kèm</span>
               </span>
@@ -184,10 +183,9 @@ export const CoachCard: React.FC<CoachCardProps> = ({
               if (onBookSession) onBookSession(coach, e);
               else onOpenDetail(coach);
             }}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold bg-slate-900 hover:bg-[#008b74] text-white shadow-sm transition-all duration-200 active:scale-[0.98] cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-xs font-bold bg-slate-900 hover:bg-[#008b74] text-white shadow-xs transition-all duration-200 active:scale-[0.98] cursor-pointer"
           >
-            <Calendar className="w-3.5 h-3.5" />
-            <span>Đặt lịch học kèm PT</span>
+            <span>Xem chi tiết &amp; Đăng ký</span>
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </div>
