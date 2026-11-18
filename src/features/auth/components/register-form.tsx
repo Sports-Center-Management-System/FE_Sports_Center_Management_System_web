@@ -228,7 +228,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         <button
           type="button"
           onClick={onSwitchToLogin}
-          className="font-bold text-white hover:underline inline-flex items-center gap-1 ml-1 cursor-pointer"
+          className="font-bold text-[#008b74] hover:underline inline-flex items-center gap-1 ml-1 cursor-pointer"
         >
           <ArrowLeft className="h-3 w-3" />
           Đăng nhập ngay

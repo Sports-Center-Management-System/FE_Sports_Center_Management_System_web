@@ -190,7 +190,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         <button
           type="button"
           onClick={onSwitchToRegister}
-          className="font-bold text-white hover:underline inline-flex items-center gap-0.5 ml-1 cursor-pointer"
+          className="font-bold text-[#008b74] hover:underline inline-flex items-center gap-0.5 ml-1 cursor-pointer"
         >
           Đăng ký ngay
           <ArrowRight className="h-3 w-3" />

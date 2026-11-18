@@ -70,16 +70,18 @@ export const router = createBrowserRouter([
     element: <LandingPage />,
   },
 
-  // 2. PUBLIC APP ROUTES (wrapped in PublicLayout with app header)
+  // 2. AUTHENTICATION (Standalone full-screen, no navbar header, fixed viewport)
+  { path: "login", element: <LoginPage /> },
+  { path: "register", element: <LoginPage /> },
+  { path: "auth/login", element: <LoginPage /> },
+  { path: "auth/register", element: <LoginPage /> },
+
+  // 3. PUBLIC APP ROUTES (wrapped in PublicLayout with app header)
   {
     element: <PublicLayout />,
     children: [
       { path: "plans", element: <PublicPlansPage /> },
       { path: "coaches", element: <CoachesPage /> },
-      { path: "login", element: <LoginPage /> },
-      { path: "register", element: <LoginPage /> },
-      { path: "auth/login", element: <LoginPage /> },
-      { path: "auth/register", element: <LoginPage /> },
       { path: "mock-payment", element: <MockPaymentPage /> },
       {
         path: "forbidden",
