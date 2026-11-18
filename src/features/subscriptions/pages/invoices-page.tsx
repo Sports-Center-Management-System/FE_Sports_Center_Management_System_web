@@ -13,6 +13,8 @@ import {
   XCircle,
   ArrowUpDown,
   DollarSign,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useSession } from "@/auth/session-context";
 import { StateMessage } from "@/components/feedback/state-message";
@@ -68,6 +70,8 @@ export const InvoicesPage: React.FC = () => {
 
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [sortBy, setSortBy] = useState<"date-desc" | "date-asc" | "amount-desc" | "amount-asc">("date-desc");
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 8;
 
   const invoices = useQuery({
     queryKey: memberKeys.invoices(user!.id),
@@ -124,6 +128,14 @@ export const InvoicesPage: React.FC = () => {
       return 0;
     });
   }, [invoices.data, statusFilter, sortBy]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / pageSize));
+  const validCurrentPage = Math.min(currentPage, totalPages);
+
+  const paginatedInvoices = useMemo(() => {
+    const start = (validCurrentPage - 1) * pageSize;
+    return filteredInvoices.slice(start, start + pageSize);
+  }, [filteredInvoices, validCurrentPage, pageSize]);
 
   return (
     <div className="w-full max-w-5xl mx-auto py-4 sm:py-6 pb-20">
@@ -206,7 +218,10 @@ export const InvoicesPage: React.FC = () => {
                   <button
                     key={tab.id}
                     type="button"
-                    onClick={() => setStatusFilter(tab.id)}
+                    onClick={() => {
+                      setStatusFilter(tab.id);
+                      setCurrentPage(1);
+                    }}
                     className={cn(
                       "px-3 py-1.5 rounded-md text-xs font-bold transition-all shrink-0 cursor-pointer border",
                       active
@@ -228,7 +243,10 @@ export const InvoicesPage: React.FC = () => {
               </span>
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
+                onChange={(e) => {
+                  setSortBy(e.target.value as any);
+                  setCurrentPage(1);
+                }}
                 className="h-9 px-3 rounded-md text-xs font-bold bg-white border border-slate-300 text-slate-700 cursor-pointer focus:outline-none focus:border-[#008b74] shadow-xs"
               >
                 <option value="date-desc">Thời gian: Mới nhất</option>
@@ -264,7 +282,7 @@ export const InvoicesPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {filteredInvoices.map((item, index) => {
+                  {paginatedInvoices.map((item, index) => {
                     const status = invoiceStatusStyles[item.status] ?? {
                       label: item.status,
                       className: "border-slate-200 bg-slate-50 text-slate-700",
@@ -274,6 +292,7 @@ export const InvoicesPage: React.FC = () => {
                     const checkoutPath = item.checkoutId
                       ? `/portal/member/checkouts/${encodeURIComponent(item.checkoutId)}`
                       : null;
+                    const displayIdx = (validCurrentPage - 1) * pageSize + index + 1;
 
                     return (
                       <tr
@@ -282,7 +301,7 @@ export const InvoicesPage: React.FC = () => {
                       >
                         {/* 1. STT */}
                         <td className="py-4 px-4 text-center text-slate-400 font-mono text-xs">
-                          {String(index + 1).padStart(2, "0")}
+                          {String(displayIdx).padStart(2, "0")}
                         </td>
 
                         {/* 2. Dịch vụ */}
@@ -356,6 +375,67 @@ export const InvoicesPage: React.FC = () => {
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Pagination Controls */}
+          {!invoices.isPending && filteredInvoices.length > 0 && (
+            <div className="p-4 border-t border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <span className="text-slate-500 font-medium">
+                Hiển thị{" "}
+                <strong className="text-slate-900 font-mono">
+                  {(validCurrentPage - 1) * pageSize + 1} -{" "}
+                  {Math.min(validCurrentPage * pageSize, filteredInvoices.length)}
+                </strong>{" "}
+                trên tổng số{" "}
+                <strong className="text-slate-900 font-mono">{filteredInvoices.length}</strong> hóa đơn
+              </span>
+
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={validCurrentPage <= 1}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    className="h-8 px-2.5 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all inline-flex items-center gap-1 font-semibold cursor-pointer shadow-2xs"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                    <span>Trước</span>
+                  </button>
+
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }).map((_, idx) => {
+                      const pageNum = idx + 1;
+                      const isActive = pageNum === validCurrentPage;
+                      return (
+                        <button
+                          key={pageNum}
+                          type="button"
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={cn(
+                            "h-8 min-w-[32px] px-2 rounded-md text-xs font-bold font-mono transition-all cursor-pointer border",
+                            isActive
+                              ? "bg-[#008b74] text-white border-[#008b74] shadow-xs"
+                              : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
+                          )}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={validCurrentPage >= totalPages}
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    className="h-8 px-2.5 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all inline-flex items-center gap-1 font-semibold cursor-pointer shadow-2xs"
+                  >
+                    <span>Sau</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
