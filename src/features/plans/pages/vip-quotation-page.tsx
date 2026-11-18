@@ -121,14 +121,15 @@ export const VipQuotationPage: React.FC = () => {
     <div className="w-full max-w-4xl mx-auto py-4 px-2 sm:px-0">
       {/* Top Header Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <Link
-          to={paramCoachId ? "/portal/member/coaches" : "/portal/member/plans"}
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
           className="h-9 px-3.5 rounded-md bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 inline-flex items-center gap-1.5 text-xs font-bold transition-colors shrink-0 shadow-xs cursor-pointer"
-          title="Quay lại danh sách"
+          title="Quay lại trang trước"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Quay lại</span>
-        </Link>
+        </button>
       </div>
 
       <StateMessage

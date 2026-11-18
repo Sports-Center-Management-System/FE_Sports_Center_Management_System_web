@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useParams, useNavigate } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { QRCodeSVG } from "qrcode.react";
 import { io } from "socket.io-client";
@@ -58,6 +58,7 @@ interface SnapshotData {
 }
 
 export const CheckoutPage: React.FC = () => {
+  const navigate = useNavigate();
   const { checkoutId = "" } = useParams();
   const { user } = useSession();
   const cache = useQueryClient();
@@ -190,14 +191,15 @@ export const CheckoutPage: React.FC = () => {
     <div className="w-full max-w-5xl mx-auto py-4 sm:py-6 space-y-6 pb-20">
       {/* Top Bar: Back Button */}
       <div className="flex items-center justify-between gap-4">
-        <Link
-          to="/portal/member/plans"
-          className="h-9 px-3.5 rounded-none bg-white border border-slate-900 hover:bg-slate-100 text-slate-900 inline-flex items-center gap-2 text-xs font-bold transition-all shadow-none cursor-pointer"
-          title="Quay lại danh mục gói tập"
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="h-9 px-3.5 rounded-md bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 inline-flex items-center gap-2 text-xs font-bold transition-all shadow-xs cursor-pointer"
+          title="Quay lại trang trước"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Quay lại danh mục gói tập</span>
-        </Link>
+          <span>Quay lại</span>
+        </button>
       </div>
 
       <StateMessage

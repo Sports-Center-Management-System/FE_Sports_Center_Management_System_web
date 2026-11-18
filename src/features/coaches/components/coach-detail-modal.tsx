@@ -91,6 +91,54 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
     return matchingSubscriptions[0];
   }, [matchingSubscriptions, selectedDisciplineId]);
 
+  // Fetch VIP plans to directly bind checkout
+  const plansQuery = useQuery({
+    queryKey: ["catalog", "all"],
+    queryFn: () => get<Plan[]>("/memberships/plans", true),
+    enabled: Boolean(isOpen),
+  });
+
+  const targetVipPlan = useMemo(() => {
+    if (!activeCoach || !plansQuery.data) return null;
+    const discIds =
+      activeCoach.coachProfile?.coachSpecialties?.map((s) => s.specialty.disciplineId) ||
+      activeCoach.disciplineIds ||
+      [];
+    return (
+      plansQuery.data.find(
+        (p) => p.packageTier === "VIP" && p.isActive && discIds.includes(p.disciplineId)
+      ) || plansQuery.data.find((p) => p.packageTier === "VIP" && p.isActive) || null
+    );
+  }, [activeCoach, plansQuery.data]);
+
+  const checkoutMutation = useMutation({
+    mutationFn: async () => {
+      setBookingError(null);
+      if (!user) {
+        navigate("/auth/login", { state: { from: "/portal/member/coaches" } });
+        return null;
+      }
+      if (!activeCoach) return null;
+      if (!targetVipPlan) {
+        throw new Error("Đang tải danh mục gói tập VIP, vui lòng thử lại sau giây lát.");
+      }
+      return createCheckout(user.id, {
+        kind: "NEW_SUBSCRIPTION",
+        planId: targetVipPlan.id,
+        coachId: activeCoach.id,
+      });
+    },
+    onSuccess: (order) => {
+      if (order?.checkoutId) {
+        onClose();
+        navigate(`/portal/member/checkouts/${order.checkoutId}`);
+      }
+    },
+    onError: (err: any) => {
+      setBookingError(err?.message || "Không thể tạo đơn thanh toán, vui lòng thử lại.");
+    },
+  });
+
   // Reset modal state on open/coach change
   useEffect(() => {
     if (isOpen) {
@@ -133,53 +181,6 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
     activeRate && activeRate.ratePerSession > 0 ? Number(activeRate.ratePerSession) : 0;
   const weeklyRate = sessionRate * 3; // Chu kỳ tuần tiêu chuẩn 3 buổi kèm riêng
   const weeklyPriceDisplay = sessionRate > 0 ? `${money(weeklyRate)}/tuần` : "Giá tuần ưu đãi";
-
-  // Fetch VIP plans to directly bind checkout
-  const plansQuery = useQuery({
-    queryKey: ["catalog", "all"],
-    queryFn: () => get<Plan[]>("/memberships/plans", true),
-    enabled: Boolean(isOpen),
-  });
-
-  const targetVipPlan = useMemo(() => {
-    if (!activeCoach || !plansQuery.data) return null;
-    const discIds =
-      activeCoach.coachProfile?.coachSpecialties?.map((s) => s.specialty.disciplineId) ||
-      activeCoach.disciplineIds ||
-      [];
-    return (
-      plansQuery.data.find(
-        (p) => p.packageTier === "VIP" && p.isActive && discIds.includes(p.disciplineId)
-      ) || plansQuery.data.find((p) => p.packageTier === "VIP" && p.isActive) || null
-    );
-  }, [activeCoach, plansQuery.data]);
-
-  const checkoutMutation = useMutation({
-    mutationFn: async () => {
-      setBookingError(null);
-      if (!user) {
-        navigate("/auth/login", { state: { from: "/portal/member/coaches" } });
-        return null;
-      }
-      if (!targetVipPlan) {
-        throw new Error("Đang tải danh mục gói tập VIP, vui lòng thử lại sau giây lát.");
-      }
-      return createCheckout(user.id, {
-        kind: "NEW_SUBSCRIPTION",
-        planId: targetVipPlan.id,
-        coachId: activeCoach.id,
-      });
-    },
-    onSuccess: (order) => {
-      if (order?.checkoutId) {
-        onClose();
-        navigate(`/portal/member/checkouts/${order.checkoutId}`);
-      }
-    },
-    onError: (err: any) => {
-      setBookingError(err?.message || "Không thể tạo đơn thanh toán, vui lòng thử lại.");
-    },
-  });
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
