@@ -6,8 +6,10 @@ import { StateMessage } from '@/components/feedback/state-message'
 import { Card } from '@/components/ui/card'
 import { get } from '@/lib/api'
 import type { InbodyLog } from '@/lib/types'
-import { InbodyBodyViewer } from '../components/inbody/inbody-body-viewer'
+import { InbodyBodyMap } from '../components/inbody/inbody-body-map'
 import { InbodyMetricCard } from '../components/inbody/inbody-metric-card'
+import { InbodyShapeCard } from '../components/inbody/inbody-shape-card'
+import { useBodyGender } from '../components/inbody/body-map/use-body-gender'
 import { InbodyComparison } from '../components/inbody/inbody-comparison'
 import { InbodyHistory } from '../components/inbody/inbody-history'
 import { InbodyVisualBoundary } from '../components/inbody/inbody-visual-boundary'
@@ -31,6 +33,7 @@ export const ProgressPage = () => {
   const latest = chronological.at(-1)
   const previous = chronological.at(-2)
   const first = chronological[0]
+  const bodyGender = useBodyGender(user?.id, user?.gender)
 
   return (
     <div className="inbody-dashboard relative isolate mx-auto min-w-0 max-w-6xl overflow-hidden rounded-3xl bg-slate-50 p-4 sm:p-6">
@@ -39,7 +42,6 @@ export const ProgressPage = () => {
         style={{ backgroundImage: `url("${gymFacility}")` }}
       /> */}
       <div className="relative">
-      
         <div aria-live="polite" aria-busy={progress.isPending}>
           <StateMessage
             loading={progress.isPending}
@@ -58,30 +60,34 @@ export const ProgressPage = () => {
               </p>
             )}
             <section aria-label="Tổng quan và quá trình cải thiện" className="inbody-overview">
-              <InbodyBodyViewer />
-              <InbodyVisualBoundary
-                fallback={
-                  <Card
-                    role="status"
-                    className="inbody-visual-card flex items-center justify-center text-center text-sm text-slate-500"
-                  >
-                    Không thể hiển thị biểu đồ. Xem các chỉ số trong bảng lịch sử bên dưới.
-                  </Card>
-                }
-              >
-                <Suspense
+              <InbodyBodyMap measurements={chronological} bodyGender={bodyGender} />
+              {/* Right column: the four trend charts, then the C/I/D shape of the latest visit. */}
+              <div className="inbody-overview-side">
+                <InbodyVisualBoundary
                   fallback={
                     <Card
                       role="status"
-                      className="inbody-visual-card animate-pulse text-sm text-slate-500"
+                      className="inbody-visual-card flex items-center justify-center text-center text-sm text-slate-500"
                     >
-                      Đang tải biểu đồ...
+                      Không thể hiển thị biểu đồ. Xem các chỉ số trong bảng lịch sử bên dưới.
                     </Card>
                   }
                 >
-                  <InbodyProgressChart measurements={chronological} />
-                </Suspense>
-              </InbodyVisualBoundary>
+                  <Suspense
+                    fallback={
+                      <Card
+                        role="status"
+                        className="inbody-visual-card animate-pulse text-sm text-slate-500"
+                      >
+                        Đang tải biểu đồ...
+                      </Card>
+                    }
+                  >
+                    <InbodyProgressChart measurements={chronological} />
+                  </Suspense>
+                </InbodyVisualBoundary>
+                {latest && <InbodyShapeCard measurement={latest} gender={bodyGender.gender} />}
+              </div>
             </section>
             <Card
               role="region"

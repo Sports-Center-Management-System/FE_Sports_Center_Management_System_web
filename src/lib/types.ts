@@ -185,7 +185,29 @@ export interface InbodyLog {
   bodyFatPct?: string | number | null
   muscleMassKg?: string | number | null
   bmi?: string | number | null
+  heightCm?: string | number | null
+  visceralFatLevel?: string | number | null
+  skeletalMuscleMassKg?: string | number | null
+  bodyFatMassKg?: string | number | null
+  leanBodyMassKg?: string | number | null
+  bmrKcal?: string | number | null
+  tbwLiters?: string | number | null
+  proteinKg?: string | number | null
+  mineralKg?: string | number | null
+  waistHipRatio?: string | number | null
+  inbodyScore?: string | number | null
+  /** Segmental lean mass (kg) as InBody machines report it; each segment may be null. */
+  segmentalLean?: Partial<Record<InbodySegment, string | number | null>> | null
+  notes?: string | null
+  /** Added by the backend on every log it returns. */
+  analysis?: InbodyAnalysis | null
 }
+export interface InbodyAnalysis {
+  bodyShape?: 'TYPE_C' | 'TYPE_I' | 'TYPE_D'
+  bodyShapeDescription?: string
+  hasSignificantImbalance?: boolean
+}
+export type InbodySegment = 'rightArm' | 'leftArm' | 'trunk' | 'rightLeg' | 'leftLeg'
 export interface LockerAssignment {
   id: string
   assignedAt: string

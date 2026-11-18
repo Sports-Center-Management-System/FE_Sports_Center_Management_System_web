@@ -11,10 +11,22 @@ import {
 import { Button } from '@/components/ui/button';
 import { coachPortalApi } from '../api/coach-portal-api';
 import { InbodyLogModal } from '../components/inbody-log-modal';
-import type { AssignedMemberItem } from '../types/coach-portal.types';
+import type { AssignedMemberItem, InbodyLogItem } from '../types/coach-portal.types';
 import { TablePagination } from '@/components/common/table-pagination';
 
 const ITEMS_PER_PAGE = 10;
+
+const hasValue = (value: unknown) => value !== null && value !== undefined && value !== '';
+const fatText = (log: InbodyLogItem) =>
+  hasValue(log.bodyFatMassKg)
+    ? `${log.bodyFatMassKg} kg`
+    : hasValue(log.bodyFatPct)
+      ? `${log.bodyFatPct}%`
+      : '--';
+const muscleText = (log: InbodyLogItem) => {
+  const value = hasValue(log.skeletalMuscleMassKg) ? log.skeletalMuscleMassKg : log.muscleMassKg;
+  return hasValue(value) ? `${value} kg` : '--';
+};
 
 export const CoachMembersPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -163,7 +175,8 @@ export const CoachMembersPage: React.FC = () => {
                   const initial = memberName.charAt(0).toUpperCase();
 
                   const memberLogs = Array.isArray(user.memberInbodyLogs) ? user.memberInbodyLogs : [];
-                  const latestInbody = memberLogs[0];
+                  // The API returns logs oldest first.
+                  const latestInbody = memberLogs[memberLogs.length - 1];
                   const fitnessGoal = sanitizeText(user.memberProfile?.fitnessGoals);
 
                   return (
@@ -220,11 +233,11 @@ export const CoachMembersPage: React.FC = () => {
                               </span>
                               <span className="text-slate-300 dark:text-slate-700">·</span>
                               <span className="text-slate-600 dark:text-slate-300">
-                                Cơ: {sanitizeText(latestInbody.muscleMassKg) ? `${latestInbody.muscleMassKg} kg` : '--'}
+                                Cơ: {muscleText(latestInbody)}
                               </span>
                               <span className="text-slate-300 dark:text-slate-700">·</span>
                               <span className="text-slate-600 dark:text-slate-300">
-                                Mỡ: {sanitizeText(latestInbody.bodyFatKg) ? `${latestInbody.bodyFatKg} kg` : '--'}
+                                Mỡ: {fatText(latestInbody)}
                               </span>
                             </div>
                             <span className="text-[10px] text-slate-400 block">
@@ -371,7 +384,7 @@ export const CoachMembersPage: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
-                        {selectedMember.user.memberInbodyLogs.map((log) => (
+                        {[...selectedMember.user.memberInbodyLogs].reverse().map((log) => (
                           <tr key={log.id} className="hover:bg-slate-50/50">
                             <td className="p-3 text-slate-900 dark:text-slate-100 font-bold">
                               {new Date(log.measuredAt).toLocaleDateString('vi-VN')}
@@ -380,13 +393,13 @@ export const CoachMembersPage: React.FC = () => {
                               {sanitizeText(log.weightKg) ? `${log.weightKg} kg` : '--'}
                             </td>
                             <td className="p-3 text-emerald-600 font-bold">
-                              {sanitizeText(log.muscleMassKg) ? `${log.muscleMassKg} kg` : '--'}
+                              {muscleText(log)}
                             </td>
                             <td className="p-3 text-slate-700 dark:text-slate-300">
-                              {sanitizeText(log.bodyFatKg) ? `${log.bodyFatKg} kg` : '--'}
+                              {fatText(log)}
                             </td>
                             <td className="p-3 font-bold text-slate-900 dark:text-slate-100">
-                              {sanitizeText(log.score, '--')}
+                              {sanitizeText(log.inbodyScore, '--')}
                             </td>
                             <td className="p-3 text-slate-500 max-w-xs truncate">
                               {sanitizeText(log.notes, '--')}

@@ -11,6 +11,7 @@ import type {
   AssignedMemberItem,
   InbodyLogPayload,
   InbodyLogItem,
+  WorkoutRecommendation,
   ExerciseKnowledgeItem,
   WorkoutPlanItem,
   CreateWorkoutPlanPayload,
@@ -453,6 +454,14 @@ export const coachPortalApi = {
 
   createInbodyLog: async (payload: InbodyLogPayload): Promise<InbodyLogItem> => {
     const res = await apiClient.post<InbodyLogItem>('/inbody/logs', payload);
+    return res.data;
+  },
+
+  // Trợ lý đề xuất giáo án theo InBody
+  getWorkoutRecommendation: async (memberId: string): Promise<WorkoutRecommendation> => {
+    const res = await apiClient.get<WorkoutRecommendation>(
+      `/workout-plans/recommendations/${encodeURIComponent(memberId)}`,
+    );
     return res.data;
   },
 
