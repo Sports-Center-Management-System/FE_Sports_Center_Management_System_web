@@ -153,32 +153,32 @@ export const router = createBrowserRouter([
           },
         ],
       },
-    ],
-  },
 
-  // Front-desk pages render their own full-screen layout, so they sit outside PublicLayout.
-  {
-    path: "/portal/desk",
-    element: <ReceptionistLayout />,
-    children: [
+      // 4. FRONT DESK / RECEPTIONIST PORTAL
       {
-        element: <StaffGuard roles={["RECEPTIONIST", "CENTER_MANAGER"]} />,
+        path: "portal/desk",
+        element: <ReceptionistLayout />,
         children: [
-          { index: true, element: <FrontDeskPage /> },
-          { path: "gate-checkin", element: <GateCheckinPage /> },
-          { path: "pos", element: <PosPage key="sale" /> },
-          { path: "subscriptions", element: <PosPage key="subscriptions" initialMode="RENEW" /> },
-          { path: "members", element: <MembersPage /> },
-          { path: "members/:memberId", element: <MembersPage /> },
+          {
+            element: <StaffGuard roles={["RECEPTIONIST", "CENTER_MANAGER"]} />,
+            children: [
+              { index: true, element: <FrontDeskPage /> },
+              { path: "gate-checkin", element: <GateCheckinPage /> },
+              { path: "pos", element: <PosPage key="sale" /> },
+              { path: "subscriptions", element: <PosPage key="subscriptions" initialMode="RENEW" /> },
+              { path: "members", element: <MembersPage /> },
+              { path: "members/:memberId", element: <MembersPage /> },
+            ],
+          },
+          {
+            element: <StaffGuard roles={["RECEPTIONIST", "COACH"]} />,
+            children: [{ path: "inbody", element: <InbodyPage /> }],
+          },
         ],
       },
-      {
-        element: <StaffGuard roles={["RECEPTIONIST", "COACH"]} />,
-        children: [{ path: "inbody", element: <InbodyPage /> }],
-      },
+      { path: "desk", element: <Navigate to="/portal/desk" replace /> },
     ],
   },
-  { path: "/desk", element: <Navigate to="/portal/desk" replace /> },
 
   // 4. CENTER MANAGER PORTAL
   {

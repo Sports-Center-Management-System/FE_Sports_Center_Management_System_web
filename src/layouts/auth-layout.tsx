@@ -11,7 +11,7 @@ export interface AuthLayoutProps {
 export const AuthLayout: React.FC<AuthLayoutProps> = ({
   children,
   title = "Chào mừng đến với Trung Tâm Thể Thao",
-  subtitle = "Hệ thống quản lý và dịch vụ hội viên thể thao đa bộ môn",
+  subtitle = "",
 }) => {
   return (
     <div className="min-h-screen w-full flex bg-[#f8fafc] text-slate-800">
@@ -27,6 +27,9 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
         {/* Soft, light gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/40 to-slate-950/25 pointer-events-none" />
 
+        {/* Brand Logo in Top Banner */}
+      
+
         {/* Middle Feature Highlights */}
         <div className="relative z-10 my-auto py-10 space-y-7">
           <div>
@@ -37,59 +40,62 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
 
           {/* 4 Disciplines Grid */}
           <div className="grid grid-cols-2 gap-3.5 pt-2">
-            <div className="p-4 rounded-2xl bg-slate-950/50 hover:bg-slate-950/65 border border-white/20 backdrop-blur-md transition-all shadow-md">
+            <div className="p-4 rounded-none bg-slate-950/60 hover:bg-slate-950/75 border border-white/15 backdrop-blur-md transition-all shadow-md">
               <p className="text-xs font-bold text-white tracking-wide">Gym & Fitness</p>
-              <p className="text-[11px] text-slate-200 mt-1">Tập tự do & PT 1:1</p>
+              <p className="text-[11px] text-slate-300 mt-1">Tập tự do & PT 1:1</p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-950/50 hover:bg-slate-950/65 border border-white/20 backdrop-blur-md transition-all shadow-md">
+            <div className="p-4 rounded-none bg-slate-950/60 hover:bg-slate-950/75 border border-white/15 backdrop-blur-md transition-all shadow-md">
               <p className="text-xs font-bold text-white tracking-wide">Boxing & Combat</p>
-              <p className="text-[11px] text-slate-200 mt-1">Lớp nhóm & Đối kháng</p>
+              <p className="text-[11px] text-slate-300 mt-1">Lớp nhóm & Đối kháng</p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-950/50 hover:bg-slate-950/65 border border-white/20 backdrop-blur-md transition-all shadow-md">
+            <div className="p-4 rounded-none bg-slate-950/60 hover:bg-slate-950/75 border border-white/15 backdrop-blur-md transition-all shadow-md">
               <p className="text-xs font-bold text-white tracking-wide">Yoga & Mind</p>
-              <p className="text-[11px] text-slate-200 mt-1">Dẻo dai & Phục hồi</p>
+              <p className="text-[11px] text-slate-300 mt-1">Dẻo dai & Phục hồi</p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-950/50 hover:bg-slate-950/65 border border-white/20 backdrop-blur-md transition-all shadow-md">
+            <div className="p-4 rounded-none bg-slate-950/60 hover:bg-slate-950/75 border border-white/15 backdrop-blur-md transition-all shadow-md">
               <p className="text-xs font-bold text-white tracking-wide">Zumba & Dance</p>
-              <p className="text-[11px] text-slate-200 mt-1">Sôi động & Đốt mỡ</p>
+              <p className="text-[11px] text-slate-300 mt-1">Sôi động & Đốt mỡ</p>
             </div>
           </div>
         </div>
 
         {/* Bottom Security Guarantee */}
-        <div className="relative z-10 pt-4 border-t border-white/20 flex items-center justify-between text-[11px] text-slate-200 font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+        <div className="relative z-10 pt-4 border-t border-white/20 flex items-center justify-between text-[11px] text-slate-300 font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
           <span>Hệ thống quản lý thể thao chuyên nghiệp</span>
         </div>
       </div>
 
       {/* Right Column: Interactive Content Form Container */}
       <div className="flex-1 flex flex-col justify-center items-center p-6 sm:p-10 lg:p-14 overflow-y-auto">
-        <div className="w-full max-w-md space-y-6">
+        <div className="w-full max-w-md">
           {/* Mobile Brand Logo */}
-          <div className="lg:hidden flex items-center mb-2">
-            <img src={logo3tc} alt="3TC FITNESS" className="h-8 w-auto object-contain" />
+          <div className="lg:hidden flex items-center gap-2 mb-6">
+           
+            <span className="font-extrabold text-base tracking-tight text-slate-900">
+              3TC <span className="text-[#008b74]">FITNESS</span>
+            </span>
           </div>
 
-          {/* Form Header */}
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-              {title}
-            </h2>
-            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-              {subtitle}
-            </p>
-          </div>
+          {/* Child Form Card - Boxy, Sharp Corners, Clean Borders */}
+          <div className="rounded-none border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
+            {/* Form Header Inside Card */}
+            <div className="mb-6">
+              <h2 className="text-xl font-bold tracking-tight text-slate-900">
+                {title}
+              </h2>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                {subtitle}
+              </p>
+            </div>
 
-          {/* Child Form Card */}
-          <div className="rounded-2xl border border-slate-200/90 bg-white p-6 sm:p-8 shadow-xl shadow-slate-200/40">
             {children}
           </div>
 
           {/* Footer note */}
-          <p className="text-center text-[11px] text-slate-400">
+          <p className="text-center text-[11px] text-slate-400 mt-6">
             Bằng việc tiếp tục, bạn đồng ý với Điều khoản dịch vụ và Chính sách bảo mật của trung tâm thể thao.
           </p>
         </div>
