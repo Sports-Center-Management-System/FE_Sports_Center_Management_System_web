@@ -1,5 +1,5 @@
 import { Navigate, createBrowserRouter } from "react-router";
-import { PublicLayout, MemberLayout, CoachLayout, ReceptionistLayout, ManagerLayout } from "@/layouts";
+import { PublicLayout, MemberLayout, CoachLayout, ReceptionistLayout, ManagerLayout, ConsoleLayout } from "@/layouts";
 import { LoginPage, NotFoundPage } from "@/features/auth";
 import { PublicPlansPage, MockPaymentPage } from "@/features/public";
 import { PlansPage, QuotePage } from "@/features/plans";
@@ -45,6 +45,11 @@ import {
   ManagerBookingsPage,
   ManagerAttendancesPage,
 } from "@/features/manager";
+import {
+  ConsoleManagersPage,
+  ConsoleAuditLogsPage,
+  ConsoleMetricsPage,
+} from "@/features/console";
 import { mondayInVietnam } from "@/lib/date";
 import {
   MemberGuard,
@@ -68,15 +73,6 @@ export const router = createBrowserRouter([
       { path: "auth/login", element: <LoginPage /> },
       { path: "auth/register", element: <LoginPage /> },
       { path: "mock-payment", element: <MockPaymentPage /> },
-      {
-        path: "console/*",
-        element: (
-          <div className="p-8 max-w-xl mx-auto text-center space-y-3 bg-white rounded-2xl border border-slate-200 shadow-sm mt-8">
-            <h2 className="text-xl font-bold text-slate-800">Console Quản Trị Hệ Thống</h2>
-            <p className="text-xs text-slate-500">Phân hệ Console (ADMIN) đang trong backlog phát triển giai đoạn tiếp theo.</p>
-          </div>
-        ),
-      },
       {
         path: "forbidden",
         element: (
@@ -213,7 +209,26 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // 5. 404 Catch-all
+  // 5. ADMIN CONSOLE (/console)
+  {
+    path: "/console",
+    element: <StaffGuard roles={["ADMIN"]} />,
+    errorElement: <PortalErrorFallback />,
+    children: [
+      {
+        element: <ConsoleLayout />,
+        children: [
+          { index: true, element: <Navigate to="/console/managers" replace /> },
+          { path: "managers", element: <ConsoleManagersPage /> },
+          { path: "audit-logs", element: <ConsoleAuditLogsPage /> },
+          { path: "metrics", element: <ConsoleMetricsPage /> },
+        ],
+      },
+    ],
+  },
+  { path: "/portal/console", element: <Navigate to="/console" replace /> },
+
+  // 6. 404 Catch-all
   { path: "404", element: <NotFoundPage /> },
   { path: "*", element: <NotFoundPage /> },
 ]);

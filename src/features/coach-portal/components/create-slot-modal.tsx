@@ -8,6 +8,12 @@ import {
   Loader2,
   Plus,
   Check,
+  Sparkles,
+  Sun,
+  Sunset,
+  Coffee,
+  Layers,
+  CheckCircle2,
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
@@ -78,6 +84,8 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
 }) => {
   const queryClient = useQueryClient();
 
+  const [activeTab, setActiveTab] = useState<'single' | 'bulk'>('single');
+
   // Time calculations to prevent past slot creation
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
@@ -97,6 +105,16 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showCustomTime, setShowCustomTime] = useState<boolean>(false);
 
+  // Bulk states
+  const [bulkWeekOffset, setBulkWeekOffset] = useState<0 | 1>(0);
+  const [selectedDays, setSelectedDays] = useState<number[]>([1, 2, 3, 4, 5]); // 1=Mon, ..., 7=Sun
+  const [selectedBulkTimeSlots, setSelectedBulkTimeSlots] = useState<string[]>([
+    '07:00-08:00',
+    '08:00-09:00',
+    '17:00-18:00',
+    '18:00-19:00',
+  ]);
+
   // Sync date when initialDate changes
   useEffect(() => {
     if (initialDate && initialDate >= todayStr) {
@@ -110,6 +128,7 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
   const isStartTimePast = isToday && (!isNaN(sh) && !isNaN(sm) ? sh * 60 + sm <= currentMinutes : false);
   const isSlotInPast = isPastDate || isStartTimePast;
 
+  // Single Slot Mutation
   const mutation = useMutation({
     mutationFn: async () => {
       const normStart = format24hInput(startTime);
@@ -161,8 +180,95 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
     if (selectedPeriod === 'ALL') return HOURLY_SLOTS;
     return HOURLY_SLOTS.filter((s) => s.period === selectedPeriod);
   }, [selectedPeriod]);
+  // Calculate bulk slots
+  const calculatedBulkSlots = useMemo(() => {
+    const d = new Date();
+    const currentDay = d.getDay();
+    const diffToMon = d.getDate() - currentDay + (currentDay === 0 ? -6 : 1) + bulkWeekOffset * 7;
+    const monday = new Date(d);
+    monday.setDate(diffToMon);
+    monday.setHours(0, 0, 0, 0);
+
+    const slots: { startTime: string; endTime: string }[] = [];
+    const currentTime = new Date().getTime();
+
+    selectedDays.forEach((dayIndex) => {
+      const targetDate = new Date(monday);
+      targetDate.setDate(monday.getDate() + (dayIndex - 1));
+      const dateStr = targetDate.toISOString().slice(0, 10);
+
+      selectedBulkTimeSlots.forEach((slotRange) => {
+        const [s, e] = slotRange.split('-');
+        const startDt = new Date(`${dateStr}T${s}:00`);
+        const endDt = new Date(`${dateStr}T${e}:00`);
+
+        if (startDt.getTime() > currentTime && endDt > startDt) {
+          slots.push({
+            startTime: startDt.toISOString(),
+            endTime: endDt.toISOString(),
+          });
+        }
+      });
+    });
+
+    return slots;
+  }, [bulkWeekOffset, selectedDays, selectedBulkTimeSlots]);
+
+  // Bulk Slot Mutation
+  const bulkMutation = useMutation({
+    mutationFn: async () => {
+      if (calculatedBulkSlots.length === 0) {
+        throw new Error('Chưa có slot tương lai hợp lệ nào được chọn. Vui lòng chọn ít nhất 1 ngày và khung giờ.');
+      }
+      return coachPortalApi.createSlotsBulk(calculatedBulkSlots);
+    },
+    onSuccess: async (data) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['coach', 'availability'] }),
+        queryClient.invalidateQueries({ queryKey: ['coach', 'multi-day-schedule'] }),
+      ]);
+      alert(`Đã mở thành công ${data.count || calculatedBulkSlots.length} slot rảnh cho tuần!`);
+      onClose();
+    },
+    onError: (err: any) => {
+      let msg = err.response?.data?.message || err.message || 'Lỗi khi mở slot hàng loạt';
+      if (typeof msg !== 'string') msg = JSON.stringify(msg);
+      if (msg.includes('SCHEDULE_OR_DATA_CONFLICT') || msg.includes('23P01')) {
+        msg = 'Một số slot bị trùng lặp với lịch hiện có hoặc ca trực khác. Vui lòng kiểm tra lại.';
+      }
+      setErrorMessage(msg);
+    },
+  });
 
   if (!isOpen) return null;
+
+  if (!isOpen) return null;
+
+  const BULK_SLOT_OPTIONS = [
+    { id: '06:00-07:00', label: '06:00 - 07:00', period: 'Sáng' },
+    { id: '07:00-08:00', label: '07:00 - 08:00', period: 'Sáng' },
+    { id: '08:00-09:00', label: '08:00 - 09:00', period: 'Sáng' },
+    { id: '09:00-10:00', label: '09:00 - 10:00', period: 'Sáng' },
+    { id: '11:30-12:30', label: '11:30 - 12:30', period: 'Trưa' },
+    { id: '12:30-13:30', label: '12:30 - 13:30', period: 'Trưa' },
+    { id: '14:00-15:00', label: '14:00 - 15:00', period: 'Chiều' },
+    { id: '15:00-16:00', label: '15:00 - 16:00', period: 'Chiều' },
+    { id: '16:00-17:00', label: '16:00 - 17:00', period: 'Chiều' },
+    { id: '17:00-18:00', label: '17:00 - 18:00', period: 'Tối' },
+    { id: '18:00-19:00', label: '18:00 - 19:00', period: 'Tối' },
+    { id: '19:00-20:00', label: '19:00 - 20:00', period: 'Tối' },
+    { id: '20:00-21:00', label: '20:00 - 21:00', period: 'Tối' },
+  ];
+
+  const DAYS_OF_WEEK = [
+    { id: 1, label: 'Thứ 2' },
+    { id: 2, label: 'Thứ 3' },
+    { id: 3, label: 'Thứ 4' },
+    { id: 4, label: 'Thứ 5' },
+    { id: 5, label: 'Thứ 6' },
+    { id: 6, label: 'Thứ 7' },
+    { id: 7, label: 'Chủ Nhật' },
+  ];
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 overflow-y-auto animate-in fade-in duration-150">
@@ -194,6 +300,34 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
             title="Đóng modal"
           >
             <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Tab Switcher */}
+        <div className="grid grid-cols-2 border-b border-slate-200 bg-slate-100/60 p-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab('single')}
+            className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+              activeTab === 'single'
+                ? 'bg-white text-emerald-800 shadow-xs'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Calendar className="h-3.5 w-3.5" />
+            <span>Mở 1 Ca Đơn Lẻ</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('bulk')}
+            className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+              activeTab === 'bulk'
+                ? 'bg-white text-emerald-800 shadow-xs'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Layers className="h-3.5 w-3.5 text-emerald-600" />
+            <span>Mở Hàng Loạt Cả Tuần (Bulk)</span>
           </button>
         </div>
 
@@ -316,8 +450,151 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
                 const [psh, psm] = slot.start.split(':').map(Number);
                 const isPresetPast =
                   isPastDate || (isToday && psh * 60 + psm <= currentMinutes);
+          {activeTab === 'single' ? (
+            <>
+              {isSlotInPast && (
+                <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+                  <div>
+                    <span className="font-bold">Khung giờ không hợp lệ: </span>
+                    {isPastDate
+                      ? 'Ngày được chọn đã nằm trong quá khứ.'
+                      : `Khung giờ bắt đầu (${startTime}) đã qua thời điểm hiện tại. Vui lòng chọn khung giờ ở tương lai.`}
+                  </div>
+                </div>
+              )}
 
-                return (
+              {/* Date Picker */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5 text-slate-500" />
+                  Ngày áp dụng slot
+                </label>
+                <input
+                  type="date"
+                  value={date}
+                  min={new Date().toISOString().slice(0, 10)}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-semibold text-slate-800 focus:border-emerald-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20"
+                />
+              </div>
+
+              {/* Period Filter for Duty Presets */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                    <span>Khung giờ gợi ý phổ biến</span>
+                  </label>
+                  <span className="text-[10px] text-slate-400 font-semibold">Bấm để chọn nhanh</span>
+                </div>
+
+                <div className="flex items-center gap-1.5 pb-1">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPeriod('ALL')}
+                    className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all ${
+                      selectedPeriod === 'ALL'
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Tất cả ca
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPeriod('MORNING')}
+                    className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1 ${
+                      selectedPeriod === 'MORNING'
+                        ? 'bg-amber-600 text-white'
+                        : 'bg-amber-50 text-amber-800 hover:bg-amber-100'
+                    }`}
+                  >
+                    <Sun className="h-3 w-3" />
+                    Ca Sáng (06-09h)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPeriod('LUNCH')}
+                    className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1 ${
+                      selectedPeriod === 'LUNCH'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-blue-50 text-blue-800 hover:bg-blue-100'
+                    }`}
+                  >
+                    <Coffee className="h-3 w-3" />
+                    Ca Trưa (11-13h)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPeriod('EVENING')}
+                    className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1 ${
+                      selectedPeriod === 'EVENING'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-purple-50 text-purple-800 hover:bg-purple-100'
+                    }`}
+                  >
+                    <Sunset className="h-3 w-3" />
+                    Ca Tối (17-21h)
+                  </button>
+                </div>
+
+                {/* Presets Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                  {filteredPresets.map((preset) => {
+                    const isSelected = startTime === preset.start && endTime === preset.end;
+                    const [psh, psm] = preset.start.split(':').map(Number);
+                    const isPresetPast = isPastDate || (isToday && (psh * 60 + psm <= currentMinutes));
+
+                    return (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        disabled={isPresetPast}
+                        onClick={() => {
+                          if (!isPresetPast) {
+                            setStartTime(preset.start);
+                            setEndTime(preset.end);
+                          }
+                        }}
+                        className={`rounded-xl border p-2.5 text-left transition-all flex flex-col justify-between ${
+                          isPresetPast
+                            ? 'border-slate-200 bg-slate-50 text-slate-400 opacity-50 cursor-not-allowed'
+                            : isSelected
+                            ? 'border-emerald-600 bg-emerald-50/80 ring-2 ring-emerald-500/20 text-emerald-950'
+                            : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-black">{preset.label}</span>
+                          {isPresetPast ? (
+                            <span className="rounded-md bg-slate-200 text-slate-500 text-[9px] font-bold px-1.5 py-0.5">
+                              Đã qua giờ
+                            </span>
+                          ) : preset.isPeak ? (
+                            <span className="rounded-md bg-amber-100 text-amber-900 text-[9px] font-black uppercase px-1.5 py-0.2">
+                              Giờ vàng ★
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-1 line-clamp-1">
+                          {isPresetPast ? 'Đã quá thời điểm hiện tại' : preset.desc}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          ) : (
+            /* Bulk Mode Body */
+            <div className="space-y-4">
+              {/* Week Selector */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  1. Chọn tuần áp dụng
+                </label>
+                <div className="flex items-center gap-2">
                   <button
                     key={slot.label}
                     type="button"
@@ -355,9 +632,140 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
                         </span>
                       )}
                     </div>
+                    type="button"
+                    onClick={() => setBulkWeekOffset(0)}
+                    className={`flex-1 py-2 px-3 rounded-xl border text-xs font-bold transition-all ${
+                      bulkWeekOffset === 0
+                        ? 'border-emerald-600 bg-emerald-50 text-emerald-800'
+                        : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    Tuần Này (Hiện Tại)
                   </button>
-                );
-              })}
+                  <button
+                    type="button"
+                    onClick={() => setBulkWeekOffset(1)}
+                    className={`flex-1 py-2 px-3 rounded-xl border text-xs font-bold transition-all ${
+                      bulkWeekOffset === 1
+                        ? 'border-emerald-600 bg-emerald-50 text-emerald-800'
+                        : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    Tuần Kế Tiếp (Tuần Sau)
+                  </button>
+                </div>
+              </div>
+
+              {/* Days selection */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold text-slate-700">
+                    2. Chọn ngày trong tuần
+                  </label>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDays([1, 2, 3, 4, 5])}
+                      className="text-[11px] text-emerald-700 font-bold hover:underline px-1.5 py-0.5"
+                    >
+                      T2 - T6
+                    </button>
+                    <span className="text-slate-300">|</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDays([1, 2, 3, 4, 5, 6, 7])}
+                      className="text-[11px] text-emerald-700 font-bold hover:underline px-1.5 py-0.5"
+                    >
+                      Cả tuần
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
+                  {DAYS_OF_WEEK.map((d) => {
+                    const isChecked = selectedDays.includes(d.id);
+                    return (
+                      <button
+                        key={d.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedDays((prev) =>
+                            prev.includes(d.id) ? prev.filter((x) => x !== d.id) : [...prev, d.id]
+                          );
+                        }}
+                        className={`py-2 px-1 text-center rounded-lg border text-xs font-semibold transition-all ${
+                          isChecked
+                            ? 'border-emerald-600 bg-emerald-600 text-white font-bold'
+                            : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        {d.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Time Slots Selection */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold text-slate-700">
+                    3. Chọn các khung giờ mở rảnh
+                  </label>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedBulkTimeSlots([
+                          '06:00-07:00',
+                          '07:00-08:00',
+                          '08:00-09:00',
+                          '17:00-18:00',
+                          '18:00-19:00',
+                          '19:00-20:00',
+                        ])
+                      }
+                      className="text-[11px] text-emerald-700 font-bold hover:underline px-1.5 py-0.5"
+                    >
+                      Khung giờ vàng
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
+                  {BULK_SLOT_OPTIONS.map((slot) => {
+                    const isChecked = selectedBulkTimeSlots.includes(slot.id);
+                    return (
+                      <button
+                        key={slot.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedBulkTimeSlots((prev) =>
+                            prev.includes(slot.id)
+                              ? prev.filter((x) => x !== slot.id)
+                              : [...prev, slot.id]
+                          );
+                        }}
+                        className={`p-2 rounded-xl border text-left transition-all flex items-center justify-between ${
+                          isChecked
+                            ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold'
+                            : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span className="text-xs">{slot.label}</span>
+                        <span className="text-[10px] text-slate-400 font-normal">({slot.period})</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Summary box */}
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 p-3 flex items-center gap-3">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                <div className="text-xs text-emerald-900">
+                  <span className="font-bold">Tổng quan: </span>
+                  Sẽ tự động tạo <span className="font-extrabold text-emerald-700">{calculatedBulkSlots.length} slot rảnh</span> (đã lọc bỏ các ca trong quá khứ).
+                </div>
+              </div>
             </div>
 
             {/* Optional Custom Time Inputs */}
@@ -399,6 +807,22 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
             </strong>
             <span className="text-slate-400"> (1 tiếng)</span>
           </div>
+          )}
+        </div>
+
+        {/* Footer Actions */}
+        <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-6 py-4">
+          {activeTab === 'single' ? (
+            <div className="text-xs font-semibold text-slate-600">
+              Ca tập: <span className="text-emerald-700 font-bold">{startTime} - {endTime}</span>
+              {' · '}
+              <span className="text-slate-700 font-medium">{new Date(date).toLocaleDateString('vi-VN')}</span>
+            </div>
+          ) : (
+            <div className="text-xs font-semibold text-slate-600">
+              Hàng loạt: <span className="text-emerald-700 font-bold">{calculatedBulkSlots.length} ca</span>
+            </div>
+          )}
 
           <div className="flex items-center gap-2 shrink-0">
             <Button
@@ -427,6 +851,48 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
               )}
               <span>{isSlotInPast ? 'Giờ không hợp lệ' : `Mở slot rảnh (${startTime} - ${endTime})`}</span>
             </button>
+              disabled={mutation.isPending || bulkMutation.isPending}
+              className="text-xs font-semibold"
+            >
+              Hủy
+            </Button>
+            {activeTab === 'single' ? (
+              <Button
+                type="button"
+                onClick={() => mutation.mutate()}
+                disabled={mutation.isPending || isSlotInPast}
+                className={`text-xs font-bold gap-1.5 shadow-sm transition-all ${
+                  isSlotInPast
+                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed hover:bg-slate-300 shadow-none'
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+                }`}
+              >
+                {mutation.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Plus className="h-3.5 w-3.5" />
+                )}
+                <span>{isSlotInPast ? 'Giờ trong quá khứ' : 'Mở slot rảnh'}</span>
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                onClick={() => bulkMutation.mutate()}
+                disabled={bulkMutation.isPending || calculatedBulkSlots.length === 0}
+                className={`text-xs font-bold gap-1.5 shadow-sm transition-all ${
+                  calculatedBulkSlots.length === 0
+                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed hover:bg-slate-300 shadow-none'
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+                }`}
+              >
+                {bulkMutation.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Layers className="h-3.5 w-3.5" />
+                )}
+                <span>Mở {calculatedBulkSlots.length} slot tuần</span>
+              </Button>
+            )}
           </div>
         </div>
       </div>

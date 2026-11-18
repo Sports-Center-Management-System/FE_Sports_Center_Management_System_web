@@ -323,6 +323,16 @@ export const coachPortalApi = {
     return res.data;
   },
 
+  createSlotsBulk: async (
+    slots: CreateSlotPayload[]
+  ): Promise<{ count: number; slots: CoachAvailabilitySlot[] }> => {
+    const res = await apiClient.post<{ count: number; slots: CoachAvailabilitySlot[] }>(
+      '/coaches/availability/bulk',
+      { slots }
+    );
+    return res.data;
+  },
+
   deleteSlot: async (slotId: string): Promise<{ id: string }> => {
     const res = await apiClient.delete<{ id: string }>(`/coaches/availability/${slotId}`);
     return res.data;
