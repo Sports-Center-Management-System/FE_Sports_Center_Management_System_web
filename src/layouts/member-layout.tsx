@@ -48,7 +48,7 @@ export const MemberLayout: React.FC = () => {
   return (
     <div
       className={cn(
-        'h-full w-full overflow-hidden grid grid-cols-1 grid-rows-[auto_minmax(0,1fr)] md:grid-rows-1 bg-[#f8fafc] text-slate-800 transition-all duration-300 ease-in-out',
+        'h-screen w-full overflow-hidden grid grid-cols-1 grid-rows-[auto_minmax(0,1fr)] md:grid-rows-1 bg-[#f8fafc] text-slate-800 transition-all duration-300 ease-in-out',
         isCollapsed ? 'md:grid-cols-[76px_minmax(0,1fr)]' : 'md:grid-cols-[260px_minmax(0,1fr)]',
       )}
     >
