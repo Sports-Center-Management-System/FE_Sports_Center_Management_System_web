@@ -1,7 +1,7 @@
 import { Navigate, createBrowserRouter } from "react-router";
 import { PublicLayout, MemberLayout, CoachLayout, ReceptionistLayout, ManagerLayout, ConsoleLayout } from "@/layouts";
 import { LoginPage, NotFoundPage } from "@/features/auth";
-import { PublicPlansPage, MockPaymentPage } from "@/features/public";
+import { PublicPlansPage, MockPaymentPage, LandingPage } from "@/features/public";
 import { PlansPage, QuotePage } from "@/features/plans";
 import { CoachesPage } from "@/features/coaches";
 import { CheckoutPage, TransactionsPage } from "@/features/checkout";
@@ -60,18 +60,28 @@ import {
 } from "./route-elements";
 
 export const router = createBrowserRouter([
-  // 1. PUBLIC ROUTES (wrapped in PublicLayout with public header)
+  // 1. LANDING PAGE (Full-width, dedicated sticky header & footer)
   {
     path: "/",
+    element: <LandingPage />,
+  },
+  {
+    path: "/landing",
+    element: <LandingPage />,
+  },
+
+  // 2. AUTHENTICATION (Standalone full-screen, no navbar header, fixed viewport)
+  { path: "login", element: <LoginPage /> },
+  { path: "register", element: <LoginPage /> },
+  { path: "auth/login", element: <LoginPage /> },
+  { path: "auth/register", element: <LoginPage /> },
+
+  // 3. PUBLIC APP ROUTES (wrapped in PublicLayout with app header)
+  {
     element: <PublicLayout />,
     children: [
-      { index: true, element: <Navigate to="/plans" replace /> },
       { path: "plans", element: <PublicPlansPage /> },
       { path: "coaches", element: <CoachesPage /> },
-      { path: "login", element: <LoginPage /> },
-      { path: "register", element: <LoginPage /> },
-      { path: "auth/login", element: <LoginPage /> },
-      { path: "auth/register", element: <LoginPage /> },
       { path: "mock-payment", element: <MockPaymentPage /> },
       {
         path: "forbidden",
@@ -153,32 +163,32 @@ export const router = createBrowserRouter([
           },
         ],
       },
-    ],
-  },
 
-  // Front-desk pages render their own full-screen layout, so they sit outside PublicLayout.
-  {
-    path: "/portal/desk",
-    element: <ReceptionistLayout />,
-    children: [
+      // 4. FRONT DESK / RECEPTIONIST PORTAL
       {
-        element: <StaffGuard roles={["RECEPTIONIST", "CENTER_MANAGER"]} />,
+        path: "portal/desk",
+        element: <ReceptionistLayout />,
         children: [
-          { index: true, element: <FrontDeskPage /> },
-          { path: "gate-checkin", element: <GateCheckinPage /> },
-          { path: "pos", element: <PosPage key="sale" /> },
-          { path: "subscriptions", element: <PosPage key="subscriptions" initialMode="RENEW" /> },
-          { path: "members", element: <MembersPage /> },
-          { path: "members/:memberId", element: <MembersPage /> },
+          {
+            element: <StaffGuard roles={["RECEPTIONIST", "CENTER_MANAGER"]} />,
+            children: [
+              { index: true, element: <FrontDeskPage /> },
+              { path: "gate-checkin", element: <GateCheckinPage /> },
+              { path: "pos", element: <PosPage key="sale" /> },
+              { path: "subscriptions", element: <PosPage key="subscriptions" initialMode="RENEW" /> },
+              { path: "members", element: <MembersPage /> },
+              { path: "members/:memberId", element: <MembersPage /> },
+            ],
+          },
+          {
+            element: <StaffGuard roles={["RECEPTIONIST", "COACH"]} />,
+            children: [{ path: "inbody", element: <InbodyPage /> }],
+          },
         ],
       },
-      {
-        element: <StaffGuard roles={["RECEPTIONIST", "COACH"]} />,
-        children: [{ path: "inbody", element: <InbodyPage /> }],
-      },
+      { path: "desk", element: <Navigate to="/portal/desk" replace /> },
     ],
   },
-  { path: "/desk", element: <Navigate to="/portal/desk" replace /> },
 
   // 4. CENTER MANAGER PORTAL
   {
