@@ -5,9 +5,6 @@ import {
   BarChart3,
   BookOpen,
   Building2,
-  CalendarCheck,
-  DoorOpen,
-  ReceiptText,
   CalendarClock,
   CalendarDays,
   ClipboardCheck,
@@ -17,12 +14,12 @@ import {
   Menu,
   Package,
   UserCog,
-  UsersRound,
 } from 'lucide-react'
 import { useAuth } from '@/context/auth-context'
 import { cn } from '@/lib/utils'
 import { managerApi, managerKeys } from '@/features/manager/api/manager-api'
 import { connectRealtime } from '@/features/manager/lib/realtime'
+import logo3tc from '@/assets/images/logo-3tc.png'
 
 const navGroups = [
   {
@@ -45,15 +42,7 @@ const navGroups = [
       { label: 'Báo cáo', path: '/portal/manager/reports', icon: BarChart3 },
     ],
   },
-  {
-    label: 'Vận hành quầy',
-    links: [
-      { label: 'Hội viên & InBody', path: '/portal/manager/members', icon: UsersRound },
-      { label: 'Bán hàng & hóa đơn', path: '/portal/manager/pos', icon: ReceiptText },
-      { label: 'Lịch đặt chỗ', path: '/portal/manager/bookings', icon: CalendarCheck },
-      { label: 'Cổng & điểm danh', path: '/portal/manager/attendances', icon: DoorOpen },
-    ],
-  },
+  
 ]
 
 function useCancellationRealtime() {
@@ -157,13 +146,10 @@ export const ManagerLayout: React.FC = () => {
       </details>
 
       <aside className="hidden h-full flex-col border-r border-slate-200 bg-white p-3 md:flex">
-        <NavLink to="/portal/manager/dashboard" className="mb-4 flex items-center gap-2 px-2 py-1">
-          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-[#008b74] text-xs font-bold text-white">
-            3TC
-          </span>
-          <span className="leading-tight">
-            <span className="block text-sm font-semibold text-slate-900">3TC Fitness</span>
-            <span className="block text-xs text-slate-500">Quản lý trung tâm</span>
+        <NavLink to="/portal/manager/dashboard" className="mb-4 flex items-center gap-2.5 px-2 py-1 hover:opacity-85 transition-opacity">
+          <img src={logo3tc} alt="3TC FITNESS" className="h-7 w-auto object-contain" />
+          <span className="rounded-md bg-emerald-100/80 px-1.5 py-0.5 text-[10px] font-extrabold tracking-wider text-emerald-800 uppercase">
+            QUẢN LÝ
           </span>
         </NavLink>
         <nav

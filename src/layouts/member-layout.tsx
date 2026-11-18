@@ -122,27 +122,34 @@ export const MemberLayout: React.FC = () => {
       <aside
         className={cn(
           'hidden h-full max-h-full overflow-hidden bg-white border-r border-slate-200/90 md:flex flex-col justify-between shadow-xs transition-all duration-300 ease-in-out shrink-0 select-none',
-          isCollapsed ? 'p-2.5 pb-2 w-[70px]' : 'p-3 pb-2 w-[240px]',
+          isCollapsed ? 'p-2.5 pb-2 w-[76px]' : 'p-3 pb-2 w-[260px]',
         )}
       >
         <div className="flex flex-col min-h-0 space-y-1.5 flex-1">
-          {/* Header Row: 'Khu vực Hội Viên' and Collapse Toggle Arrow */}
+          {/* Header Row: Logo 3TC Fitness and Collapse Toggle Arrow */}
           {!isCollapsed ? (
-            <div className="flex items-center justify-between px-1 pb-2 border-b border-slate-100">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
-                Khu vực Hội Viên
-              </span>
+            <div className="flex items-center justify-between px-1 pb-2.5 border-b border-slate-100">
+              <Link
+                to="/portal/member/plans"
+                className="flex items-center gap-2 hover:opacity-85 transition-opacity min-w-0"
+                title="3TC Fitness - Hội Viên"
+              >
+                <img src={logo3tc} alt="3TC FITNESS" className="h-7 w-auto object-contain" />
+                <span className="rounded-md bg-emerald-100/80 px-1.5 py-0.5 text-[10px] font-extrabold tracking-wider text-emerald-800 uppercase">
+                  MEMBER
+                </span>
+              </Link>
               <button
                 type="button"
                 onClick={() => setIsCollapsed(true)}
                 title="Thu gọn menu"
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
             </div>
           ) : (
-            <div className="flex items-center justify-center pb-2 border-b border-slate-100">
+            <div className="flex flex-col items-center gap-2 pb-2.5 border-b border-slate-100">
               <button
                 type="button"
                 onClick={() => setIsCollapsed(false)}
@@ -151,6 +158,13 @@ export const MemberLayout: React.FC = () => {
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
+              <Link
+                to="/portal/member/plans"
+                title="3TC Fitness - Hội Viên"
+                className="hover:opacity-85 transition-opacity"
+              >
+                <img src={logo3tc} alt="3TC" className="h-5 w-auto object-contain max-w-[50px]" />
+              </Link>
             </div>
           )}
 

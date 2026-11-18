@@ -12,7 +12,6 @@ import {
   RotateCcw,
   XCircle,
   ArrowUpDown,
-  DollarSign,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -77,30 +76,6 @@ export const InvoicesPage: React.FC = () => {
     queryKey: memberKeys.invoices(user!.id),
     queryFn: () => get<Invoice[]>("/billing/invoices"),
   });
-
-  // Calculate summary metrics
-  const stats = useMemo(() => {
-    const list = invoices.data || [];
-    let totalPaid = 0;
-    let paidCount = 0;
-    let pendingCount = 0;
-
-    for (const inv of list) {
-      if (inv.status === "PAID") {
-        totalPaid += Number(inv.amount || 0);
-        paidCount++;
-      } else if (inv.status === "PENDING") {
-        pendingCount++;
-      }
-    }
-
-    return {
-      totalPaid,
-      paidCount,
-      pendingCount,
-      totalCount: list.length,
-    };
-  }, [invoices.data]);
 
   // Filter & sort invoices
   const filteredInvoices = useMemo(() => {

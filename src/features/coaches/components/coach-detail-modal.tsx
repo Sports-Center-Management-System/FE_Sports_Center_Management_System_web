@@ -180,7 +180,6 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
   const sessionRate =
     activeRate && activeRate.ratePerSession > 0 ? Number(activeRate.ratePerSession) : 0;
   const weeklyRate = sessionRate * 3; // Chu kỳ tuần tiêu chuẩn 3 buổi kèm riêng
-  const weeklyPriceDisplay = sessionRate > 0 ? `${money(weeklyRate)}/tuần` : "Giá tuần ưu đãi";
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">

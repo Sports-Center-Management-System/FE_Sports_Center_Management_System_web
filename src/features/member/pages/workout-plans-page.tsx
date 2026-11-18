@@ -12,7 +12,6 @@ import {
   Calendar,
   Filter,
   Quote,
-  Target,
   Swords,
   Activity,
 } from 'lucide-react';
@@ -311,11 +310,6 @@ export const WorkoutPlansPage: React.FC = () => {
       return true;
     });
   }, [rawTemplates, templateWeekFilter, templateSearch]);
-
-  // Derived metrics
-  const totalExercisesCount = useMemo(() => {
-    return rawPlans.reduce((sum, p) => sum + (p.exercises?.length || 0), 0);
-  }, [rawPlans]);
 
   // Paginated plans
   const totalPlansPages = Math.max(1, Math.ceil(filteredAndSortedPlans.length / plansPageSize));
