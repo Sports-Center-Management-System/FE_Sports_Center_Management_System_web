@@ -350,16 +350,7 @@ export const CheckoutPage: React.FC = () => {
                 </tbody>
                 <tfoot>
                   
-                  {hasPt && (
-                    <tr className="bg-slate-50 border-t border-slate-200 text-xs text-slate-700">
-                      <td colSpan={2} className="py-3 px-6 text-left border-r border-slate-300 font-medium">
-                        Phí dịch vụ Huấn luyện viên kèm riêng:
-                      </td>
-                      <td colSpan={2} className="py-3 px-6 text-right font-mono font-bold text-slate-900">
-                        {money(order.data.ptAmount)}
-                      </td>
-                    </tr>
-                  )}
+                  
                   {changed && (
                     <tr className="bg-amber-50/80 border-t border-amber-200 text-xs text-amber-900">
                       <td colSpan={4} className="py-2.5 px-6 font-medium">
