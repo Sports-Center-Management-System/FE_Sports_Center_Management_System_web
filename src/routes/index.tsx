@@ -18,6 +18,7 @@ import {
   FrontDeskPage,
   GateCheckinPage,
   InbodyPage,
+  LockersPage as DeskLockersPage,
   MembersPage,
   PosPage,
 } from "@/features/front-desk";
@@ -178,6 +179,8 @@ export const router = createBrowserRouter([
               { path: "subscriptions", element: <PosPage key="subscriptions" initialMode="RENEW" /> },
               { path: "members", element: <MembersPage /> },
               { path: "members/:memberId", element: <MembersPage /> },
+              { path: "bookings", element: <ManagerBookingsPage variant="desk" /> },
+              { path: "lockers", element: <DeskLockersPage /> },
             ],
           },
           {

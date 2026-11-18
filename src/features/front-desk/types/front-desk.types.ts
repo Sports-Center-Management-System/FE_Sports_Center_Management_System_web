@@ -40,6 +40,7 @@ export interface Schedule {
 
 export interface Locker {
   id: string;
+  lockerNumber: string;
   zone: string;
   status: "AVAILABLE" | "OCCUPIED" | "MAINTENANCE";
   isActive: boolean;

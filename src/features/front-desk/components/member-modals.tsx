@@ -1,6 +1,7 @@
 import React, { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { GENDER_LABEL } from "../lib/gender";
 import { memberError } from "../lib/member-error";
 import { changeSubscriptionStatus, createMember, updateMemberDetail } from "../services/member-management.service";
 import type {
@@ -8,7 +9,20 @@ import type {
   MemberDetail,
   MemberProfileUpdate,
 } from "../types/member-management.types";
+import type { MemberGender } from "../types/gate-checkin.types";
 import type { PosSubscription } from "../types/pos.types";
+
+
+const GenderSelect: React.FC<{ value: MemberGender | ""; onChange: (value: MemberGender | "") => void }> = ({ value, onChange }) => (
+  <label className="block font-medium text-slate-800">
+    Giới tính
+    <select value={value} onChange={(event) => onChange(event.target.value as MemberGender | "")} className="mt-1.5 h-10 w-full rounded-md border border-[#cbded4] bg-white px-3 outline-none focus:border-[#008b74]">
+      <option value="">Chưa chọn</option>
+      {(Object.keys(GENDER_LABEL) as MemberGender[]).map((key) => <option key={key} value={key}>{GENDER_LABEL[key]}</option>)}
+    </select>
+    <span className="mt-1 block text-xs font-normal text-slate-500">Dùng để gợi ý khu tủ đồ và hình cơ thể InBody.</span>
+  </label>
+);
 
 const DialogFrame: React.FC<{
   title: string;
@@ -39,10 +53,11 @@ export const EditMemberModal: React.FC<{
   onClose: () => void;
   onSaved: (updated: MemberDetail) => void;
 }> = ({ member, onClose, onSaved }) => {
-  const [form, setForm] = useState<MemberProfileUpdate>({
+  const [form, setForm] = useState({
     fullName: member.fullName,
     phone: member.phone ?? "",
-    avatarUrl: member.avatarUrl ?? "",
+    gender: (member.gender ?? "") as MemberGender | "",
+    heightCm: member.memberProfile?.heightCm != null ? String(member.memberProfile.heightCm) : "",
     fitnessGoals: member.memberProfile?.fitnessGoals ?? "",
     medicalHistory: member.memberProfile?.medicalHistory ?? "",
   });
@@ -50,24 +65,22 @@ export const EditMemberModal: React.FC<{
   const busyRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
-  const setField = (field: keyof MemberProfileUpdate, value: string) => {
+  const setField = (field: keyof typeof form, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
     setError(null);
   };
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (busyRef.current) return;
-    const payload = {
-      fullName: form.fullName.trim(), phone: form.phone.trim(), avatarUrl: form.avatarUrl.trim(),
+    const height = form.heightCm.trim() ? Number(form.heightCm.replace(",", ".")) : undefined;
+    const payload: MemberProfileUpdate = {
+      fullName: form.fullName.trim(), phone: form.phone.trim(),
+      ...(form.gender ? { gender: form.gender } : {}),
+      ...(height !== undefined ? { heightCm: height } : {}),
       fitnessGoals: form.fitnessGoals.trim(), medicalHistory: form.medicalHistory.trim(),
     };
     if (!payload.fullName) { setError("Vui lòng nhập họ tên hội viên."); return; }
-    if (payload.avatarUrl) {
-      try {
-        const url = new URL(payload.avatarUrl);
-        if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error("invalid");
-      } catch { setError("Ảnh đại diện cần là đường dẫn http hoặc https hợp lệ."); return; }
-    }
+    if (height !== undefined && (!Number.isFinite(height) || height < 50 || height > 250)) { setError("Chiều cao cần trong khoảng 50 đến 250 cm."); return; }
     busyRef.current = true;
     setBusy(true);
     setError(null);
@@ -86,7 +99,7 @@ export const EditMemberModal: React.FC<{
     <form onSubmit={(event) => void submit(event)} className="mt-5 space-y-4 text-sm">
       <label className="block font-medium">Họ tên<input value={form.fullName} maxLength={150} onChange={(event) => setField("fullName", event.target.value)} className="mt-1.5 h-10 w-full rounded-md border border-[#cbded4] px-3 outline-none focus:border-[#008b74]" /></label>
       <div className="grid gap-4 sm:grid-cols-2"><label className="block font-medium">Số điện thoại<input value={form.phone} maxLength={20} onChange={(event) => setField("phone", event.target.value)} className="mt-1.5 h-10 w-full rounded-md border border-[#cbded4] px-3 outline-none focus:border-[#008b74]" /></label><label className="block font-medium">Email<input value={member.email} readOnly className="mt-1.5 h-10 w-full rounded-md border border-[#e0e9e4] bg-[#f5f8f6] px-3 text-[#61756f]" /></label></div>
-      <label className="block font-medium">URL ảnh đại diện<input value={form.avatarUrl} maxLength={2000} onChange={(event) => setField("avatarUrl", event.target.value)} placeholder="https://..." className="mt-1.5 h-10 w-full rounded-md border border-[#cbded4] px-3 outline-none focus:border-[#008b74]" /></label>
+      <div className="grid gap-4 sm:grid-cols-2"><GenderSelect value={form.gender} onChange={(value) => setField("gender", value)} /><label className="block font-medium">Chiều cao (cm)<input value={form.heightCm} inputMode="decimal" onChange={(event) => setField("heightCm", event.target.value)} placeholder="Ví dụ: 170" className="mt-1.5 h-10 w-full rounded-md border border-[#cbded4] px-3 outline-none focus:border-[#008b74]" /></label></div>
       <label className="block font-medium">Mục tiêu tập luyện<textarea value={form.fitnessGoals} maxLength={4000} rows={2} onChange={(event) => setField("fitnessGoals", event.target.value)} className="mt-1.5 w-full rounded-md border border-[#cbded4] p-3 outline-none focus:border-[#008b74]" /></label>
       <label className="block font-medium">Tiền sử sức khỏe<textarea value={form.medicalHistory} maxLength={4000} rows={2} onChange={(event) => setField("medicalHistory", event.target.value)} className="mt-1.5 w-full rounded-md border border-[#cbded4] p-3 outline-none focus:border-[#008b74]" /></label>
       {error && <p role="alert" className="text-[#af3c2d]">{error}</p>}
@@ -134,18 +147,19 @@ export const CreateMemberModal: React.FC<{
   onClose: () => void;
   onCreated: (newMember: MemberDetail) => void;
 }> = ({ onClose, onCreated }) => {
-  const [form, setForm] = useState<CreateMemberPayload>({
+  const [form, setForm] = useState({
     fullName: "",
     email: "",
     phone: "",
     password: "",
     avatarUrl: "",
+    gender: "" as MemberGender | "",
   });
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
-  const setField = (field: keyof CreateMemberPayload, value: string) => {
+  const setField = (field: keyof typeof form, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
     setError(null);
   };
@@ -158,6 +172,7 @@ export const CreateMemberModal: React.FC<{
       email: form.email.trim().toLowerCase(),
       phone: form.phone.trim(),
       password: form.password,
+      ...(form.gender ? { gender: form.gender } : {}),
       avatarUrl: form.avatarUrl?.trim() || undefined,
     };
     if (!payload.fullName) {
@@ -230,6 +245,7 @@ export const CreateMemberModal: React.FC<{
             />
           </label>
         </div>
+        <GenderSelect value={form.gender} onChange={(value) => setField("gender", value)} />
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block font-medium text-slate-800">
             Mật khẩu khởi tạo <span className="text-rose-500">*</span>

@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CreateMemberModal, EditMemberModal, SubscriptionStatusModal } from "../components/member-modals";
+import { GENDER_LABEL } from "../lib/gender";
 import { InbodyPanel } from "../components/inbody-panel";
 import { PosMemberSearch } from "../components/pos-member-search";
 import { formatVnd } from "../lib/currency";
@@ -302,6 +303,8 @@ export const MembersPage: React.FC = () => {
                       {profileLoading ? <div className="mt-4 h-24 animate-pulse rounded-xl bg-slate-100" /> : profileError ? <p role="alert" className="mt-4 text-sm text-rose-600">{profileError}</p> : profile ? (
                         <dl className="mt-4 grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2">
                           <div><dt className="text-slate-500">Email</dt><dd className="mt-1 break-all font-semibold text-slate-900">{profile.email}</dd></div>
+                          <div><dt className="text-slate-500">Giới tính</dt><dd className="mt-1 font-semibold text-slate-900">{profile.gender ? GENDER_LABEL[profile.gender] : "Chưa chọn"}</dd></div>
+                          <div><dt className="text-slate-500">Chiều cao</dt><dd className="mt-1 font-semibold text-slate-900">{profile.memberProfile?.heightCm != null ? `${Number(profile.memberProfile.heightCm).toLocaleString("vi-VN")} cm` : "Chưa có"}</dd></div>
                           <div><dt className="text-slate-500">Mã hội viên</dt><dd className="mt-1 break-all font-mono text-xs text-slate-600">{profile.id}</dd></div>
                           <div><dt className="text-slate-500">Mục tiêu tập luyện</dt><dd className="mt-1 whitespace-pre-wrap font-medium text-slate-800">{profile.memberProfile?.fitnessGoals || "Chưa có"}</dd></div>
                           <div><dt className="text-slate-500">Tiền sử sức khỏe</dt><dd className="mt-1 whitespace-pre-wrap font-medium text-slate-800">{profile.memberProfile?.medicalHistory || "Chưa có"}</dd></div>

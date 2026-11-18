@@ -123,10 +123,24 @@ const emptyText: Record<View, string> = {
   all: 'Chưa có lượt đặt nào.',
 }
 
-export function ManagerBookingsPage() {
+/**
+ * `desk` is the receptionist's copy: the backend lets the front desk book and cancel on a
+ * member's behalf, but not read staff accounts or assign workout plans.
+ */
+export function ManagerBookingsPage({ variant = 'manager' }: { variant?: 'manager' | 'desk' }) {
   const queryClient = useQueryClient()
+  const isDesk = variant === 'desk'
   const bookings = useQuery({ queryKey: managerKeys.bookings, queryFn: managerApi.bookings })
-  const staff = useQuery({ queryKey: managerKeys.staff, queryFn: managerApi.staff })
+  const staff = useQuery({
+    queryKey: managerKeys.staff,
+    queryFn: managerApi.staff,
+    enabled: !isDesk,
+  })
+  const coaches = useQuery({
+    queryKey: managerKeys.coaches,
+    queryFn: managerApi.coaches,
+    enabled: isDesk,
+  })
   const [view, setView] = useState<View>('upcoming')
   const [kind, setKind] = useState<Kind>('ALL')
   const [creating, setCreating] = useState(false)
@@ -157,7 +171,7 @@ export function ManagerBookingsPage() {
   const { items: visible, pager } = usePagination(rows, PAGE_SIZE, `${view}|${kind}`)
   const memberName = useUserNames(visible.map((b) => b.memberId))
   const coachName = (id: string | null) =>
-    id ? (staff.data?.find((u) => u.id === id)?.fullName ?? 'HLV') : null
+    id ? ((isDesk ? coaches.data : staff.data)?.find((u) => u.id === id)?.fullName ?? 'HLV') : null
 
   const groups = new Map<string, typeof visible>()
   for (const b of visible) {
@@ -174,7 +188,8 @@ export function ManagerBookingsPage() {
   return (
     <>
       <PageHeader
-        title="Lịch đặt chỗ"
+        onDark={isDesk}
+        title={isDesk ? 'Đặt lịch hộ' : 'Lịch đặt chỗ'}
         description="Lượt đặt lớp nhóm và PT 1-1 của hội viên. Đặt hoặc hủy hộ khi hội viên nhờ quầy."
         actions={
           <Btn tone="primary" onClick={() => setCreating(true)}>
@@ -278,7 +293,7 @@ export function ManagerBookingsPage() {
                           ) : null}
                         </div>
                         <div className="flex w-full shrink-0 justify-end gap-1.5 sm:w-auto">
-                          {b.status !== 'CANCELLED' ? (
+                          {!isDesk && b.status !== 'CANCELLED' ? (
                             <Btn size="sm" onClick={() => setPlanFor(b)}>
                               Giáo án
                             </Btn>

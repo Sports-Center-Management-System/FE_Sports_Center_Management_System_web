@@ -7,16 +7,32 @@ export function PageHeader({
   title,
   description,
   actions,
+  onDark = false,
 }: {
   title: string
   description?: string
   actions?: React.ReactNode
+  /** Light text, for layouts that put a dark photo behind the page header (front desk). */
+  onDark?: boolean
 }) {
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="text-xl font-bold text-slate-900">{title}</h1>
-        {description ? <p className="mt-1 text-sm text-slate-500">{description}</p> : null}
+        <h1
+          className={cn(
+            'font-bold',
+            onDark
+              ? 'text-2xl font-black tracking-tight text-white md:text-3xl'
+              : 'text-xl text-slate-900',
+          )}
+        >
+          {title}
+        </h1>
+        {description ? (
+          <p className={cn('mt-1 text-sm', onDark ? 'text-white/85' : 'text-slate-500')}>
+            {description}
+          </p>
+        ) : null}
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
     </div>

@@ -12,6 +12,8 @@ import {
   LogOut,
   Menu,
   Calendar,
+  CalendarCheck,
+  DoorOpen,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
@@ -28,6 +30,8 @@ const receptionistNavLinks = [
   { label: 'Bán vé & PT', path: '/portal/desk/pos', icon: ReceiptText },
   { label: 'Gia hạn & PT', path: '/portal/desk/subscriptions', icon: CreditCard },
   { label: 'Hội viên', path: '/portal/desk/members', icon: UsersRound },
+  { label: 'Đặt lịch hộ', path: '/portal/desk/bookings', icon: CalendarCheck },
+  { label: 'Tủ đồ', path: '/portal/desk/lockers', icon: DoorOpen },
   { label: 'InBody', path: '/portal/desk/inbody', icon: Activity },
 ]
 

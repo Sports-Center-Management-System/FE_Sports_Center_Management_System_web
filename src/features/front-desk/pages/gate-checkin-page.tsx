@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDateTime } from "../lib/date-time";
-import { gateCheckin, searchMembers } from "../services/gate-checkin.service";
+import { gateCheckin, returnLocker, searchMembers } from "../services/gate-checkin.service";
 import type {
   GateCheckinResponse,
   LockerZone,
@@ -26,6 +26,10 @@ const lockerZones: { value: LockerZone; label: string }[] = [
   { value: "VIP_AREA", label: "Khu VIP" },
 ];
 
+/** The usual locker zone for a member's gender; VIP stays a manual choice. */
+const zoneForGender = (gender: SearchMember["gender"]): LockerZone | "" =>
+  gender === "MALE" ? "MALE_LOCKER" : gender === "FEMALE" ? "FEMALE_LOCKER" : "";
+
 const apiError = (error: unknown, fallback: string): string => {
   if (!axios.isAxiosError(error)) return fallback;
   if (!error.response) return "Không kết nối được máy chủ. Vui lòng kiểm tra mạng và thử lại.";
@@ -37,7 +41,8 @@ const apiError = (error: unknown, fallback: string): string => {
     GATE_ACCESS_DENIED: "Hội viên không có gói tập hợp lệ, đã hết hạn hoặc không có lịch đặt phù hợp hôm nay.",
     NO_VALID_ACTIVE_SUBSCRIPTION: "Hội viên không có gói tập hợp lệ hoặc thẻ đã hết hạn.",
     NO_AVAILABLE_LOCKER: "Khu vực đã chọn không còn tủ trống. Hãy chọn khu vực khác hoặc không cấp tủ.",
-    RETURN_OVERNIGHT_LOCKER_FIRST: "Hội viên cần trả tủ của lượt ghé trước trước khi check-in mới.",
+    RETURN_OVERNIGHT_LOCKER_FIRST: "Hội viên còn giữ tủ từ ngày trước nên chưa check-in được. Báo quản lý trung tâm để xử lý tủ cũ.",
+    LOCKER_ALREADY_RETURNED: "Tủ này đã được trả trước đó.",
     USER_NOT_FOUND: "Không tìm thấy hội viên này. Vui lòng tìm lại.",
     INVALID_USER_ROLE_OR_INACTIVE: "Tài khoản hội viên không hoạt động hoặc không đúng vai trò.",
   };
@@ -61,6 +66,9 @@ export const GateCheckinPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [result, setResult] = useState<GateCheckinResponse | null>(null);
+  const [returning, setReturning] = useState(false);
+  const [returnedAt, setReturnedAt] = useState<string | null>(null);
+  const [returnError, setReturnError] = useState<string | null>(null);
   const searchSequence = useRef(0);
   const submittingRef = useRef(false);
   const queryRef = useRef<HTMLInputElement>(null);
@@ -82,6 +90,9 @@ export const GateCheckinPage: React.FC = () => {
     setSubmitting(false);
     setSubmitError(null);
     setResult(null);
+    setReturning(false);
+    setReturnedAt(null);
+    setReturnError(null);
     window.setTimeout(() => queryRef.current?.focus(), 0);
   };
 
@@ -130,6 +141,21 @@ export const GateCheckinPage: React.FC = () => {
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
+    }
+  };
+
+  const handleReturnLocker = async () => {
+    const assignmentId = result?.lockerAssignment?.id;
+    if (!assignmentId || returning) return;
+    setReturning(true);
+    setReturnError(null);
+    try {
+      const response = await returnLocker(assignmentId);
+      setReturnedAt(response.returnedAt);
+    } catch (error) {
+      setReturnError(apiError(error, "Không trả được tủ. Vui lòng thử lại."));
+    } finally {
+      setReturning(false);
     }
   };
 
@@ -264,6 +290,7 @@ export const GateCheckinPage: React.FC = () => {
                         disabled={!member.isActive || submitting}
                         onClick={() => {
                           setSelected(member);
+                          setZone((current) => current || zoneForGender(member.gender));
                           setSubmitError(null);
                         }}
                         className={`flex w-full items-center gap-3 px-2 py-3 text-left rounded-xl transition-colors disabled:cursor-not-allowed disabled:opacity-55 ${
@@ -313,9 +340,30 @@ export const GateCheckinPage: React.FC = () => {
               </div>
               <div className="mt-8 border-y border-slate-100 py-6">
                 <p className="text-xs font-semibold uppercase text-slate-500">Tủ được cấp</p>
-                <p className="mt-1 break-words text-4xl font-black text-[#008b74]">
+                <p className={`mt-1 break-words text-4xl font-black ${returnedAt ? "text-slate-400 line-through" : "text-[#008b74]"}`}>
                   {result.assignedLocker || "Không cấp tủ"}
                 </p>
+                {result.lockerAssignment && (
+                  <div className="mt-4">
+                    {returnedAt ? (
+                      <p className="text-sm font-semibold text-[#008b74]">Đã trả tủ lúc {formatDateTime(returnedAt)}.</p>
+                    ) : (
+                      <>
+                        <p className="text-sm text-slate-500">
+                          {result.repeated
+                            ? "Hội viên đang giữ tủ này. Khi hội viên ra về, bấm trả tủ để giải phóng tủ."
+                            : "Khi hội viên ra về, quét lại hội viên để trả tủ."}
+                        </p>
+                        {result.repeated && (
+                          <Button type="button" variant="outline" disabled={returning} onClick={() => void handleReturnLocker()} className="mt-3 h-10 rounded-xl">
+                            {returning ? "Đang trả tủ..." : `Trả tủ ${result.lockerAssignment.locker.lockerNumber}`}
+                          </Button>
+                        )}
+                        {returnError && <p role="alert" className="mt-2 text-sm text-rose-600">{returnError}</p>}
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
               <Button type="button" variant="mint" onClick={reset} className="mt-8 h-11 rounded-xl">
                 Check-in hội viên khác

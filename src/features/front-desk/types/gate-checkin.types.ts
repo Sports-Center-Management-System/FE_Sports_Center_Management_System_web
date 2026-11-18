@@ -1,4 +1,5 @@
 export type LockerZone = "MALE_LOCKER" | "FEMALE_LOCKER" | "VIP_AREA";
+export type MemberGender = "MALE" | "FEMALE" | "OTHER";
 
 export interface SearchMember {
   id: string;
@@ -6,6 +7,7 @@ export interface SearchMember {
   phone: string | null;
   email: string;
   avatarUrl: string | null;
+  gender?: MemberGender | null;
   isActive: boolean;
 }
 
@@ -22,4 +24,9 @@ export interface GateCheckinResponse {
   towelIssued: boolean;
   checkinTime: string;
   repeated: boolean;
+  /** The open locker of this visit; its id is what returning the locker needs. */
+  lockerAssignment?: {
+    id: string;
+    locker: { lockerNumber: string; zone: LockerZone };
+  } | null;
 }
