@@ -194,7 +194,7 @@ export const SubscriptionDetailModal: React.FC<SubscriptionDetailModalProps> = (
                     : 'bg-slate-100 text-slate-800 border-slate-200',
                 )}
               >
-                {isVip ? 'VIP ĐẶC QUYỀN' : isPlus ? 'PLUS TOÀN DIỆN' : item.packageTier}
+                {formatSubscriptionTier(item.packageTier)}
               </span>
 
               <span
@@ -227,7 +227,7 @@ export const SubscriptionDetailModal: React.FC<SubscriptionDetailModalProps> = (
             </div>
 
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-snug">
-              {item.plan?.name ?? 'Gói tập'}
+              {formatSubscriptionPlanName(item.plan?.name)}
             </h2>
             <p className="text-xs text-slate-500 mt-1">
               Thời hạn kích hoạt: <span className="font-semibold text-slate-700">{displayDate(item.startDate)}</span> - <span className="font-semibold text-slate-700">{displayDate(expiration, isActiveDropIn(item))}</span>
