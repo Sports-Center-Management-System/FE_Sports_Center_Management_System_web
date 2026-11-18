@@ -19,7 +19,6 @@ import {
   Lock,
   FileText,
   Activity,
-  Flame,
   CreditCard,
   Smartphone,
   UserCheck,
@@ -81,7 +80,7 @@ export const LandingPage: React.FC = () => {
 
   // ScrollSpy via IntersectionObserver / scroll listener
   useEffect(() => {
-    const sections = ['hero', 'about', 'features', 'pricing', 'faq', 'guide', 'legal']
+    const sections = ['hero', 'about', 'features', 'faq', 'guide', 'legal']
 
     const handleScroll = () => {
       const scrollPosition = window.scrollY + 130
@@ -163,18 +162,13 @@ export const LandingPage: React.FC = () => {
             Tính năng
           </button>
 
-          {/* Bảng giá (#pricing) */}
-          <button
-            type="button"
-            onClick={() => scrollToSection('pricing')}
-            className={`transition-colors cursor-pointer ${
-              activeSection === 'pricing'
-                ? 'text-[#008b74] font-bold'
-                : 'text-slate-600 hover:text-[#008b74]'
-            }`}
+          {/* Bảng giá (/plans) */}
+          <Link
+            to="/plans"
+            className="transition-colors cursor-pointer text-slate-600 hover:text-[#008b74]"
           >
             Bảng giá
-          </button>
+          </Link>
 
           {/* Hỏi đáp (#faq) */}
           <button
@@ -352,15 +346,13 @@ export const LandingPage: React.FC = () => {
               >
                 Tính năng
               </button>
-              <button
-                type="button"
-                onClick={() => scrollToSection('pricing')}
-                className={`text-left py-1.5 ${
-                  activeSection === 'pricing' ? 'text-[#008b74] font-bold' : 'hover:text-[#008b74]'
-                }`}
+              <Link
+                to="/plans"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-left py-1.5 hover:text-[#008b74]"
               >
                 Bảng giá
-              </button>
+              </Link>
               <button
                 type="button"
                 onClick={() => scrollToSection('faq')}
@@ -514,14 +506,13 @@ export const LandingPage: React.FC = () => {
 
               {/* Nút Call-To-Action (CTA) */}
               <div className="flex flex-wrap items-center gap-4 pt-2">
-                <button
-                  type="button"
-                  onClick={() => scrollToSection('pricing')}
+                <Link
+                  to="/plans"
                   className="px-6 py-3.5 rounded-xl bg-[#008b74] hover:bg-[#007461] text-white text-sm font-bold transition-all shadow-md shadow-emerald-700/20 flex items-center gap-2 cursor-pointer"
                 >
                   <span>Trải Nghiệm Miễn Phí Ngay (0đ)</span>
                   <ArrowRight className="w-4 h-4" />
-                </button>
+                </Link>
                 <button
                   type="button"
                   onClick={() => scrollToSection('features')}
@@ -803,9 +794,7 @@ export const LandingPage: React.FC = () => {
                   <h3 className="text-base sm:text-lg font-bold text-slate-900 group-hover:text-[#008b74] transition-colors">
                     {feat.title}
                   </h3>
-                  <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
-                    {feat.desc}
-                  </p>
+                  <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">{feat.desc}</p>
                 </div>
               </div>
             ))}
@@ -814,259 +803,7 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* =========================================================================
-          4. BẢNG GIÁ GÓI TẬP (id="pricing")
-          ========================================================================= */}
-      <section id="pricing" className="py-24 bg-white border-b border-slate-200/80 scroll-mt-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-8 space-y-16">
-          <div className="text-center max-w-3xl mx-auto space-y-3">
-            <span className="text-xs font-bold text-[#008b74] uppercase tracking-wider">
-              Đầu tư xứng đáng
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-              Bảng Giá Minh Bạch – Đầu Tư Xứng Đáng Cho Sức Khỏe
-            </h2>
-            <div className="w-12 h-1 bg-[#008b74] mx-auto rounded-full mt-2" />
-            <p className="text-slate-600 text-sm sm:text-base leading-relaxed pt-2">
-              Các gói tập linh hoạt từ tập thử miễn phí, vé ngày tiện lợi đến gói VIP kèm huấn luyện
-              viên riêng.
-            </p>
-          </div>
-
-          {/* 4 Thẻ gói tập */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
-            {/* Gói 1: TRIAL */}
-            <div className="bg-white border border-slate-200/90 rounded-3xl p-6 flex flex-col justify-between hover:border-slate-300 transition-all shadow-xs">
-              <div className="space-y-4">
-                <div className="pb-4 border-b border-slate-100">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    Gói Trải Nghiệm
-                  </span>
-                  <h3 className="text-xl font-black text-slate-900 mt-1">TRIAL</h3>
-                  <div className="mt-3">
-                    <span className="text-3xl font-black text-slate-900">0 VNĐ</span>
-                    <span className="text-xs text-slate-500 block mt-0.5">
-                      Thời hạn: 3 - 7 Ngày
-                    </span>
-                  </div>
-                </div>
-
-                <div className="space-y-2 pt-1 text-xs text-slate-600">
-                  <strong className="text-slate-800 text-[11px] uppercase tracking-wider block">
-                    Quyền lợi chi tiết:
-                  </strong>
-                  <ul className="space-y-2">
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-[#008b74] shrink-0 mt-0.5" />
-                      <span>Tập Gym không giới hạn 3 ngày</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-[#008b74] shrink-0 mt-0.5" />
-                      <span>Miễn phí 1 buổi Boxing hoặc 3 buổi Yoga</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-[#008b74] shrink-0 mt-0.5" />
-                      <span>Đo InBody & tư vấn thể trạng 0đ</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-
-              <div className="pt-6 mt-6 border-t border-slate-100 space-y-3">
-                <span className="text-[11px] text-slate-500 block">
-                  Phù hợp: <strong>Hội viên mới muốn trải nghiệm cơ sở vật chất</strong>
-                </span>
-                <Link
-                  to="/plans"
-                  className="block w-full py-2.5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold text-center transition-colors shadow-2xs"
-                >
-                  Đăng Ký Tập Thử
-                </Link>
-              </div>
-            </div>
-
-            {/* Gói 2: DROP-IN */}
-            <div className="bg-white border border-slate-200/90 rounded-3xl p-6 flex flex-col justify-between hover:border-slate-300 transition-all shadow-xs">
-              <div className="space-y-4">
-                <div className="pb-4 border-b border-slate-100">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    Vé Ngày Linh Hoạt
-                  </span>
-                  <h3 className="text-xl font-black text-slate-900 mt-1">DROP-IN</h3>
-                  <div className="mt-3">
-                    <span className="text-3xl font-black text-slate-900">50.000đ</span>
-                    <span className="text-xs text-slate-500 block mt-0.5">Thời hạn: 1 Ngày</span>
-                  </div>
-                </div>
-
-                <div className="space-y-2 pt-1 text-xs text-slate-600">
-                  <strong className="text-slate-800 text-[11px] uppercase tracking-wider block">
-                    Quyền lợi chi tiết:
-                  </strong>
-                  <ul className="space-y-2">
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-[#008b74] shrink-0 mt-0.5" />
-                      <span>Gym tự do: 50.000đ/ngày</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-[#008b74] shrink-0 mt-0.5" />
-                      <span>Boxing Class: 80.000đ/buổi</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-[#008b74] shrink-0 mt-0.5" />
-                      <span>Yoga (Hatha/Vinyasa): 120k - 150k/buổi</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-
-              <div className="pt-6 mt-6 border-t border-slate-100 space-y-3">
-                <span className="text-[11px] text-slate-500 block">
-                  Phù hợp: <strong>Người bận rộn, khách du lịch hoặc tập không cố định</strong>
-                </span>
-                <Link
-                  to="/plans"
-                  className="block w-full py-2.5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold text-center transition-colors shadow-2xs"
-                >
-                  Mua Vé Ngày
-                </Link>
-              </div>
-            </div>
-
-            {/* Gói 3: PLUS (Phổ biến nhất) */}
-            <div className="bg-white border-2 border-[#008b74] rounded-3xl p-6 flex flex-col justify-between shadow-lg shadow-emerald-700/10 relative scale-[1.02]">
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-[#008b74] text-white text-[10px] font-black uppercase tracking-wider shadow-sm">
-                Phổ Biến Nhất
-              </div>
-
-              <div className="space-y-4">
-                <div className="pb-4 border-b border-slate-100">
-                  <span className="text-xs font-bold text-[#008b74] uppercase tracking-wider">
-                    Gói Tháng Chuẩn
-                  </span>
-                  <h3 className="text-xl font-black text-slate-900 mt-1">PLUS</h3>
-                  <div className="mt-3">
-                    <span className="text-3xl font-black text-[#008b74]">300.000đ</span>
-                    <span className="text-xs text-slate-500 block mt-0.5">Thời hạn: 30 Ngày</span>
-                  </div>
-                </div>
-
-                <div className="space-y-2 pt-1 text-xs text-slate-600">
-                  <strong className="text-slate-800 text-[11px] uppercase tracking-wider block">
-                    Quyền lợi chi tiết:
-                  </strong>
-                  <ul className="space-y-2">
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-[#008b74] shrink-0 mt-0.5" />
-                      <span>Gym: 300.000đ (Tập không giới hạn giờ)</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-[#008b74] shrink-0 mt-0.5" />
-                      <span>Boxing Plus: 700.000đ (Kèm 10 buổi lớp nhóm)</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-[#008b74] shrink-0 mt-0.5" />
-                      <span>Yoga Plus: 1.000.000đ (Kèm 12 buổi lớp Yoga)</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-
-              <div className="pt-6 mt-6 border-t border-slate-100 space-y-3">
-                <span className="text-[11px] text-slate-500 block">
-                  Phù hợp: <strong>Hội viên duy trì thói quen tập luyện nghiêm túc</strong>
-                </span>
-                <Link
-                  to="/plans"
-                  className="block w-full py-2.5 rounded-xl bg-[#008b74] hover:bg-[#007461] text-white text-xs font-bold text-center transition-all shadow-md shadow-emerald-700/20"
-                >
-                  Đăng Ký Gói Plus
-                </Link>
-              </div>
-            </div>
-
-            {/* Gói 4: VIP 1-1 */}
-            <div className="bg-white border border-slate-200/90 rounded-3xl p-6 flex flex-col justify-between hover:border-slate-300 transition-all shadow-xs">
-              <div className="space-y-4">
-                <div className="pb-4 border-b border-slate-100">
-                  <span className="text-xs font-bold text-amber-600 uppercase tracking-wider">
-                    Kèm HLV Riêng
-                  </span>
-                  <h3 className="text-xl font-black text-slate-900 mt-1">VIP 1-1</h3>
-                  <div className="mt-3">
-                    <span className="text-2xl sm:text-3xl font-black text-slate-900">300.000đ</span>
-                    <span className="text-[11px] text-slate-500 block mt-0.5">
-                      + Phí HLV (Thời hạn: 30 Ngày)
-                    </span>
-                  </div>
-                </div>
-
-                <div className="space-y-2 pt-1 text-xs text-slate-600">
-                  <strong className="text-slate-800 text-[11px] uppercase tracking-wider block">
-                    Quyền lợi chi tiết:
-                  </strong>
-                  <ul className="space-y-2">
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                      <span>Trọn gói quyền lợi của gói Plus</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                      <span>12 buổi Huấn luyện viên riêng kèm 1-1</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                      <span>Lộ trình giáo án thiết kế riêng từng buổi</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                      <span>Tủ đồ VIP riêng cố định bảo mật</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-
-              <div className="pt-6 mt-6 border-t border-slate-100 space-y-3">
-                <span className="text-[11px] text-slate-500 block">
-                  Phù hợp: <strong>Người cần tăng cơ, giảm mỡ nhanh, chuẩn form</strong>
-                </span>
-                <Link
-                  to="/plans"
-                  className="block w-full py-2.5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold text-center transition-colors shadow-2xs"
-                >
-                  Tư Vấn Gói VIP
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          {/* Banner Ưu đãi kèm theo */}
-          <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-emerald-50 via-teal-50/50 to-white border border-emerald-200/80 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xs">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-[#008b74] text-white flex items-center justify-center shrink-0">
-                <Flame className="w-6 h-6" />
-              </div>
-              <div>
-                <h4 className="text-base font-bold text-slate-900">
-                  Đặc Quyền Hội Viên 3TC Fitness
-                </h4>
-                <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
-                  Miễn phí gửi xe, phòng tắm nóng lạnh, nước uống và tủ đồ thông minh cho tất cả các
-                  gói từ Plus trở lên!
-                </p>
-              </div>
-            </div>
-            <Link
-              to="/plans"
-              className="px-6 py-3 rounded-xl bg-[#008b74] hover:bg-[#007461] text-white text-xs font-bold transition-all shadow-md shadow-emerald-700/20 whitespace-nowrap"
-            >
-              Xem Chi Tiết Các Môn Tập
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* =========================================================================
-          5. HỎI ĐÁP THƯỜNG GẶP (id="faq")
+          4. HỎI ĐÁP THƯỜNG GẶP (id="faq")
           ========================================================================= */}
       <section id="faq" className="py-24 bg-slate-50/60 border-b border-slate-200/80 scroll-mt-24">
         <div className="max-w-4xl mx-auto px-4 sm:px-8 space-y-12">
@@ -1235,8 +972,8 @@ export const LandingPage: React.FC = () => {
                     3
                   </span>
                   <p>
-                    <strong className="text-slate-800">Bước 3:</strong> Nhập mã số tủ tại khu vực locker để
-                    mở khóa và cất đồ an toàn. Khi ra về, hoàn tất check-out để trả tủ.
+                    <strong className="text-slate-800">Bước 3:</strong> Nhập mã số tủ tại khu vực
+                    locker để mở khóa và cất đồ an toàn. Khi ra về, hoàn tất check-out để trả tủ.
                   </p>
                 </div>
               </div>
@@ -1451,13 +1188,12 @@ export const LandingPage: React.FC = () => {
                 >
                   Tính năng
                 </button>
-                <button
-                  type="button"
-                  onClick={() => scrollToSection('pricing')}
+                <Link
+                  to="/plans"
                   className="text-left text-slate-600 hover:text-[#008b74] transition-colors cursor-pointer"
                 >
                   Bảng giá
-                </button>
+                </Link>
                 <button
                   type="button"
                   onClick={() => scrollToSection('faq')}
