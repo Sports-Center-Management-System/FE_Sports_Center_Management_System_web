@@ -1,5 +1,5 @@
 import { useId, useRef, useState, type FormEvent } from 'react'
-import { AlertCircle, Loader2 } from 'lucide-react'
+import { AlertCircle, AlertTriangle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {
@@ -8,6 +8,7 @@ import {
   SEGMENT_FIELDS,
   checkEntry,
   entryValues,
+  getFieldHint,
   hasProData,
   type EntryField,
   type EntryMode,
@@ -28,6 +29,7 @@ function Field({
   spec,
   value,
   error,
+  hint,
   required,
   onChange,
   onBlur,
@@ -35,6 +37,7 @@ function Field({
   spec: FieldSpec
   value: string
   error?: string
+  hint?: string
   required?: boolean
   onChange: (value: string) => void
   onBlur: () => void
@@ -42,10 +45,15 @@ function Field({
   const id = useId()
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-xs font-medium text-slate-700">
-        {spec.label}
-        {required ? <span className="text-red-600"> *</span> : null}
-      </label>
+      <div className="mb-1 flex items-center justify-between">
+        <label htmlFor={id} className="block text-xs font-medium text-slate-700 truncate">
+          {spec.label}
+          {required ? <span className="text-red-600"> *</span> : null}
+        </label>
+        {hint && !error ? (
+          <span className="text-[10px] font-normal text-slate-400 shrink-0 ml-1">{hint}</span>
+        ) : null}
+      </div>
       <div className="relative">
         <input
           id={id}
@@ -150,6 +158,9 @@ export function InbodyEntryForm({
   }
 
   const { derived } = check
+  const heightNum = Number(values.heightCm.replace(',', '.')) || null
+  const weightNum = Number(values.weightKg.replace(',', '.')) || null
+
   const preview = [
     { label: 'Khối mỡ (BFM)', value: derived.bodyFatMassKg, unit: 'kg' },
     { label: 'Khối nạc (LBM)', value: derived.leanBodyMassKg, unit: 'kg' },
@@ -195,6 +206,7 @@ export function InbodyEntryForm({
             key={spec.key}
             spec={spec}
             required
+            hint={getFieldHint(spec.key, heightNum, weightNum)}
             value={values[spec.key]}
             error={errorFor(spec.key)}
             onChange={(value) => update(spec.key, value)}
@@ -230,6 +242,7 @@ export function InbodyEntryForm({
                 <Field
                   key={spec.key}
                   spec={spec}
+                  hint={getFieldHint(spec.key, heightNum, weightNum)}
                   value={values[spec.key]}
                   error={errorFor(spec.key)}
                   onChange={(value) => update(spec.key, value)}
@@ -247,6 +260,7 @@ export function InbodyEntryForm({
                 <Field
                   key={spec.key}
                   spec={spec}
+                  hint={getFieldHint(spec.key, heightNum, weightNum)}
                   value={values[spec.key]}
                   error={errorFor(spec.key)}
                   onChange={(value) => update(spec.key, value)}
@@ -272,6 +286,23 @@ export function InbodyEntryForm({
           className="w-full resize-none rounded-lg border border-slate-300 p-3 text-sm text-slate-900 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/15"
         />
       </div>
+
+      {check.warnings.length > 0 && !check.formError ? (
+        <div
+          role="status"
+          className="rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900 space-y-1"
+        >
+          <div className="flex items-center gap-1.5 font-bold text-amber-800">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
+            <span>Lưu ý chỉ số bất thường:</span>
+          </div>
+          <ul className="list-disc pl-5 space-y-0.5 text-[11px] text-amber-800">
+            {check.warnings.map((w, idx) => (
+              <li key={idx}>{w}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       {check.formError || serverError ? (
         <p
