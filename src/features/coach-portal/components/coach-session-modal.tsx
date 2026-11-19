@@ -345,7 +345,7 @@ export const CoachSessionModal: React.FC<CoachSessionModalProps> = ({
                               ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
                               : !started
                               ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
-                              : 'bg-slate-900 hover:bg-slate-800 text-white'
+                              : 'bg-emerald-600 hover:bg-emerald-700 text-white'
                           }`}
                         >
                           {isCancelled ? (

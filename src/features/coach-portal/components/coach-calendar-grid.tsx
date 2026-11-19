@@ -110,27 +110,7 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
     });
 
     if (daySessions.length === 0) {
-      // Clean empty state with active + Thêm slot button
-      return (
-        <div className="absolute inset-x-2 top-28 bottom-12 flex flex-col items-center justify-center text-center p-3 z-10">
-          <p className="text-[12px] text-slate-400 dark:text-slate-500 font-medium mb-1.5">
-            Trống lịch dạy
-          </p>
-          {onOpenCreateSlot && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenCreateSlot(dateString);
-              }}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 transition shadow-2xs cursor-pointer active:scale-95"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Thêm slot</span>
-            </button>
-          )}
-        </div>
-      );
+      return null;
     }
 
     return daySessions.map((session) => {
@@ -201,20 +181,20 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
             'absolute rounded-[10px] p-2 text-xs transition-all duration-150 cursor-pointer overflow-hidden shadow-2xs select-none group hover:shadow-md hover:scale-[1.01] hover:z-20 focus:outline-hidden focus:ring-2 z-10',
             // Completed Style (Màu xanh lá)
             isCompleted &&
-              'bg-emerald-50/95 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 border border-emerald-300/90 dark:border-emerald-800 hover:bg-emerald-100/95 dark:hover:bg-emerald-950/60 focus:ring-emerald-400',
+              'bg-emerald-50/95 text-emerald-950 border border-emerald-300/90 hover:bg-emerald-100/95 focus:ring-emerald-400',
             // Empty Slot Style
             isEmpty &&
-              'bg-slate-50/80 dark:bg-slate-900/40 text-slate-600 dark:text-slate-300 border border-dashed border-slate-300 dark:border-slate-700 hover:bg-slate-100/90 dark:hover:bg-slate-900/70',
+              'bg-slate-50/80 text-slate-600 border border-dashed border-slate-300 hover:bg-slate-100/90',
             // PT 1:1 Style
             !isCompleted &&
               !isEmpty &&
               isPt &&
-              'bg-purple-50/95 dark:bg-purple-950/40 text-purple-950 dark:text-purple-100 border border-purple-200/90 dark:border-purple-800/60 hover:bg-purple-100/95 dark:hover:bg-purple-950/60 focus:ring-purple-400',
+              'bg-purple-50/95 text-purple-950 border border-purple-200/90 hover:bg-purple-100/95 focus:ring-purple-400',
             // Group Class Style
             !isCompleted &&
               !isEmpty &&
               isGroup &&
-              'bg-teal-50/95 dark:bg-teal-950/40 text-teal-950 dark:text-teal-100 border border-teal-200/90 dark:border-teal-800/60 hover:bg-teal-100/95 dark:hover:bg-teal-950/60 focus:ring-teal-400',
+              'bg-teal-50/95 text-teal-950 border border-teal-200/90 hover:bg-teal-100/95 focus:ring-teal-400',
             // Live Session Ring
             isLive && 'ring-2 ring-emerald-500 shadow-md animate-pulse'
           )}
@@ -279,7 +259,7 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
   };
 
   return (
-    <div className="flex flex-col flex-1 h-full min-h-[580px] bg-white dark:bg-[#131b26] rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-xs overflow-hidden">
+    <div className="flex flex-col flex-1 h-full min-h-[580px] bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
       {/* Scrollable Container with Sticky Day Headers */}
       <div
         ref={scrollContainerRef}
@@ -288,17 +268,17 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
       >
         <div className="min-w-[760px] relative">
           {/* Sticky Header: GMT+7 Corner & 7 Day Columns */}
-          <div className="sticky top-0 z-30 flex border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-[#131b26]/95 backdrop-blur-md">
+          <div className="sticky top-0 z-30 flex border-b border-slate-200 bg-white/95 backdrop-blur-md">
             {/* GMT+7 corner */}
-            <div className="w-16 shrink-0 p-2.5 flex flex-col items-center justify-center border-r border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80">
-              <span className="text-[10.5px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <div className="w-16 shrink-0 p-2.5 flex flex-col items-center justify-center border-r border-slate-200 bg-slate-50/80">
+              <span className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">
                 GMT+7
               </span>
               <Clock className="w-3.5 h-3.5 text-slate-400 mt-0.5" />
             </div>
 
             {/* 7 Days Columns Headers */}
-            <div className="grid grid-cols-7 flex-1 divide-x divide-slate-200 dark:divide-slate-800">
+            <div className="grid grid-cols-7 flex-1 divide-x divide-slate-200">
               {weekDays.map((day) => {
                 // Count booked sessions for this day (exclude empty slots)
                 const daySessionsCount = sessions.filter((s) => {
@@ -313,8 +293,8 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
                     className={cn(
                       'py-2.5 px-2 text-center transition-colors flex flex-col items-center justify-center group/header relative',
                       day.isToday
-                        ? 'bg-emerald-500/[0.06] dark:bg-emerald-400/[0.08]'
-                        : 'hover:bg-slate-50/70 dark:hover:bg-slate-900/30'
+                        ? 'bg-emerald-500/[0.06]'
+                        : 'hover:bg-slate-50/70'
                     )}
                   >
                     {/* Day label: Thứ 2, Thứ 3, etc. */}
@@ -322,8 +302,8 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
                       className={cn(
                         'text-[11.5px] font-bold tracking-tight',
                         day.isToday
-                          ? 'text-emerald-700 dark:text-emerald-400'
-                          : 'text-slate-500 dark:text-slate-400'
+                          ? 'text-emerald-700'
+                          : 'text-slate-500'
                       )}
                     >
                       {day.dayLabel}
@@ -334,8 +314,8 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
                       className={cn(
                         'mt-1 w-7 h-7 flex items-center justify-center rounded-full text-xs transition-all tabular-nums',
                         day.isToday
-                          ? 'bg-emerald-600 dark:bg-emerald-500 text-white font-black shadow-xs'
-                          : 'text-slate-900 dark:text-slate-100 font-bold'
+                          ? 'bg-emerald-600 text-white font-black shadow-xs'
+                          : 'text-slate-900 font-bold'
                       )}
                     >
                       {day.dayNumber}
@@ -376,7 +356,7 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
           {/* Grid Body */}
           <div className="flex relative" style={{ height: `${totalGridHeight}px` }}>
             {/* Time labels column (06:00 -> 22:00) */}
-            <div className="w-16 shrink-0 relative border-r border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/40 select-none">
+            <div className="w-16 shrink-0 relative border-r border-slate-200 bg-slate-50/40 select-none">
               {hours.map((hour, idx) => {
                 const hourFormatted = `${String(hour).padStart(2, '0')}:00`;
                 return (
@@ -390,7 +370,7 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
                       idx === 0 ? 'translate-y-1' : '-translate-y-1/2'
                     )}
                   >
-                    <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 tabular-nums">
+                    <span className="text-[11px] font-medium text-slate-500 tabular-nums">
                       {hourFormatted}
                     </span>
                   </div>
@@ -399,7 +379,7 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
             </div>
 
             {/* 7 Columns for Days */}
-            <div className="grid grid-cols-7 flex-1 divide-x divide-slate-200 dark:divide-slate-800 relative">
+            <div className="grid grid-cols-7 flex-1 divide-x divide-slate-200 relative">
               {weekDays.map((day) => {
                 return (
                   <div
@@ -411,7 +391,7 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
                     }}
                     className={cn(
                       'relative h-full transition-colors cursor-pointer',
-                      day.isToday && 'bg-emerald-500/[0.03] dark:bg-emerald-400/[0.04]'
+                      day.isToday && 'bg-emerald-500/[0.03]'
                     )}
                   >
                     {/* Hourly Horizontal Grid Lines & 30-min auxiliary lines */}
@@ -420,12 +400,12 @@ export const CoachCalendarGrid: React.FC<CoachCalendarGridProps> = ({
                         {/* Main hourly line */}
                         <div
                           style={{ top: `${idx * HOUR_HEIGHT_PX}px` }}
-                          className="absolute inset-x-0 border-t border-slate-200/70 dark:border-slate-800/80 pointer-events-none"
+                          className="absolute inset-x-0 border-t border-slate-200/70 pointer-events-none"
                         />
                         {/* 30-minute faint dashed line */}
                         <div
                           style={{ top: `${idx * HOUR_HEIGHT_PX + HOUR_HEIGHT_PX / 2}px` }}
-                          className="absolute inset-x-0 border-t border-dashed border-slate-200/40 dark:border-slate-800/40 pointer-events-none"
+                          className="absolute inset-x-0 border-t border-dashed border-slate-200/40 pointer-events-none"
                         />
                       </React.Fragment>
                     ))}

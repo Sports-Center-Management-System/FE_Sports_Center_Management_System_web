@@ -14,11 +14,12 @@ interface Props {
   minimumLength?: number;
   resultsClassName?: string;
   showEmail?: boolean;
+  searchFn?: (query: string) => Promise<SearchMember[]>;
 }
 
 export const PosMemberSearch: React.FC<Props> = ({
   selected, onSelect, disabled, placeholder = "Số điện thoại hội viên",
-  inputMode = "tel", minimumLength = 4, resultsClassName = "max-h-48", showEmail = false,
+  inputMode = "tel", minimumLength = 4, resultsClassName = "max-h-48", showEmail = false, searchFn,
 }) => {
   const [query, setQuery] = useState("");
   const [members, setMembers] = useState<SearchMember[]>([]);
@@ -29,7 +30,17 @@ export const PosMemberSearch: React.FC<Props> = ({
 
   useEffect(() => () => { sequence.current += 1; }, []);
   useEffect(() => {
-    if (selected) setMembers((current) => current.map((member) => member.id === selected.id ? selected : member));
+    if (selected) {
+      setMembers((current) => {
+        if (!current.some((member) => member.id === selected.id)) {
+          return [selected, ...current];
+        }
+        return current.map((member) => member.id === selected.id ? selected : member);
+      });
+      if (!query) {
+        setQuery(selected.fullName || selected.phone || "");
+      }
+    }
   }, [selected]);
 
   const clear = () => {
@@ -45,7 +56,7 @@ export const PosMemberSearch: React.FC<Props> = ({
   const search = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const q = query.trim();
-    if (q.length < minimumLength) {
+    if (minimumLength > 0 && q.length < minimumLength) {
       setError(`Nhập ít nhất ${minimumLength} ký tự để tìm hội viên.`);
       return;
     }
@@ -56,7 +67,7 @@ export const PosMemberSearch: React.FC<Props> = ({
     setMembers([]);
     onSelect(null);
     try {
-      const found = await searchMembers(q);
+      const found = searchFn ? await searchFn(q) : await searchMembers(q);
       if (current !== sequence.current) return;
       setMembers(found);
       setSearched(true);
@@ -86,9 +97,9 @@ export const PosMemberSearch: React.FC<Props> = ({
         <div className="relative min-w-0 flex-1">
           <label htmlFor="pos-member-query" className="sr-only">{placeholder}</label>
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#789188]" />
-          <input id="pos-member-query" type={inputMode === "tel" ? "tel" : "search"} inputMode={inputMode} autoComplete="off" value={query} disabled={disabled}
+          <input id="pos-member-query" type={inputMode === "tel" ? "tel" : "text"} inputMode={inputMode} autoComplete="off" value={query} disabled={disabled}
             onChange={(event) => { sequence.current += 1; setQuery(event.target.value); setMembers([]); setSearched(false); setLoading(false); setError(null); onSelect(null); }}
-            placeholder={placeholder} className="h-10 w-full rounded-md border border-[#ceded5] bg-white pl-10 pr-9 text-sm outline-none focus:border-[#008b74] focus:ring-2 focus:ring-[#008b74]/15" />
+            placeholder={placeholder} className="h-10 w-full rounded-md border border-[#ceded5] bg-white pl-10 pr-9 text-sm outline-none focus:border-[#008b74] focus:ring-2 focus:ring-[#008b74]/15 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden [&::-webkit-search-results-button]:hidden [&::-webkit-search-results-decoration]:hidden" />
           {query && <button type="button" onClick={clear} disabled={disabled} title="Xóa tìm kiếm" aria-label="Xóa tìm kiếm" className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[#667b73] hover:bg-[#edf5f0]"><X className="h-4 w-4" /></button>}
         </div>
         <Button type="submit" variant="mint" disabled={disabled || loading} className="h-10 shrink-0">{loading ? "Đang tìm..." : "Tìm hội viên"}</Button>

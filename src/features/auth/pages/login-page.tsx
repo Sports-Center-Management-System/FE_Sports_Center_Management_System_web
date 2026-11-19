@@ -20,7 +20,7 @@ function isPathAllowedForRole(path: string, role?: string): boolean {
     case 'RECEPTIONIST':
       return path.startsWith('/portal/desk')
     case 'COACH':
-      return path.startsWith('/coach')
+      return path.startsWith('/coach') || path.startsWith('/portal/coach')
     case 'MEMBER':
       return (
         path.startsWith('/portal/member') ||

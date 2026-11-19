@@ -299,7 +299,7 @@ export const ScheduleDatePickerModal: React.FC<ScheduleDatePickerModalProps> = (
                   onDoubleClick={() => handleApplyDate(item.iso)}
                   className={`group relative flex flex-col items-center justify-between min-h-[58px] p-1.5 rounded-xl border text-xs transition-all ${
                     isSelected
-                      ? 'border-slate-900 bg-slate-900 text-white shadow-md ring-2 ring-slate-900/20 z-10 scale-[1.03]'
+                      ? 'border-emerald-600 bg-emerald-600 text-white shadow-md ring-2 ring-emerald-500/20 z-10 scale-[1.03]'
                       : isToday
                       ? 'border-emerald-500 bg-emerald-50/70 text-emerald-950 font-bold hover:bg-emerald-100/70'
                       : item.isCurrentMonth
