@@ -1,3 +1,5 @@
+import type { InbodyPayload } from "@/lib/inbody-entry";
+
 export interface InbodyLog {
   id: string;
   userId: string;
@@ -6,32 +8,22 @@ export interface InbodyLog {
   heightCm: number | string;
   weightKg: number | string;
   muscleMassKg: number | string | null;
+  skeletalMuscleMassKg?: number | string | null;
   bodyFatPct: number | string | null;
+  bodyFatMassKg?: number | string | null;
   bmi: number | string | null;
   visceralFatLevel: number | null;
+  tbwLiters?: number | string | null;
+  proteinKg?: number | string | null;
+  mineralKg?: number | string | null;
+  waistHipRatio?: number | string | null;
+  inbodyScore?: number | null;
+  segmentalLean?: Record<string, number | string | null> | null;
   notes: string | null;
 }
 
-export interface CreateInbodyLog {
-  userId: string;
-  heightCm: number;
-  weightKg: number;
-  muscleMassKg?: number;
-  bodyFatPct?: number;
-  bmi?: number;
-  visceralFatLevel?: number;
-  notes?: string;
-}
-
-export interface UpdateInbodyLog {
-  heightCm?: number;
-  weightKg?: number;
-  muscleMassKg?: number | null;
-  bodyFatPct?: number | null;
-  bmi?: number | null;
-  visceralFatLevel?: number | null;
-  notes?: string | null;
-}
+export type CreateInbodyLog = InbodyPayload & { userId: string };
+export type UpdateInbodyLog = Partial<InbodyPayload>;
 
 export interface CoachTodaySchedule {
   pt: Array<{

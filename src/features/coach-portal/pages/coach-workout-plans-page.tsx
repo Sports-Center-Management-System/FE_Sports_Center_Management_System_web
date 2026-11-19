@@ -28,6 +28,7 @@ import type {
   WorkoutExerciseDto,
   WorkoutTemplateItem,
   WorkoutPlanItem,
+  WorkoutRecommendation,
 } from '../types/coach-portal.types';
 import {
   parseExerciseInstructions,
@@ -37,6 +38,7 @@ import {
   getExerciseDiscipline,
 } from '../utils/exercise-metadata.utils';
 import { WorkoutPlanDetailModal } from '@/components/common/workout-plan-detail-modal';
+import { InbodyRecommendationCard } from '../components/inbody-recommendation-card';
 import { useAuth } from '@/context/auth-context';
 
 type PlanTab = 'TEMPLATES' | 'CUSTOM_PLANS' | 'EXERCISE_LIBRARY';
@@ -96,6 +98,7 @@ export const CoachWorkoutPlansPage: React.FC = () => {
   const [formDisciplineFilter, setFormDisciplineFilter] = useState<'ALL' | 'BOXING' | 'YOGA' | 'GYM'>('ALL');
   const [formCategoryFilter, setFormCategoryFilter] = useState<string>('ALL');
   const [formError, setFormError] = useState<string | null>(null);
+  const [recommendationHidden, setRecommendationHidden] = useState<boolean>(false);
 
   // Queries
   const {
@@ -240,6 +243,39 @@ export const CoachWorkoutPlansPage: React.FC = () => {
     setFormExerciseSearch('');
     setFormDisciplineFilter('ALL');
     setFormCategoryFilter('ALL');
+    setFormError(null);
+    setRecommendationHidden(false);
+  };
+
+  // One click from the InBody assistant: add its exercises (skipping ones already in the
+  // plan) and its cardio/nutrition advice; the coach can still adjust everything before saving.
+  const handleApplyRecommendation = (rec: WorkoutRecommendation) => {
+    setExercisesList((prev) => [
+      ...prev,
+      ...rec.recommendedExercises
+        .filter((ex) => !prev.some((item) => item.exerciseId === ex.exerciseId))
+        .map((ex) => ({
+          exerciseId: ex.exerciseId,
+          title: ex.exerciseName,
+          category: ex.category || 'Chung',
+          sets: ex.sets,
+          reps: ex.reps,
+          weightKg: 0,
+          restSeconds: 60,
+          coachFeedback: ex.notes || '',
+        })),
+    ]);
+    if (!planTitle.trim() && rec.primaryGoalTitle) setPlanTitle(`Giáo án ${rec.primaryGoalTitle}`);
+    const advice = [
+      rec.cardioPrescription
+        ? `Cardio ${rec.cardioPrescription.targetZone.replace('_', ' ')} ${rec.cardioPrescription.durationMinutes} phút cuối buổi: ${rec.cardioPrescription.reason}`
+        : null,
+      rec.nutritionAdvice
+        ? `Dinh dưỡng: khoảng ${rec.nutritionAdvice.targetDailyCalories} kcal/ngày, ${rec.nutritionAdvice.proteinTargetGrams} g protein. ${rec.nutritionAdvice.guideline}`
+        : null,
+    ].filter((line): line is string => Boolean(line) && !planNotes.includes(line as string));
+    if (advice.length > 0)
+      setPlanNotes((current) => [current.trim(), ...advice].filter(Boolean).join('\n'));
     setFormError(null);
   };
 
@@ -1754,7 +1790,10 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                       </div>
                       <select
                         value={targetMemberId}
-                        onChange={(e) => setTargetMemberId(e.target.value)}
+                        onChange={(e) => {
+                          setTargetMemberId(e.target.value);
+                          setRecommendationHidden(false);
+                        }}
                         disabled={!!editingPlanId}
                         className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-emerald-600 focus:outline-hidden disabled:opacity-75 disabled:cursor-not-allowed"
                       >
@@ -1766,6 +1805,14 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                         ))}
                       </select>
                     </div>
+
+                    {targetMemberId && !editingPlanId && !recommendationHidden && (
+                      <InbodyRecommendationCard
+                        memberId={targetMemberId}
+                        onApply={handleApplyRecommendation}
+                        onDismiss={() => setRecommendationHidden(true)}
+                      />
+                    )}
 
                     <div className="space-y-1.5">
                       <label className="text-xs font-black text-slate-900 dark:text-slate-100">

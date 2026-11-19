@@ -1,7 +1,7 @@
 import { Navigate, createBrowserRouter } from "react-router";
 import { PublicLayout, MemberLayout, CoachLayout, ReceptionistLayout, ManagerLayout, ConsoleLayout } from "@/layouts";
 import { LoginPage, NotFoundPage } from "@/features/auth";
-import { PublicPlansPage, MockPaymentPage } from "@/features/public";
+import { PublicPlansPage, MockPaymentPage, LandingPage } from "@/features/public";
 import { PlansPage, QuotePage } from "@/features/plans";
 import { CoachesPage } from "@/features/coaches";
 import { CheckoutPage, TransactionsPage } from "@/features/checkout";
@@ -60,18 +60,28 @@ import {
 } from "./route-elements";
 
 export const router = createBrowserRouter([
-  // 1. PUBLIC ROUTES (wrapped in PublicLayout with public header)
+  // 1. LANDING PAGE (Full-width, dedicated sticky header & footer)
   {
     path: "/",
+    element: <LandingPage />,
+  },
+  {
+    path: "/landing",
+    element: <LandingPage />,
+  },
+
+  // 2. AUTHENTICATION (Standalone full-screen, no navbar header, fixed viewport)
+  { path: "login", element: <LoginPage /> },
+  { path: "register", element: <LoginPage /> },
+  { path: "auth/login", element: <LoginPage /> },
+  { path: "auth/register", element: <LoginPage /> },
+
+  // 3. PUBLIC APP ROUTES (wrapped in PublicLayout with app header)
+  {
     element: <PublicLayout />,
     children: [
-      { index: true, element: <Navigate to="/plans" replace /> },
       { path: "plans", element: <PublicPlansPage /> },
       { path: "coaches", element: <CoachesPage /> },
-      { path: "login", element: <LoginPage /> },
-      { path: "register", element: <LoginPage /> },
-      { path: "auth/login", element: <LoginPage /> },
-      { path: "auth/register", element: <LoginPage /> },
       { path: "mock-payment", element: <MockPaymentPage /> },
       {
         path: "forbidden",
