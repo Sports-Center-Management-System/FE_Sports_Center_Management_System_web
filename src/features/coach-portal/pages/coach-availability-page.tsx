@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Clock,
@@ -12,6 +13,7 @@ import {
   X,
   CalendarCheck2,
   UserCheck,
+  ArrowLeft,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { coachPortalApi } from '../api/coach-portal-api';
@@ -21,6 +23,8 @@ import { TablePagination } from '@/components/common/table-pagination';
 const ITEMS_PER_PAGE = 10;
 
 export const CoachAvailabilityPage: React.FC = () => {
+  const location = useLocation();
+  const coachBasePath = location.pathname.startsWith('/portal/coach') ? '/portal/coach' : '/coach';
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState<boolean>(false);
   const [filter, setFilter] = useState<'ALL' | 'UNBOOKED' | 'BOOKED'>('ALL');
@@ -136,41 +140,47 @@ export const CoachAvailabilityPage: React.FC = () => {
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 pb-20">
-      {/* 1. Header Studio Hero */}
-      <div className="p-6 sm:p-8 rounded-3xl bg-slate-950 text-white shadow-xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-slate-950 flex items-center justify-center shrink-0 font-black shadow-md">
-            <Clock className="w-6 h-6" />
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200/80">
+        <div>
+          <div className="flex items-center gap-2">
+            <Link
+              to={`${coachBasePath}/schedule`}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#008b74] hover:underline"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" /> Lịch HLV
+            </Link>
           </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              Khung Giờ Rảnh PT
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-300 font-medium mt-0.5">
-              Mở ca trực và quản lý các khung giờ sẵn sàng đón học viên đăng ký tập kèm 1-1
-            </p>
-          </div>
+          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white mt-1">
+            Khung Giờ Rảnh PT
+          </h1>
+          <p className="text-xs text-white mt-0.5">
+            Mở ca trực và quản lý các khung giờ sẵn sàng đón học viên đăng ký tập kèm 1-1
+          </p>
         </div>
-
-        <div className="flex items-center gap-2.5 self-start md:self-auto shrink-0">
-          <button
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <Button
             type="button"
+            variant="outline"
             onClick={() => void refetch()}
             disabled={isLoading || isRefetching}
-            className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700 text-xs font-bold transition shadow-xs cursor-pointer flex items-center gap-2"
+            className="text-xs font-bold gap-1.5 bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-xs"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isRefetching ? 'animate-spin' : ''}`} />
             <span>Làm mới</span>
-          </button>
-
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="mint"
             onClick={() => setIsCreateOpen(true)}
-            className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs sm:text-sm shadow-md transition active:scale-95 cursor-pointer flex items-center gap-2"
+            className="text-xs font-bold gap-1.5 shadow-sm"
           >
-            <Plus className="h-4 w-4 stroke-[3]" />
+            <Plus className="h-4 w-4" />
             <span>Mở khung giờ rảnh</span>
-          </button>
+          </Button>
+          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-[#008b74] border border-emerald-200/70">
+            Huấn luyện viên
+          </span>
         </div>
       </div>
 
@@ -231,7 +241,7 @@ export const CoachAvailabilityPage: React.FC = () => {
             onClick={() => setFilter('ALL')}
             className={`rounded-xl px-4 py-1.5 text-xs font-black transition-all cursor-pointer ${
               filter === 'ALL'
-                ? 'bg-slate-950 text-white shadow-xs'
+                ? 'bg-emerald-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >

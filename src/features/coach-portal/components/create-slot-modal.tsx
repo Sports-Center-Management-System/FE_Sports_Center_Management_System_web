@@ -25,7 +25,7 @@ interface CreateSlotModalProps {
 }
 
 interface DutyShiftPreset {
-  period: 'MORNING' | 'LUNCH' | 'EVENING';
+  period: 'MORNING' | 'LUNCH' | 'AFTERNOON' | 'EVENING';
   label: string;
   start: string;
   end: string;
@@ -34,15 +34,7 @@ interface DutyShiftPreset {
 }
 
 const DUTY_PRESETS: DutyShiftPreset[] = [
-  // Morning Shifts
-  {
-    period: 'MORNING',
-    label: '06:00 - 10:00 (4h)',
-    start: '06:00',
-    end: '10:00',
-    isPeak: true,
-    desc: 'Ca trực sáng dài 4 tiếng (06h - 10h)',
-  },
+  // Morning Shifts (Mỗi ca đúng 1 tiếng)
   {
     period: 'MORNING',
     label: '06:00 - 07:00',
@@ -72,7 +64,14 @@ const DUTY_PRESETS: DutyShiftPreset[] = [
     end: '10:00',
     desc: 'Ca giữa buổi sáng',
   },
-  // Lunch Shifts
+  {
+    period: 'MORNING',
+    label: '10:00 - 11:00',
+    start: '10:00',
+    end: '11:00',
+    desc: 'Ca cuối buổi sáng',
+  },
+  // Lunch Shifts (Mỗi ca đúng 1 tiếng)
   {
     period: 'LUNCH',
     label: '11:30 - 12:30',
@@ -87,22 +86,29 @@ const DUTY_PRESETS: DutyShiftPreset[] = [
     end: '13:30',
     desc: 'Duy trì vóc dáng đầu giờ chiều',
   },
-  // Afternoon & Evening Shifts
+  // Afternoon Shifts (Mỗi ca đúng 1 tiếng)
   {
-    period: 'EVENING',
-    label: '14:00 - 18:00 (4h)',
+    period: 'AFTERNOON',
+    label: '14:00 - 15:00',
     start: '14:00',
-    end: '18:00',
-    desc: 'Ca trực chiều dài 4 tiếng (14h - 18h)',
+    end: '15:00',
+    desc: 'Ca tập đầu giờ chiều',
   },
   {
-    period: 'EVENING',
-    label: '17:00 - 21:00 (4h)',
-    start: '17:00',
-    end: '21:00',
-    isPeak: true,
-    desc: 'Ca trực tối dài 4 tiếng (17h - 21h)',
+    period: 'AFTERNOON',
+    label: '15:00 - 16:00',
+    start: '15:00',
+    end: '16:00',
+    desc: 'Ca tập giữa buổi chiều',
   },
+  {
+    period: 'AFTERNOON',
+    label: '16:00 - 17:00',
+    start: '16:00',
+    end: '17:00',
+    desc: 'Ca tập cuối buổi chiều',
+  },
+  // Evening Shifts (Mỗi ca đúng 1 tiếng)
   {
     period: 'EVENING',
     label: '17:00 - 18:00',
@@ -193,7 +199,7 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
   );
   const [startTime, setStartTime] = useState<string>('07:00');
   const [endTime, setEndTime] = useState<string>('08:00');
-  const [selectedPeriod, setSelectedPeriod] = useState<'ALL' | 'MORNING' | 'LUNCH' | 'EVENING'>('ALL');
+  const [selectedPeriod, setSelectedPeriod] = useState<'ALL' | 'MORNING' | 'LUNCH' | 'AFTERNOON' | 'EVENING'>('ALL');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Bulk states
@@ -237,6 +243,10 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
       }
       if (endDateTime <= startDateTime) {
         throw new Error('Giờ kết thúc phải sau giờ bắt đầu.');
+      }
+      const durationMinutes = Math.round((endDateTime.getTime() - startDateTime.getTime()) / 60000);
+      if (durationMinutes > 60) {
+        throw new Error('Mỗi ca rảnh chỉ được phép mở thời lượng tối đa 1 tiếng (60 phút).');
       }
 
       return coachPortalApi.createSlot({
@@ -465,53 +475,65 @@ export const CreateSlotModal: React.FC<CreateSlotModalProps> = ({
                   <span className="text-[10px] text-slate-400 font-semibold">Bấm để chọn nhanh</span>
                 </div>
 
-                <div className="flex items-center gap-1.5 pb-1">
+                <div className="flex items-center gap-1.5 pb-1 overflow-x-auto">
                   <button
                     type="button"
                     onClick={() => setSelectedPeriod('ALL')}
-                    className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all ${
+                    className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all shrink-0 ${
                       selectedPeriod === 'ALL'
-                        ? 'bg-slate-900 text-white'
+                        ? 'bg-emerald-600 text-white shadow-2xs'
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                   >
-                    Tất cả ca
+                    Tất cả ca (1h)
                   </button>
                   <button
                     type="button"
                     onClick={() => setSelectedPeriod('MORNING')}
-                    className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1 ${
+                    className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1 shrink-0 ${
                       selectedPeriod === 'MORNING'
                         ? 'bg-amber-600 text-white'
                         : 'bg-amber-50 text-amber-800 hover:bg-amber-100'
                     }`}
                   >
                     <Sun className="h-3 w-3" />
-                    Ca Sáng (06-09h)
+                    Sáng (06-11h)
                   </button>
                   <button
                     type="button"
                     onClick={() => setSelectedPeriod('LUNCH')}
-                    className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1 ${
+                    className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1 shrink-0 ${
                       selectedPeriod === 'LUNCH'
                         ? 'bg-blue-600 text-white'
                         : 'bg-blue-50 text-blue-800 hover:bg-blue-100'
                     }`}
                   >
                     <Coffee className="h-3 w-3" />
-                    Ca Trưa (11-13h)
+                    Trưa (11-14h)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPeriod('AFTERNOON')}
+                    className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1 shrink-0 ${
+                      selectedPeriod === 'AFTERNOON'
+                        ? 'bg-orange-600 text-white'
+                        : 'bg-orange-50 text-orange-800 hover:bg-orange-100'
+                    }`}
+                  >
+                    <Sun className="h-3 w-3" />
+                    Chiều (14-17h)
                   </button>
                   <button
                     type="button"
                     onClick={() => setSelectedPeriod('EVENING')}
-                    className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1 ${
+                    className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1 shrink-0 ${
                       selectedPeriod === 'EVENING'
                         ? 'bg-purple-600 text-white'
                         : 'bg-purple-50 text-purple-800 hover:bg-purple-100'
                     }`}
                   >
                     <Sunset className="h-3 w-3" />
-                    Ca Tối (17-21h)
+                    Tối (17-22h)
                   </button>
                 </div>
 

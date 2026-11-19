@@ -12,7 +12,7 @@ export function resolveBackendConfig(value = '', useProxy = false) {
       url.password ||
       url.search ||
       url.hash ||
-      (path !== '' && path !== '/api/v1')
+      (path !== '' && path !== '/api/v1' && path !== '/v1')
     ) {
       throw new Error(
         'VITE_API_BASE_URL must be an HTTP(S) backend origin, without /docs or other paths',

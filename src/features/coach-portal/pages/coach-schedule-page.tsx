@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Link, useLocation } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import {
   ChevronLeft,
@@ -6,7 +7,9 @@ import {
   Plus,
   CalendarDays,
   CalendarRange,
+  ArrowLeft,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { coachPortalApi } from '../api/coach-portal-api';
 import { AttendanceModal } from '../components/attendance-modal';
 import { SessionWorkoutPlanModal } from '../components/session-workout-plan-modal';
@@ -33,6 +36,8 @@ type ViewMode = 'WEEK_GRID' | 'AGENDA';
 
 export const CoachSchedulePage: React.FC = () => {
   const { user } = useAuth();
+  const location = useLocation();
+  const coachBasePath = location.pathname.startsWith('/portal/coach') ? '/portal/coach' : '/coach';
 
   // Dynamic current week (Monday)
   const [currentWeek, setCurrentWeek] = useState<string>(() => getMondayOfWeek());
@@ -219,52 +224,74 @@ export const CoachSchedulePage: React.FC = () => {
   }, [sessionList]);
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] dark:bg-[#0b0f17] text-slate-900 dark:text-slate-100 px-4 sm:px-6 lg:px-8 pt-2 pb-10 space-y-5">
-      {/* 1. TOP STUDIO HERO HEADER */}
-      <div className="w-full rounded-3xl bg-slate-950 text-white p-6 sm:p-8 shadow-xl border border-slate-800/80 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-slate-950 flex items-center justify-center shrink-0 font-black shadow-md">
-            <CalendarDays className="w-6 h-6" />
+    <div className="w-full max-w-7xl mx-auto space-y-6 pb-24">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200/80">
+        <div>
+          <div className="flex items-center gap-2">
+            <Link
+              to={`${coachBasePath}/schedule`}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#008b74] hover:underline"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" /> Lịch HLV
+            </Link>
           </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              Lịch Dạy Theo Tuần
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-300 font-medium mt-0.5">
-              Quản lý ca trực rảnh, lịch dạy kèm PT 1-1 và các lớp học nhóm trong tuần
-            </p>
-          </div>
+          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white mt-1">
+            Lịch giảng dạy & Huấn luyện
+          </h1>
+          <p className="text-xs text-white mt-0.5">
+            Quản lý ca trực rảnh, lịch dạy kèm PT 1-1 và các lớp học nhóm trong tuần
+          </p>
         </div>
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <Button
+            type="button"
+            variant="mint"
+            onClick={() => {
+              setCreateSlotDate(undefined);
+              setIsCreateSlotOpen(true);
+            }}
+            className="text-xs font-bold gap-1.5 shadow-sm"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Thêm slot rảnh</span>
+          </Button>
+          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-[#008b74] border border-emerald-200/70">
+            Huấn luyện viên
+          </span>
+        </div>
+      </div>
 
-        {/* Navigation & Action Controls */}
-        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+      {/* Navigation Controls, Filter Chips & View Mode Switcher */}
+      <div className="p-3.5 sm:p-4 rounded-3xl bg-white border border-slate-200/90 shadow-xs flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
           {/* Jump to This Week */}
           <button
             type="button"
             onClick={handleGoToCurrentWeek}
-            className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700 text-xs font-bold transition shadow-xs cursor-pointer active:scale-95"
+            className="px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200 text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95"
           >
             Tuần này
           </button>
 
           {/* Week Range Nav: ‹ 19/10 – 25/10/2026 › */}
-          <div className="flex items-center rounded-xl border border-slate-800 bg-slate-900 p-1 shadow-xs">
+          <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 p-1 shadow-2xs">
             <button
               type="button"
               onClick={() => handleWeekChange('prev')}
               aria-label="Tuần trước"
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-white transition cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="px-3 text-xs font-black text-white tabular-nums tracking-tight">
+            <span className="px-3 text-xs font-black text-slate-900 tabular-nums tracking-tight">
               {weekRangeLabel}
             </span>
             <button
               type="button"
               onClick={() => handleWeekChange('next')}
               aria-label="Tuần kế tiếp"
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-white transition cursor-pointer"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -274,97 +301,76 @@ export const CoachSchedulePage: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsDatePickerOpen(true)}
-            className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700 text-xs font-bold transition shadow-xs cursor-pointer active:scale-95 flex items-center gap-1.5"
+            className="px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200 text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95 flex items-center gap-1.5"
           >
-            <CalendarDays className="w-3.5 h-3.5 text-slate-400" />
+            <CalendarDays className="w-3.5 h-3.5 text-slate-500" />
             <span>Chọn ngày</span>
           </button>
-
-          {/* Mở slot nhận học viên PT */}
-          <button
-            type="button"
-            onClick={() => {
-              setCreateSlotDate(undefined);
-              setIsCreateSlotOpen(true);
-            }}
-            className="px-4 sm:px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs sm:text-sm shadow-md transition active:scale-95 cursor-pointer flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4 stroke-[3]" />
-            <span>Thêm slot rảnh</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 2. STATS KPI CARDS */}
- 
-
-      {/* 3. FILTER CHIPS & VIEW MODE SWITCHER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-        {/* Category Filter Chips */}
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          {/* Tất cả */}
-          <button
-            onClick={() => setFilterType('ALL')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              filterType === 'ALL'
-                ? 'bg-slate-950 text-white shadow-xs'
-                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-            }`}
-          >
-            Tất cả ({stats.totalSessions})
-          </button>
-
-          {/* PT 1:1 */}
-          <button
-            onClick={() => setFilterType('PT')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
-              filterType === 'PT'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'bg-white text-emerald-900 border border-emerald-200 hover:bg-emerald-50/60'
-            }`}
-          >
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            PT 1:1 ({stats.totalPt})
-          </button>
-
-          {/* Lớp nhóm */}
-          <button
-            onClick={() => setFilterType('CLASS')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
-              filterType === 'CLASS'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'bg-white text-blue-900 border border-blue-200 hover:bg-blue-50/60'
-            }`}
-          >
-            <span className="w-2 h-2 rounded-full bg-blue-500" />
-            Lớp nhóm ({stats.totalGroup})
-          </button>
         </div>
 
-        {/* View Switcher: Lưới tuần / Lịch trình */}
-        <div className="flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-2xs self-start sm:self-auto">
-          <button
-            onClick={() => setViewMode('WEEK_GRID')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
-              viewMode === 'WEEK_GRID'
-                ? 'bg-slate-950 text-white shadow-xs'
-                : 'text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            <CalendarRange className="w-3.5 h-3.5" />
-            <span>Lưới tuần</span>
-          </button>
-          <button
-            onClick={() => setViewMode('AGENDA')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
-              viewMode === 'AGENDA'
-                ? 'bg-slate-950 text-white shadow-xs'
-                : 'text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            <CalendarDays className="w-3.5 h-3.5" />
-            <span>Lịch trình</span>
-          </button>
+        {/* Category Filter Chips & View Mode Switcher */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          {/* Category Filter Chips */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              onClick={() => setFilterType('ALL')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                filterType === 'ALL'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              Tất cả ({stats.totalSessions})
+            </button>
+            <button
+              onClick={() => setFilterType('PT')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
+                filterType === 'PT'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'bg-white text-emerald-900 border border-emerald-200 hover:bg-emerald-50/60'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              PT 1:1 ({stats.totalPt})
+            </button>
+            <button
+              onClick={() => setFilterType('CLASS')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
+                filterType === 'CLASS'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-white text-blue-900 border border-blue-200 hover:bg-blue-50/60'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-blue-500" />
+              Lớp nhóm ({stats.totalGroup})
+            </button>
+          </div>
+
+          {/* View Switcher */}
+          <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 p-1 shadow-2xs">
+            <button
+              onClick={() => setViewMode('WEEK_GRID')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
+                viewMode === 'WEEK_GRID'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <CalendarRange className="w-3.5 h-3.5" />
+              <span>Lưới tuần</span>
+            </button>
+            <button
+              onClick={() => setViewMode('AGENDA')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
+                viewMode === 'AGENDA'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <CalendarDays className="w-3.5 h-3.5" />
+              <span>Lịch trình</span>
+            </button>
+          </div>
         </div>
       </div>
 

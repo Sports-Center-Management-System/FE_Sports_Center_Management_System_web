@@ -1,3 +1,7 @@
+import React, { useEffect, useState } from 'react';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router';
+import { useQueryClient } from '@tanstack/react-query';
+import { io } from 'socket.io-client';
 import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router';
 import { useAuth } from '@/context/auth-context';
@@ -6,6 +10,7 @@ import {
   CalendarCheck,
   Clock,
   Users,
+  Activity,
   Dumbbell,
   ShieldAlert,
   UserCheck,
@@ -17,22 +22,93 @@ import {
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import logo3tc from '@/assets/images/logo-3tc.png';
+import gymFacility from '@/assets/images/plan-gym-facility.jpg';
 
 const logoutButtonClassName =
   'w-full border-slate-200 bg-white text-xs font-semibold text-slate-600 shadow-none hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 focus-visible:ring-rose-500';
 
-const coachNavLinks = [
-  { label: 'Lịch giảng dạy & Huấn luyện', path: '/portal/coach/schedule', icon: CalendarCheck },
-  { label: 'Khung giờ rảnh PT', path: '/portal/coach/availability', icon: Clock },
-  { label: 'Học viên của tôi', path: '/portal/coach/members', icon: Users },
-  { label: 'Giáo án bài tập', path: '/portal/coach/workout-plans', icon: Dumbbell },
-  { label: 'Đơn hủy & Kỷ luật', path: '/portal/coach/requests', icon: ShieldAlert },
-  { label: 'Hồ sơ cá nhân', path: '/portal/coach/profile', icon: UserCheck },
-]
+interface CoachNavItem {
+  label: string;
+  subpath: string;
+  icon: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' | 'false' }>;
+}
+
+const coachNavItems: CoachNavItem[] = [
+  { label: 'Lịch giảng dạy & Huấn luyện', subpath: 'schedule', icon: CalendarCheck },
+  { label: 'Khung giờ rảnh PT', subpath: 'availability', icon: Clock },
+  { label: 'Học viên của tôi', subpath: 'members', icon: Users },
+  { label: 'InBody', subpath: 'inbody', icon: Activity },
+  { label: 'Giáo án bài tập', subpath: 'workout-plans', icon: Dumbbell },
+  { label: 'Đơn hủy & Kỷ luật', subpath: 'requests', icon: ShieldAlert },
+  { label: 'Hồ sơ cá nhân', subpath: 'profile', icon: UserCheck },
+];
 
 export const CoachLayout: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const queryClient = useQueryClient();
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+
+  const coachBasePath = location.pathname.startsWith('/portal/coach') ? '/portal/coach' : '/coach';
+
+  const isItemActive = (subpath: string) => {
+    const current = location.pathname.replace(/\/$/, '');
+    if (subpath === 'schedule') {
+      return (
+        current === '/coach/schedule' ||
+        current === '/portal/coach/schedule' ||
+        current === '/coach' ||
+        current === '/portal/coach'
+      );
+    }
+    return current.endsWith(`/${subpath}`) || current.includes(`/${subpath}/`);
+  };
+
+  useEffect(() => {
+    const tokens = readTokens()
+    if (!tokens?.accessToken) return
+
+    const socket = io(`${apiOrigin()}/realtime`, {
+      transports: ['websocket', 'polling'],
+      auth: { token: tokens.accessToken },
+    })
+
+    const invalidateSchedule = () => {
+      queryClient.invalidateQueries({ queryKey: ['coach', 'today-schedule'] })
+      queryClient.invalidateQueries({ queryKey: ['coach', 'multi-day-schedule'] })
+      queryClient.invalidateQueries({ queryKey: ['coach', 'availability'] })
+    }
+
+    const invalidateRequests = () => {
+      queryClient.invalidateQueries({ queryKey: ['coach', 'cancellation-requests'] })
+      queryClient.invalidateQueries({ queryKey: ['coach', 'penalties'] })
+      queryClient.invalidateQueries({ queryKey: ['coach', 'today-schedule'] })
+      queryClient.invalidateQueries({ queryKey: ['coach', 'multi-day-schedule'] })
+    }
+
+    socket.on('cancellation.reviewed', invalidateRequests)
+    socket.on('cancellation.cancelled', invalidateRequests)
+    socket.on('cancellation.requested', invalidateRequests)
+    socket.on('schedule.updated', invalidateSchedule)
+    socket.on('attendance.updated', invalidateSchedule)
+    socket.on('booking.updated', invalidateSchedule)
+    socket.on('booking.created', invalidateSchedule)
+    socket.on('booking.cancelled', invalidateSchedule)
+
+    return () => {
+      socket.off('cancellation.reviewed', invalidateRequests)
+      socket.off('cancellation.cancelled', invalidateRequests)
+      socket.off('cancellation.requested', invalidateRequests)
+      socket.off('schedule.updated', invalidateSchedule)
+      socket.off('attendance.updated', invalidateSchedule)
+      socket.off('booking.updated', invalidateSchedule)
+      socket.off('booking.created', invalidateSchedule)
+      socket.off('booking.cancelled', invalidateSchedule)
+      socket.disconnect()
+    }
+  }, [queryClient, user?.id])
+
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
 
   const handleLogout = async () => {
@@ -66,22 +142,28 @@ export const CoachLayout: React.FC = () => {
         </summary>
         <div className="absolute inset-x-0 top-full max-h-[70vh] overflow-y-auto border-b border-slate-200 bg-white p-4 shadow-lg">
           <nav aria-label="Điều hướng huấn luyện viên" className="grid gap-1">
-            {coachNavLinks.map(({ label, path, icon: Icon }) => (
-              <NavLink
-                key={path}
-                to={path}
-                onClick={(event) => event.currentTarget.closest('details')?.removeAttribute('open')}
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold transition-all',
-                    isActive ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-50',
-                  )
-                }
-              >
-                <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
-                {label}
-              </NavLink>
-            ))}
+            {coachNavItems.map(({ label, subpath, icon: Icon }) => {
+              const targetPath = `${coachBasePath}/${subpath}`;
+              const isCurrentActive = isItemActive(subpath);
+              return (
+                <NavLink
+                  key={subpath}
+                  to={targetPath}
+                  onClick={(event) => event.currentTarget.closest('details')?.removeAttribute('open')}
+                  className={({ isActive }) =>
+                    cn(
+                      'flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold transition-all',
+                      (isCurrentActive || isActive)
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:bg-slate-50',
+                    )
+                  }
+                >
+                  <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
+                  {label}
+                </NavLink>
+              );
+            })}
           </nav>
           <Button
             type="button"
@@ -133,35 +215,43 @@ export const CoachLayout: React.FC = () => {
 
           {/* Nav List */}
           <nav className="space-y-0.5">
-            {coachNavLinks.map(({ label, path, icon: Icon }) => (
-              <NavLink
-                key={path}
-                to={path}
-                title={isCollapsed ? label : undefined}
-                className={({ isActive }) =>
-                  cn(
-                    'group flex items-center rounded-xl text-xs font-bold transition-all',
-                    isCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2',
-                    isActive
-                      ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/30'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
-                  )
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    <Icon
-                      aria-hidden="true"
-                      className={cn(
-                        'shrink-0 transition-colors h-4 w-4',
-                        isActive ? 'text-white' : 'text-slate-500 group-hover:text-slate-700'
-                      )}
-                    />
-                    {!isCollapsed && <span className="truncate">{label}</span>}
-                  </>
-                )}
-              </NavLink>
-            ))}
+            {coachNavItems.map(({ label, subpath, icon: Icon }) => {
+              const targetPath = `${coachBasePath}/${subpath}`;
+              const isCurrentActive = isItemActive(subpath);
+              return (
+                <NavLink
+                  key={subpath}
+                  to={targetPath}
+                  title={isCollapsed ? label : undefined}
+                  className={({ isActive }) => {
+                    const isSelected = isCurrentActive || isActive;
+                    return cn(
+                      'group flex items-center rounded-xl text-xs font-bold transition-all',
+                      isCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2',
+                      isSelected
+                        ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/30'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+                    );
+                  }}
+                >
+                  {({ isActive }) => {
+                    const isSelected = isCurrentActive || isActive;
+                    return (
+                      <>
+                        <Icon
+                          aria-hidden="true"
+                          className={cn(
+                            'shrink-0 transition-colors h-4 w-4',
+                            isSelected ? 'text-white' : 'text-slate-500 group-hover:text-slate-700'
+                          )}
+                        />
+                        {!isCollapsed && <span className="truncate">{label}</span>}
+                      </>
+                    );
+                  }}
+                </NavLink>
+              );
+            })}
           </nav>
         </div>
 
@@ -222,6 +312,16 @@ export const CoachLayout: React.FC = () => {
         </div>
       </aside>
 
+      {/* Main Workspace Area */}
+      <main className="h-full min-h-0 overflow-y-auto p-4 sm:p-6 md:p-8 w-full min-w-0 relative isolate">
+        <div
+          className="inbody-backdrop"
+          style={{ backgroundImage: `url("${gymFacility}")` }}
+        />
+        <div className="relative">
+          <Outlet />
+        </div>
+      </main>
       {/* Main Workspace Area with Header */}
       <div className="h-full min-h-0 flex flex-col min-w-0 overflow-hidden">
         <header className="hidden md:flex items-center justify-between px-6 py-2.5 bg-white border-b border-slate-200/90 shrink-0 z-20">

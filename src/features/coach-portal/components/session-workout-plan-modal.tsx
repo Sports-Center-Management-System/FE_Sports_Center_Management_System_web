@@ -538,7 +538,7 @@ export const SessionWorkoutPlanModal: React.FC<SessionWorkoutPlanModalProps> = (
                       onClick={() => setSelectorTab('MEMBER_PLANS')}
                       className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 ${
                         selectorTab === 'MEMBER_PLANS'
-                          ? 'bg-slate-900 text-white shadow-xs'
+                          ? 'bg-emerald-600 text-white shadow-xs'
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                       }`}
                     >
@@ -760,7 +760,7 @@ export const SessionWorkoutPlanModal: React.FC<SessionWorkoutPlanModalProps> = (
                                       type="button"
                                       disabled={applyMemberPlanMutation.isPending}
                                       onClick={() => applyMemberPlanMutation.mutate(mPlan)}
-                                      className="h-8 px-3 bg-slate-900 hover:bg-emerald-600 text-white text-xs font-bold gap-1 transition-all"
+                                      className="h-8 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold gap-1 transition-all"
                                     >
                                       {applyMemberPlanMutation.isPending ? (
                                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1071,7 +1071,7 @@ export const SessionWorkoutPlanModal: React.FC<SessionWorkoutPlanModalProps> = (
                             onClick={() => handleSelectExerciseDiscipline('ALL')}
                             className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                               exerciseDisciplineFilter === 'ALL'
-                                ? 'bg-slate-900 text-white shadow-2xs'
+                                ? 'bg-emerald-600 text-white shadow-2xs'
                                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                             }`}
                           >
@@ -1082,7 +1082,7 @@ export const SessionWorkoutPlanModal: React.FC<SessionWorkoutPlanModalProps> = (
                             onClick={() => handleSelectExerciseDiscipline('BOXING')}
                             className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                               exerciseDisciplineFilter === 'BOXING'
-                                ? 'bg-slate-900 text-white shadow-2xs'
+                                ? 'bg-emerald-600 text-white shadow-2xs'
                                 : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
                             }`}
                           >
@@ -1093,7 +1093,7 @@ export const SessionWorkoutPlanModal: React.FC<SessionWorkoutPlanModalProps> = (
                             onClick={() => handleSelectExerciseDiscipline('YOGA')}
                             className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                               exerciseDisciplineFilter === 'YOGA'
-                                ? 'bg-slate-900 text-white shadow-2xs'
+                                ? 'bg-emerald-600 text-white shadow-2xs'
                                 : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
                             }`}
                           >
@@ -1104,7 +1104,7 @@ export const SessionWorkoutPlanModal: React.FC<SessionWorkoutPlanModalProps> = (
                             onClick={() => handleSelectExerciseDiscipline('GYM')}
                             className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                               exerciseDisciplineFilter === 'GYM'
-                                ? 'bg-slate-900 text-white shadow-2xs'
+                                ? 'bg-emerald-600 text-white shadow-2xs'
                                 : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
                             }`}
                           >
@@ -1203,7 +1203,7 @@ export const SessionWorkoutPlanModal: React.FC<SessionWorkoutPlanModalProps> = (
                                       <button
                                         type="button"
                                         onClick={() => handleAddExerciseFromLibrary(item)}
-                                        className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-emerald-600 text-white text-[10px] font-bold flex items-center gap-1 shrink-0 transition-all cursor-pointer"
+                                        className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold flex items-center gap-1 shrink-0 transition-all cursor-pointer"
                                       >
                                         <Plus className="w-3 h-3" />
                                         <span>Thêm</span>
@@ -1357,7 +1357,7 @@ export const SessionWorkoutPlanModal: React.FC<SessionWorkoutPlanModalProps> = (
                               {/* Exercise Header */}
                               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
                                 <div className="flex items-center gap-2 min-w-0">
-                                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-white font-mono text-xs font-black">
+                                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white font-mono text-xs font-black">
                                     {String(idx + 1).padStart(2, '0')}
                                   </span>
                                   <div className="min-w-0">

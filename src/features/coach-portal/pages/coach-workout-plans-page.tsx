@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Link, useLocation } from 'react-router';
 import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -21,6 +22,7 @@ import {
   Pencil,
   Filter,
   ArrowUpDown,
+  ArrowLeft,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { coachPortalApi } from '../api/coach-portal-api';
@@ -556,29 +558,36 @@ export const CoachWorkoutPlansPage: React.FC = () => {
     else void refetchExercises();
   };
 
+  const location = useLocation();
+  const coachBasePath = location.pathname.startsWith('/portal/coach') ? '/portal/coach' : '/coach';
+
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 pb-24">
-      {/* 1. STUDIO HEADER: High-contrast athletic presence */}
-      <div className="p-6 sm:p-8 rounded-3xl bg-slate-950 text-white shadow-xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold tracking-wide uppercase">
-            <Dumbbell className="h-3.5 w-3.5" />
-            <span>Hệ Thống Huấn Luyện &amp; Giáo Án PT</span>
+      {/* 1. HEADER: Benchmark reception standard */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200/80">
+        <div>
+          <div className="flex items-center gap-2">
+            <Link
+              to={`${coachBasePath}/schedule`}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#008b74] hover:underline"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" /> Lịch HLV
+            </Link>
           </div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
-            Giáo Án &amp; Lộ Trình Đào Tạo
+          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white mt-1">
+            Giáo án &amp; Lộ trình
           </h1>
-          <p className="text-sm text-slate-300 max-w-2xl font-normal leading-relaxed">
-            Quản lý giáo án tập luyện cá nhân hóa theo từng học viên, chuẩn hóa lộ trình 12 buổi và tra cứu kỹ thuật chuẩn từ kho động tác.
+          <p className="text-xs text-white mt-0.5">
+            Quản lý giáo án tập luyện cá nhân hóa theo từng học viên, chuẩn hóa lộ trình 12 buổi và tra cứu kỹ thuật chuẩn
           </p>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0 self-start md:self-auto">
+        <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
           <Button
             variant="outline"
             onClick={handleRefetch}
             disabled={isCurrentLoading || isCurrentRefetching}
-            className="text-xs font-bold border-slate-700 bg-slate-900/80 hover:bg-slate-800 text-slate-200 cursor-pointer h-10 px-4 rounded-xl"
+            className="text-xs font-bold border-slate-200 bg-white hover:bg-slate-50 text-slate-700 cursor-pointer h-9 px-3 rounded-xl shadow-xs"
           >
             <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isCurrentRefetching ? 'animate-spin' : ''}`} />
             <span>Làm mới</span>
@@ -589,32 +598,36 @@ export const CoachWorkoutPlansPage: React.FC = () => {
               resetForm();
               setIsCreateOpen(true);
             }}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold gap-2 cursor-pointer h-10 px-5 rounded-xl shadow-lg shadow-emerald-900/30 active:scale-[0.98] transition-all"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold gap-2 cursor-pointer h-9 px-4 rounded-xl shadow-xs active:scale-[0.98] transition-all"
           >
             <Plus className="h-4 w-4" />
             <span>Soạn giáo án mới</span>
           </Button>
+
+          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-[#008b74] border border-emerald-200/70">
+            Giáo án &amp; Lộ trình
+          </span>
         </div>
       </div>
 
       {/* 2. SEGMENTED NAVIGATION BAR */}
-      <div className="flex items-center gap-2 p-1.5 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 w-full sm:w-fit overflow-x-auto shadow-sm">
+      <div className="flex items-center gap-2 p-1.5 bg-white rounded-2xl border border-slate-200/90 w-full sm:w-fit overflow-x-auto shadow-xs">
         <button
           type="button"
           onClick={() => setActiveTab('CUSTOM_PLANS')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
             activeTab === 'CUSTOM_PLANS'
-              ? 'bg-slate-950 text-white shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
-          <Users className={`h-4 w-4 ${activeTab === 'CUSTOM_PLANS' ? 'text-emerald-400' : 'text-slate-500'}`} />
+          <Users className={`h-4 w-4 ${activeTab === 'CUSTOM_PLANS' ? 'text-white' : 'text-slate-500'}`} />
           <span>Giáo Án Học Viên</span>
           <span
             className={`text-[10px] px-2 py-0.5 rounded-full font-bold ml-1 ${
               activeTab === 'CUSTOM_PLANS'
-                ? 'bg-emerald-500 text-slate-950 font-black'
-                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                ? 'bg-emerald-700 text-white'
+                : 'bg-slate-100 text-slate-700'
             }`}
           >
             {plans.length}
@@ -624,19 +637,19 @@ export const CoachWorkoutPlansPage: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab('TEMPLATES')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
             activeTab === 'TEMPLATES'
-              ? 'bg-slate-950 text-white shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
-          <Calendar className={`h-4 w-4 ${activeTab === 'TEMPLATES' ? 'text-emerald-400' : 'text-slate-500'}`} />
+          <Calendar className={`h-4 w-4 ${activeTab === 'TEMPLATES' ? 'text-white' : 'text-slate-500'}`} />
           <span>Lộ Trình Mẫu (12 Buổi)</span>
           <span
             className={`text-[10px] px-2 py-0.5 rounded-full font-bold ml-1 ${
               activeTab === 'TEMPLATES'
-                ? 'bg-emerald-500 text-slate-950 font-black'
-                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                ? 'bg-emerald-700 text-white'
+                : 'bg-slate-100 text-slate-700'
             }`}
           >
             {templates.length}
@@ -646,19 +659,19 @@ export const CoachWorkoutPlansPage: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab('EXERCISE_LIBRARY')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
             activeTab === 'EXERCISE_LIBRARY'
-              ? 'bg-slate-950 text-white shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
-          <Dumbbell className={`h-4 w-4 ${activeTab === 'EXERCISE_LIBRARY' ? 'text-emerald-400' : 'text-slate-500'}`} />
+          <Dumbbell className={`h-4 w-4 ${activeTab === 'EXERCISE_LIBRARY' ? 'text-white' : 'text-slate-500'}`} />
           <span>Thư Viện Động Tác</span>
           <span
             className={`text-[10px] px-2 py-0.5 rounded-full font-bold ml-1 ${
               activeTab === 'EXERCISE_LIBRARY'
-                ? 'bg-emerald-500 text-slate-950 font-black'
-                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                ? 'bg-emerald-700 text-white'
+                : 'bg-slate-100 text-slate-700'
             }`}
           >
             {exercisesKnowledge.length}
@@ -787,7 +800,7 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                     {/* Top Row: Student info & Quick actions */}
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="h-11 w-11 rounded-2xl bg-slate-950 text-emerald-400 font-black text-base flex items-center justify-center shrink-0 border border-slate-800 shadow-sm">
+                        <div className="h-11 w-11 rounded-2xl bg-emerald-600 text-white font-black text-base flex items-center justify-center shrink-0 shadow-xs">
                           {studentInitial}
                         </div>
                         <div className="min-w-0">
@@ -925,7 +938,7 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                   </div>
 
                   {/* Card Bottom Bar */}
-                  <div className="p-4 bg-slate-50 dark:bg-slate-950/50 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                  <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
                     <span className="text-[11px] font-mono text-slate-400">
                      
                     </span>
@@ -933,7 +946,7 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setViewingPlan(plan)}
-                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-950 hover:bg-emerald-600 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
                     >
                       
                       <span>Xem chi tiết giáo án</span>
@@ -954,15 +967,15 @@ export const CoachWorkoutPlansPage: React.FC = () => {
           {/* Integrated Control Panel */}
           <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
             <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
-              {/* Discipline Switcher: Black & Emerald */}
+              {/* Discipline Switcher: Emerald & Slate */}
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setTemplateDiscipline('BOXING')}
                   className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
                     templateDiscipline === 'BOXING'
-                      ? 'bg-slate-950 text-white shadow-sm'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
                   Boxing (12 buổi)
@@ -972,8 +985,8 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                   onClick={() => setTemplateDiscipline('YOGA')}
                   className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
                     templateDiscipline === 'YOGA'
-                      ? 'bg-slate-950 text-white shadow-sm'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
                   Yoga (12 buổi)
@@ -988,7 +1001,7 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                   value={templateSearch}
                   onChange={(e) => setTemplateSearch(e.target.value)}
                   placeholder="Tìm theo tên buổi học, bài tập kỹ thuật..."
-                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 pl-10 pr-9 py-2 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-hidden transition-all"
+                  className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-9 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-hidden transition-all"
                 />
                 {templateSearch && (
                   <button
@@ -1003,7 +1016,7 @@ export const CoachWorkoutPlansPage: React.FC = () => {
             </div>
 
             {/* Week Progression Pills */}
-            <div className="flex items-center gap-2 overflow-x-auto pt-3 border-t border-slate-100 dark:border-slate-800 pb-1">
+            <div className="flex items-center gap-2 overflow-x-auto pt-3 border-t border-slate-100 pb-1">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0 mr-1">
                 Giai đoạn:
               </span>
@@ -1012,8 +1025,8 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                 onClick={() => setTemplateWeekFilter('ALL')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                   templateWeekFilter === 'ALL'
-                    ? 'bg-slate-950 text-white shadow-sm'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
                 Tất cả tuần
@@ -1100,7 +1113,7 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1.5 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-lg bg-slate-950 text-white">
+                          <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-lg bg-emerald-600 text-white">
                             {tpl.disciplineCode}
                           </span>
                           <span className="rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800 px-2.5 py-0.5 text-[10px] font-black">
@@ -1215,7 +1228,7 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                   </div>
 
                   {/* Card Footer Actions */}
-                  <div className="p-4 bg-slate-50 dark:bg-slate-950/50 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                  <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
                     <button
                       type="button"
                       onClick={() => setViewingTemplate(tpl)}
@@ -1228,7 +1241,7 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => handleCloneTemplateToPlan(tpl)}
-                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-950 hover:bg-emerald-600 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
                     >
                  
                       <span>Dùng mẫu này </span>
@@ -1242,12 +1255,12 @@ export const CoachWorkoutPlansPage: React.FC = () => {
       )}
 
       {/* ========================================================= */}
-      {/* TAB 3: THƯ VIỆN ĐỘNG TÁC (CHỈ DÙNG ĐEN & XANH LÁ)          */}
+      {/* TAB 3: THƯ VIỆN ĐỘNG TÁC                                 */}
       {/* ========================================================= */}
       {activeTab === 'EXERCISE_LIBRARY' && (
         <div className="space-y-6">
           {/* Integrated Control Bar */}
-          <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+          <div className="p-5 rounded-3xl bg-white border border-slate-200/90 shadow-sm space-y-4">
             <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
               {/* Discipline Segmented Pills */}
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
@@ -1256,8 +1269,8 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                   onClick={() => handleSelectDiscipline('ALL')}
                   className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 ${
                     selectedExerciseDiscipline === 'ALL'
-                      ? 'bg-slate-950 text-white shadow-sm'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
                   Tất cả môn ({disciplineCounts.ALL})
@@ -1267,8 +1280,8 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                   onClick={() => handleSelectDiscipline('BOXING')}
                   className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 ${
                     selectedExerciseDiscipline === 'BOXING'
-                      ? 'bg-slate-950 text-white shadow-sm'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
                   Boxing ({disciplineCounts.BOXING})
@@ -1278,8 +1291,8 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                   onClick={() => handleSelectDiscipline('YOGA')}
                   className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 ${
                     selectedExerciseDiscipline === 'YOGA'
-                      ? 'bg-slate-950 text-white shadow-sm'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
                   Yoga ({disciplineCounts.YOGA})
@@ -1289,8 +1302,8 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                   onClick={() => handleSelectDiscipline('GYM')}
                   className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 ${
                     selectedExerciseDiscipline === 'GYM'
-                      ? 'bg-slate-950 text-white shadow-sm'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
                   Gym ({disciplineCounts.GYM})
@@ -1329,8 +1342,8 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                 onClick={() => setSelectedCategory('ALL')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                   selectedCategory === 'ALL'
-                    ? 'bg-slate-950 text-white shadow-sm'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
                 Tất cả nhóm ({disciplineCounts[selectedExerciseDiscipline]})
@@ -1422,7 +1435,7 @@ export const CoachWorkoutPlansPage: React.FC = () => {
 
                         <div className="flex items-center gap-1.5 shrink-0">
                           {meta.discipline && (
-                            <span className="rounded-lg bg-slate-950 text-white px-2 py-0.5 text-[10px] font-black uppercase">
+                            <span className="rounded-lg bg-emerald-600 text-white px-2 py-0.5 text-[10px] font-black uppercase">
                               {meta.discipline}
                             </span>
                           )}
@@ -1481,9 +1494,9 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                           handleAddExerciseToForm(ex);
                           setIsCreateOpen(true);
                         }}
-                        className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-950 hover:bg-emerald-600 text-white text-xs font-bold transition-all shadow-sm active:scale-[0.98] cursor-pointer group"
+                        className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs active:scale-[0.98] cursor-pointer group"
                       >
-                        <Plus className="w-4 h-4 text-emerald-400 group-hover:text-white" />
+                        <Plus className="w-4 h-4 text-white" />
                         <span>Thêm vào giáo án</span>
                       </button>
                     </div>
@@ -1522,24 +1535,24 @@ export const CoachWorkoutPlansPage: React.FC = () => {
       {isCreateOpen && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[9999] overflow-y-auto bg-slate-950/70 backdrop-blur-xs p-3 sm:p-5 flex flex-col items-center justify-center">
           <div className="w-full max-w-6xl my-auto rounded-3xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden max-h-[92vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
-            {/* Modal Header: Deep Black with Emerald Badge */}
-            <div className="flex items-center justify-between border-b border-slate-800 px-6 py-5 bg-slate-950 text-white shrink-0">
+            {/* Modal Header: Clean light header with emerald accent */}
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5 bg-slate-50 text-slate-900 shrink-0">
               <div className="flex items-center gap-3.5 min-w-0">
-                <div className="h-10 w-10 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center shrink-0 shadow-sm font-black">
+                <div className="h-10 w-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs font-black">
                   {editingPlanId ? <Pencil className="h-5 w-5" /> : <Dumbbell className="h-5 w-5" />}
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-base font-black text-white leading-tight truncate">
+                    <h3 className="text-base font-black text-slate-900 leading-tight truncate">
                       {editingPlanId ? 'Chỉnh Sửa Giáo Án Học Viên' : 'Soạn Giáo Án Huấn Luyện Mới'}
                     </h3>
                     {editingPlanId && (
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-950 text-emerald-400 font-bold text-[10px] border border-emerald-800">
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold text-[10px] border border-emerald-300">
                         Đang chỉnh sửa
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-slate-300 font-medium truncate mt-0.5">
+                  <p className="text-xs text-slate-500 font-medium truncate mt-0.5">
                     {editingPlanId
                       ? 'Cập nhật lại danh sách bài tập, số hiệp, khối lượng tạ và dặn dò HLV cho học viên'
                       : 'Chọn động tác từ kho bài tập chuẩn và cá nhân hóa khối lượng tập luyện cho học viên'}
@@ -1553,7 +1566,7 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                   setIsCreateOpen(false);
                   resetForm();
                 }}
-                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors cursor-pointer shrink-0"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1619,8 +1632,8 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                         onClick={() => handleSelectFormDiscipline('ALL')}
                         className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                           formDisciplineFilter === 'ALL'
-                            ? 'bg-slate-950 text-white shadow-sm'
-                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 border border-slate-200 dark:border-slate-700'
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                         }`}
                       >
                         Tất cả ({disciplineCounts.ALL})
@@ -1630,8 +1643,8 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                         onClick={() => handleSelectFormDiscipline('BOXING')}
                         className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                           formDisciplineFilter === 'BOXING'
-                            ? 'bg-slate-950 text-white shadow-sm'
-                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 border border-slate-200 dark:border-slate-700'
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                         }`}
                       >
                         Boxing ({disciplineCounts.BOXING})
@@ -1641,8 +1654,8 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                         onClick={() => handleSelectFormDiscipline('YOGA')}
                         className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                           formDisciplineFilter === 'YOGA'
-                            ? 'bg-slate-950 text-white shadow-sm'
-                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 border border-slate-200 dark:border-slate-700'
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                         }`}
                       >
                         Yoga ({disciplineCounts.YOGA})
@@ -1652,8 +1665,8 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                         onClick={() => handleSelectFormDiscipline('GYM')}
                         className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                           formDisciplineFilter === 'GYM'
-                            ? 'bg-slate-950 text-white shadow-sm'
-                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 border border-slate-200 dark:border-slate-700'
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                         }`}
                       >
                         Gym ({disciplineCounts.GYM})
@@ -1661,14 +1674,14 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                     </div>
 
                     {/* Categories Filter (Dynamically matched to form discipline) */}
-                    <div className="flex items-center gap-1 overflow-x-auto pb-1 pt-1.5 border-t border-slate-200 dark:border-slate-700">
+                    <div className="flex items-center gap-1 overflow-x-auto pb-1 pt-1.5 border-t border-slate-200">
                       <button
                         type="button"
                         onClick={() => setFormCategoryFilter('ALL')}
                         className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
                           formCategoryFilter === 'ALL'
-                            ? 'bg-slate-950 text-white shadow-sm'
-                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 border border-slate-200 dark:border-slate-700'
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                         }`}
                       >
                         Tất cả nhóm ({disciplineCounts[formDisciplineFilter]})
@@ -1680,8 +1693,8 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                           onClick={() => setFormCategoryFilter(cat)}
                           className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
                             formCategoryFilter.toLowerCase() === cat.toLowerCase()
-                              ? 'bg-emerald-600 text-white shadow-sm'
-                              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 border border-slate-200 dark:border-slate-700'
+                              ? 'bg-emerald-600 text-white shadow-xs'
+                              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                           }`}
                         >
                           {translateCategory(cat)} ({count})
@@ -1708,19 +1721,19 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                             key={item.id}
                             className={`p-3.5 rounded-2xl border transition-all flex flex-col justify-between gap-3 ${
                               isAdded
-                                ? 'border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/20 shadow-xs'
-                                : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-400 shadow-xs'
+                                ? 'border-emerald-500 bg-emerald-50/60 shadow-xs'
+                                : 'border-slate-200 bg-white hover:border-slate-400 shadow-xs'
                             }`}
                           >
                             <div className="space-y-1.5 min-w-0">
                               <div className="flex items-center justify-between gap-2 min-w-0">
                                 <div className="flex items-center gap-1.5 min-w-0">
                                   {meta.discipline && (
-                                    <span className="rounded-md bg-slate-950 text-white px-1.5 py-0.5 text-[9px] font-black uppercase shrink-0">
+                                    <span className="rounded-md bg-emerald-600 text-white px-1.5 py-0.5 text-[9px] font-black uppercase shrink-0">
                                       {meta.discipline}
                                     </span>
                                   )}
-                                  <span className="rounded-md bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600 px-1.5 py-0.5 text-[9px] font-bold truncate">
+                                  <span className="rounded-md bg-slate-100 text-slate-700 border border-slate-200 px-1.5 py-0.5 text-[9px] font-bold truncate">
                                     {translateCategory(item.category)}
                                   </span>
                                 </div>
@@ -1740,9 +1753,9 @@ export const CoachWorkoutPlansPage: React.FC = () => {
                                   <button
                                     type="button"
                                     onClick={() => handleAddExerciseToForm(item)}
-                                    className="px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-emerald-600 text-white text-[10px] font-black flex items-center gap-1 shrink-0 transition-all cursor-pointer"
+                                    className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black flex items-center gap-1 shrink-0 transition-all cursor-pointer"
                                   >
-                                    <Plus className="w-3 h-3 text-emerald-400" />
+                                    <Plus className="w-3 h-3 text-white" />
                                     <span>Thêm</span>
                                   </button>
                                 )}
@@ -1986,12 +1999,12 @@ export const CoachWorkoutPlansPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Modal Footer Actions: Deep Slate with Solid Emerald Action */}
-            <div className="flex items-center justify-between border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-6 py-4 shrink-0">
-              <div className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+            {/* Modal Footer Actions */}
+            <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-6 py-4 shrink-0">
+              <div className="text-xs text-slate-600 font-medium">
                 {exercisesList.length > 0 ? (
                   <span>
-                    Giáo án gồm <strong className="text-slate-900 dark:text-slate-100 font-black">{exercisesList.length}</strong> bài tập
+                    Giáo án gồm <strong className="text-slate-900 font-black">{exercisesList.length}</strong> bài tập
                   </span>
                 ) : (
                   <span>Chưa chọn bài tập</span>

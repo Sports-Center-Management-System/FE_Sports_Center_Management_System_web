@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link, useLocation } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   UserCheck,
@@ -11,12 +12,15 @@ import {
   Mail,
   Phone,
   Save,
+  ArrowLeft,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/auth-context';
 import { coachPortalApi } from '../api/coach-portal-api';
 
 export const CoachProfilePage: React.FC = () => {
+  const location = useLocation();
+  const coachBasePath = location.pathname.startsWith('/portal/coach') ? '/portal/coach' : '/coach';
   const { user: authUser, setUser } = useAuth();
   const queryClient = useQueryClient();
 
@@ -119,31 +123,41 @@ export const CoachProfilePage: React.FC = () => {
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 pb-24">
       {/* ========================================================= */}
-      {/* CONTAINER 1: HEADER STUDIO HERO (1 LINE)                 */}
+      {/* CONTAINER 1: HEADER: Receptionist standard benchmark       */}
       {/* ========================================================= */}
-      <div className="w-full p-6 sm:p-8 rounded-3xl bg-slate-950 text-white shadow-xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-        <div className="space-y-1.5">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold tracking-wide uppercase">
-            <UserCheck className="h-3.5 w-3.5" />
-            <span>Hồ Sơ &amp; Chuyên Môn Huấn Luyện</span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200/80">
+        <div>
+          <div className="flex items-center gap-2">
+            <Link
+              to={`${coachBasePath}/schedule`}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#008b74] hover:underline"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" /> Lịch HLV
+            </Link>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-            Hồ Sơ Cá Nhân
+          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white mt-1">
+            Hồ sơ cá nhân
           </h1>
-          <p className="text-sm text-slate-300 font-normal leading-relaxed">
-            Quản lý thông tin định danh, số điện thoại liên hệ và tra cứu các định mức biểu phí dạy kèm 1-1.
+          <p className="text-xs text-white mt-0.5">
+            Quản lý thông tin định danh, số điện thoại liên hệ và tra cứu các định mức biểu phí dạy kèm 1-1
           </p>
         </div>
 
-        <Button
-          variant="outline"
-          onClick={handleRefresh}
-          disabled={isProfileLoading || isRatesLoading}
-          className="self-start sm:self-auto text-xs font-bold border-slate-700 bg-slate-900/80 hover:bg-slate-800 text-slate-200 cursor-pointer h-10 px-4 rounded-xl"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isProfileLoading || isRatesLoading ? 'animate-spin' : ''}`} />
-          <span>Làm mới</span>
-        </Button>
+        <div className="flex items-center gap-3 self-start sm:self-auto">
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={isProfileLoading || isRatesLoading}
+            className="text-xs font-bold border-slate-200 bg-white hover:bg-slate-50 text-slate-700 cursor-pointer h-9 px-3 rounded-xl shadow-xs"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isProfileLoading || isRatesLoading ? 'animate-spin' : ''}`} />
+            <span>Làm mới</span>
+          </Button>
+
+          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-[#008b74] border border-emerald-200/70">
+            Huấn luyện viên
+          </span>
+        </div>
       </div>
 
       {/* FEEDBACK ALERTS */}
@@ -162,13 +176,13 @@ export const CoachProfilePage: React.FC = () => {
       )}
 
       {/* ========================================================= */}
-      {/* CONTAINER 2: AVATAR & IDENTITY BANNER (1 LINE TRỌN VẸN)   */}
+      {/* CONTAINER 2: AVATAR & IDENTITY BANNER                     */}
       {/* ========================================================= */}
-      <div className="w-full rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-sm">
+      <div className="w-full rounded-3xl bg-white border border-slate-200/90 p-6 sm:p-8 shadow-sm">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
           {/* Avatar with Camera Overlay */}
           <div className="relative group shrink-0">
-            <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-3xl bg-slate-950 text-emerald-400 font-black flex items-center justify-center text-3xl uppercase overflow-hidden border border-slate-800 shadow-md">
+            <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-3xl bg-emerald-600 text-white font-black flex items-center justify-center text-3xl uppercase overflow-hidden shadow-sm">
               {displayAvatar ? (
                 <img
                   src={displayAvatar}
@@ -180,7 +194,7 @@ export const CoachProfilePage: React.FC = () => {
               )}
             </div>
 
-            <label className="absolute -bottom-2 -right-2 h-9 w-9 rounded-xl bg-slate-950 text-white flex items-center justify-center shadow-lg cursor-pointer hover:bg-emerald-600 border border-slate-800 transition-colors">
+            <label className="absolute -bottom-2 -right-2 h-9 w-9 rounded-xl bg-emerald-700 text-white flex items-center justify-center shadow-md cursor-pointer hover:bg-emerald-800 border-2 border-white transition-colors">
               <Camera className="h-4 w-4" />
               <input
                 type="file"
@@ -195,7 +209,7 @@ export const CoachProfilePage: React.FC = () => {
           {/* Coach Identity Information */}
           <div className="space-y-2 text-center sm:text-left flex-1 min-w-0">
             <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
                 {displayName}
               </h2>
               

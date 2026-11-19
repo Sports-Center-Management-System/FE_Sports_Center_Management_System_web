@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Link, useLocation } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ShieldAlert,
@@ -8,6 +9,7 @@ import {
   FileText,
   AlertCircle,
   CheckCircle2,
+  ArrowLeft,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { coachPortalApi } from '../api/coach-portal-api';
@@ -16,6 +18,8 @@ import { TablePagination } from '@/components/common/table-pagination';
 const ITEMS_PER_PAGE = 10;
 
 export const CoachRequestsPage: React.FC = () => {
+  const location = useLocation();
+  const coachBasePath = location.pathname.startsWith('/portal/coach') ? '/portal/coach' : '/coach';
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'REQUESTS' | 'PENALTIES'>('REQUESTS');
   const [reqPage, setReqPage] = useState<number>(1);
@@ -117,28 +121,40 @@ export const CoachRequestsPage: React.FC = () => {
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 pb-24">
-      {/* 1. Header */}
-      <div className="p-6 sm:p-8 rounded-3xl bg-slate-950 text-white shadow-xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="space-y-1.5">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold tracking-wide uppercase">
-            <ShieldAlert className="h-3.5 w-3.5" />
-            <span>Kỷ Luật &amp; Yêu Cầu Hủy Ca</span>
+      {/* 1. Header: Receptionist standard format */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200/80">
+        <div>
+          <div className="flex items-center gap-2">
+            <Link
+              to={`${coachBasePath}/schedule`}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#008b74] hover:underline"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" /> Lịch HLV
+            </Link>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-            Đơn Hủy &amp; Kỷ Luật
+          <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white mt-1">
+            Đơn hủy &amp; Kỷ luật
           </h1>
-        
+          <p className="text-xs text-white mt-0.5">
+            Theo dõi tiến độ duyệt đơn xin nghỉ, hủy ca đột xuất và các chế tài kỷ luật
+          </p>
         </div>
 
-        <Button
-          variant="outline"
-          onClick={handleRefetch}
-          disabled={isCurrentLoading || isCurrentRefetching}
-          className="self-start sm:self-auto text-xs font-bold border-slate-700 bg-slate-900/80 hover:bg-slate-800 text-slate-200 cursor-pointer h-10 px-4 rounded-xl"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isCurrentRefetching ? 'animate-spin' : ''}`} />
-          <span>Làm mới</span>
-        </Button>
+        <div className="flex items-center gap-3 self-start sm:self-auto">
+          <Button
+            variant="outline"
+            onClick={handleRefetch}
+            disabled={isCurrentLoading || isCurrentRefetching}
+            className="text-xs font-bold border-slate-200 bg-white hover:bg-slate-50 text-slate-700 cursor-pointer h-9 px-3 rounded-xl shadow-xs"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isCurrentRefetching ? 'animate-spin' : ''}`} />
+            <span>Làm mới</span>
+          </Button>
+
+          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-[#008b74] border border-emerald-200/70">
+            Kỷ luật &amp; Hủy ca
+          </span>
+        </div>
       </div>
 
       {/* 2. Feedback Message */}
@@ -160,23 +176,23 @@ export const CoachRequestsPage: React.FC = () => {
       )}
 
       {/* 3. Navigation Tabs */}
-      <div className="flex items-center gap-2 p-1.5 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 w-full sm:w-fit shadow-sm">
+      <div className="flex items-center gap-2 p-1.5 bg-white rounded-2xl border border-slate-200/90 w-full sm:w-fit shadow-xs">
         <button
           type="button"
           onClick={() => setActiveTab('REQUESTS')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
             activeTab === 'REQUESTS'
-              ? 'bg-slate-950 text-white shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
-          <FileText className={`h-4 w-4 ${activeTab === 'REQUESTS' ? 'text-emerald-400' : 'text-slate-500'}`} />
+          <FileText className={`h-4 w-4 ${activeTab === 'REQUESTS' ? 'text-white' : 'text-slate-500'}`} />
           <span>Đơn xin hủy ca</span>
           <span
             className={`text-[10px] px-2 py-0.5 rounded-full font-bold ml-1 ${
               activeTab === 'REQUESTS'
-                ? 'bg-emerald-500 text-slate-950 font-black'
-                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                ? 'bg-emerald-700 text-white'
+                : 'bg-slate-100 text-slate-700'
             }`}
           >
             {requests.length}
@@ -186,19 +202,19 @@ export const CoachRequestsPage: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab('PENALTIES')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
             activeTab === 'PENALTIES'
-              ? 'bg-slate-950 text-white shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
-          <ShieldAlert className={`h-4 w-4 ${activeTab === 'PENALTIES' ? 'text-emerald-400' : 'text-slate-500'}`} />
+          <ShieldAlert className={`h-4 w-4 ${activeTab === 'PENALTIES' ? 'text-white' : 'text-slate-500'}`} />
           <span>Chế tài kỷ luật</span>
           <span
             className={`text-[10px] px-2 py-0.5 rounded-full font-bold ml-1 ${
               activeTab === 'PENALTIES'
-                ? 'bg-emerald-500 text-slate-950 font-black'
-                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                ? 'bg-emerald-700 text-white'
+                : 'bg-slate-100 text-slate-700'
             }`}
           >
             {penalties.length}
@@ -257,8 +273,8 @@ export const CoachRequestsPage: React.FC = () => {
                           <span
                             className={`inline-block px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide ${
                               req.targetType === 'GROUP_CLASS'
-                                ? 'bg-slate-950 text-white'
-                                : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800'
+                                ? 'bg-emerald-700 text-white'
+                                : 'bg-emerald-50 text-emerald-800 border border-emerald-200/80'
                             }`}
                           >
                             {req.targetType === 'GROUP_CLASS' ? 'Lớp nhóm' : 'Ca PT 1-1'}
