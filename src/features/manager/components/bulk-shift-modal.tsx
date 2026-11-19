@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { X, Sparkles } from 'lucide-react';
 import { managerApi, managerKeys } from '../api/manager-api';
 import type { ShiftPayload, UserRow } from '../types/manager.types';
-import { addDaysToDay } from '../lib/format';
+import { addDaysToDay, vnInstant } from '../lib/format';
 
 interface BulkShiftModalProps {
   isOpen: boolean;
@@ -73,8 +73,8 @@ export const BulkShiftModal: React.FC<BulkShiftModalProps> = ({
         return {
           staffId: selectedStaffId,
           shiftDate: dayStr,
-          startTime: `${dayStr}T${startTime}:00Z`,
-          endTime: `${dayStr}T${endTime}:00Z`,
+          startTime: vnInstant(dayStr, startTime),
+          endTime: vnInstant(dayStr, endTime),
           notes: notes.trim() || undefined,
         };
       });

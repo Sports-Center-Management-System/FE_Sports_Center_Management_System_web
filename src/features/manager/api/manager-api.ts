@@ -72,7 +72,10 @@ export const managerApi = {
   updateStaff: (id: string, body: UpdateStaffPayload) => put<UserRow>(`/users/staff/${id}`, body),
   disableStaff: (id: string) => del<UserRow>(`/users/staff/${id}`),
 
-  shifts: () => get<StaffShift[]>('/staff-shifts'),
+  shifts: (params?: { from?: string; to?: string; role?: string; staffId?: string }) =>
+    get<StaffShift[]>(`/staff-shifts${query(params ?? {})}`),
+  swapShifts: (body: { shiftIdA: string; shiftIdB: string }) =>
+    post<{ shiftA: StaffShift; shiftB: StaffShift }>('/staff-shifts/swap', body),
   createShift: (body: ShiftPayload) => post<StaffShift>('/staff-shifts', body),
   createShiftsBulk: (body: { shifts: ShiftPayload[] }) =>
     post<{ count: number; shifts: StaffShift[] }>('/staff-shifts/bulk', body),
