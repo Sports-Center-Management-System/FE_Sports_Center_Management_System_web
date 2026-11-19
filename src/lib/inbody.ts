@@ -235,15 +235,18 @@ export function isBodyShape(value: unknown): value is BodyShape {
 // --- Entry validation -------------------------------------------------------------------
 
 export const INBODY_LIMITS = {
-  heightCm: { min: 50, max: 250 },
-  weightKg: { min: 20, max: 300 },
-  bodyFatPct: { min: 3, max: 65 },
-  skeletalMuscleMassKg: { min: 1, max: 150 },
-  tbwLiters: { min: 1, max: 150 },
-  proteinKg: { min: 0.5, max: 50 },
-  mineralKg: { min: 0.1, max: 20 },
+  heightCm: { min: 100, max: 230 },
+  weightKg: { min: 30, max: 250 },
+  bodyFatPct: { min: 3, max: 60 },
+  skeletalMuscleMassKg: { min: 5, max: 80 },
+  tbwLiters: { min: 15, max: 90 },
+  proteinKg: { min: 3, max: 25 },
+  mineralKg: { min: 1, max: 7 },
   visceralFatLevel: { min: 1, max: 20 },
-  waistHipRatio: { min: 0.3, max: 3 },
-  inbodyScore: { min: 0, max: 100 },
-  segment: { min: 0.1, max: 100 },
+  waistHipRatio: { min: 0.6, max: 1.6 },
+  inbodyScore: { min: 20, max: 100 },
+  segment: { min: 0.5, max: 55 },
+  segmentArm: { min: 0.5, max: 9.0 },
+  segmentLeg: { min: 1.5, max: 20.0 },
+  segmentTrunk: { min: 8.0, max: 55.0 },
 } as const
