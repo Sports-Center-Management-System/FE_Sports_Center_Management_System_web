@@ -25,27 +25,6 @@ export default defineConfig(({ mode }) => {
       host: true,
       proxy: {
         '/api': { target: proxyTarget, changeOrigin: true },
-        '/socket.io': {
-          target: proxyTarget,
-          changeOrigin: true,
-          ws: true,
-          configure: (proxy) => {
-            proxy.on('error', (err: any) => {
-              if (err.code === 'ECONNABORTED' || err.code === 'ECONNRESET') {
-                return;
-              }
-              console.error('[vite] ws proxy error:', err);
-            });
-            proxy.on('proxyReqWs', (_proxyReq, _req, socket) => {
-              socket.on('error', (err: any) => {
-                if (err.code === 'ECONNABORTED' || err.code === 'ECONNRESET') {
-                  return;
-                }
-                console.error('[vite] ws proxy socket error:', err);
-              });
-            });
-          },
-        },
       },
     },
   }

@@ -1,9 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { io } from 'socket.io-client';
-import React, { useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router';
 import { useAuth } from '@/context/auth-context';
 import { NotificationBell } from '@/components/common/notification-bell';
 import {
@@ -66,50 +63,44 @@ export const CoachLayout: React.FC = () => {
   };
 
   useEffect(() => {
-    const tokens = readTokens()
-    if (!tokens?.accessToken) return
-
-    const socket = io(`${apiOrigin()}/realtime`, {
-      transports: ['websocket', 'polling'],
-      auth: { token: tokens.accessToken },
-    })
-
     const invalidateSchedule = () => {
-      queryClient.invalidateQueries({ queryKey: ['coach', 'today-schedule'] })
-      queryClient.invalidateQueries({ queryKey: ['coach', 'multi-day-schedule'] })
-      queryClient.invalidateQueries({ queryKey: ['coach', 'availability'] })
-    }
+      void queryClient.invalidateQueries({ queryKey: ['coach', 'today-schedule'] });
+      void queryClient.invalidateQueries({ queryKey: ['coach', 'multi-day-schedule'] });
+      void queryClient.invalidateQueries({ queryKey: ['coach', 'availability'] });
+    };
 
     const invalidateRequests = () => {
-      queryClient.invalidateQueries({ queryKey: ['coach', 'cancellation-requests'] })
-      queryClient.invalidateQueries({ queryKey: ['coach', 'penalties'] })
-      queryClient.invalidateQueries({ queryKey: ['coach', 'today-schedule'] })
-      queryClient.invalidateQueries({ queryKey: ['coach', 'multi-day-schedule'] })
-    }
+      void queryClient.invalidateQueries({ queryKey: ['coach', 'cancellation-requests'] });
+      void queryClient.invalidateQueries({ queryKey: ['coach', 'penalties'] });
+      void queryClient.invalidateQueries({ queryKey: ['coach', 'today-schedule'] });
+      void queryClient.invalidateQueries({ queryKey: ['coach', 'multi-day-schedule'] });
+    };
 
-    socket.on('cancellation.reviewed', invalidateRequests)
-    socket.on('cancellation.cancelled', invalidateRequests)
-    socket.on('cancellation.requested', invalidateRequests)
-    socket.on('schedule.updated', invalidateSchedule)
-    socket.on('attendance.updated', invalidateSchedule)
-    socket.on('booking.updated', invalidateSchedule)
-    socket.on('booking.created', invalidateSchedule)
-    socket.on('booking.cancelled', invalidateSchedule)
+    const handleRealtime = (event: Event) => {
+      const customEvent = event as CustomEvent<{ type: string }>;
+      const type = customEvent.detail?.type;
+      if (
+        type === 'cancellation.reviewed' ||
+        type === 'cancellation.cancelled' ||
+        type === 'cancellation.requested'
+      ) {
+        invalidateRequests();
+      } else if (
+        type === 'schedule.updated' ||
+        type === 'attendance.updated' ||
+        type === 'booking.updated' ||
+        type === 'booking.created' ||
+        type === 'booking.cancelled'
+      ) {
+        invalidateSchedule();
+      }
+    };
 
+    window.addEventListener('app:realtime-event', handleRealtime);
     return () => {
-      socket.off('cancellation.reviewed', invalidateRequests)
-      socket.off('cancellation.cancelled', invalidateRequests)
-      socket.off('cancellation.requested', invalidateRequests)
-      socket.off('schedule.updated', invalidateSchedule)
-      socket.off('attendance.updated', invalidateSchedule)
-      socket.off('booking.updated', invalidateSchedule)
-      socket.off('booking.created', invalidateSchedule)
-      socket.off('booking.cancelled', invalidateSchedule)
-      socket.disconnect()
-    }
-  }, [queryClient, user?.id])
-
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+      window.removeEventListener('app:realtime-event', handleRealtime);
+    };
+  }, [queryClient]);
 
   const handleLogout = async () => {
     navigate('/auth/login', { replace: true })
@@ -312,16 +303,6 @@ export const CoachLayout: React.FC = () => {
         </div>
       </aside>
 
-      {/* Main Workspace Area */}
-      <main className="h-full min-h-0 overflow-y-auto p-4 sm:p-6 md:p-8 w-full min-w-0 relative isolate">
-        <div
-          className="inbody-backdrop"
-          style={{ backgroundImage: `url("${gymFacility}")` }}
-        />
-        <div className="relative">
-          <Outlet />
-        </div>
-      </main>
       {/* Main Workspace Area with Header */}
       <div className="h-full min-h-0 flex flex-col min-w-0 overflow-hidden">
         <header className="hidden md:flex items-center justify-between px-6 py-2.5 bg-white border-b border-slate-200/90 shrink-0 z-20">
@@ -335,8 +316,14 @@ export const CoachLayout: React.FC = () => {
           </div>
         </header>
 
-        <main className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-8 w-full min-w-0 bg-[#f8fafc]">
-          <Outlet />
+        <main className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-8 w-full min-w-0 bg-[#f8fafc] relative isolate">
+          <div
+            className="inbody-backdrop"
+            style={{ backgroundImage: `url("${gymFacility}")` }}
+          />
+          <div className="relative">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>
