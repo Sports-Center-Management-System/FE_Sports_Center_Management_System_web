@@ -179,7 +179,7 @@ export const OnBehalfCancellationModal: React.FC<OnBehalfCancellationModalProps>
       <section
         role="dialog"
         aria-modal="true"
-        className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl border border-slate-200"
+        className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-none bg-white p-6 shadow-2xl border-2 border-slate-900"
       >
         {/* Header */}
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">

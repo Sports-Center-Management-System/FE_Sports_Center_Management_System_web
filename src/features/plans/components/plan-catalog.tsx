@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "@/auth/session-context";
 import { StateMessage } from "@/components/feedback/state-message";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { createCheckout } from "@/lib/checkout";
 import { memberKeys } from "@/lib/keys";
 import type { Discipline, Plan } from "@/lib/types";
 import { getPlanImage } from "./plan-images";
+import { formatPlanName, formatTierLabel } from "../lib/plan-formatter";
 import { PlanDetailModal } from "./plan-detail-modal";
 import { PlanCarousel } from "./plan-carousel";
 
@@ -26,6 +27,7 @@ import {
   ChevronRight,
   ChevronLeft,
   LayoutGrid,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -102,9 +104,16 @@ interface PlanCardProps {
   onOpenDetail: (plan: Plan) => void;
   onSelectPlan: (plan: Plan, e?: React.MouseEvent) => void;
   isOrdering: boolean;
+  isCurrentOrdering?: boolean;
 }
 
-const PlanCard: React.FC<PlanCardProps> = ({ plan, onOpenDetail, onSelectPlan, isOrdering }) => {
+const PlanCard: React.FC<PlanCardProps> = ({
+  plan,
+  onOpenDetail,
+  onSelectPlan,
+  isOrdering,
+  isCurrentOrdering = false,
+}) => {
   const isVip = plan.packageTier === "VIP";
   const isPlus = plan.packageTier === "PLUS";
   const planImg = getPlanImage(
@@ -117,7 +126,7 @@ const PlanCard: React.FC<PlanCardProps> = ({ plan, onOpenDetail, onSelectPlan, i
   return (
     <article
       onClick={() => onOpenDetail(plan)}
-      className="group relative flex flex-col justify-between bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-sm hover:shadow-xl hover:border-emerald-500/40 transition-all duration-300 cursor-pointer w-[310px] sm:w-[350px] md:w-[370px] shrink-0 snap-start"
+      className="group relative flex flex-col justify-between bg-white rounded-md overflow-hidden border border-slate-200/90 shadow-2xs hover:shadow-md hover:border-emerald-600/50 transition-all duration-200 cursor-pointer w-[310px] sm:w-[350px] md:w-[370px] shrink-0 snap-start"
     >
       {/* Visual Image Header */}
       <div className="relative h-52 sm:h-56 w-full overflow-hidden bg-slate-950">
@@ -131,14 +140,14 @@ const PlanCard: React.FC<PlanCardProps> = ({ plan, onOpenDetail, onSelectPlan, i
 
         {/* Top Badges */}
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase bg-black/50 text-white backdrop-blur-md border border-white/20">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-bold tracking-wide uppercase bg-black/60 text-white backdrop-blur-md border border-white/20">
             <DisciplineIconComponent nameOrCode={plan.discipline?.name || plan.disciplineId} className="w-3.5 h-3.5 text-emerald-400" />
             {plan.discipline?.name || "Bộ môn"}
           </span>
 
           <span
             className={cn(
-              "px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase border backdrop-blur-md",
+              "px-2.5 py-1 rounded text-[10px] font-black tracking-wider uppercase border backdrop-blur-md",
               isVip
                 ? "bg-amber-500/80 text-white border-amber-400"
                 : isPlus
@@ -146,13 +155,13 @@ const PlanCard: React.FC<PlanCardProps> = ({ plan, onOpenDetail, onSelectPlan, i
                   : "bg-slate-700/80 text-white border-slate-500"
             )}
           >
-            {isVip ? "VIP ĐẶC QUYỀN" : isPlus ? "PLUS TOÀN DIỆN" : plan.packageTier}
+            {formatTierLabel(plan.packageTier)}
           </span>
         </div>
 
         {/* Floating Action: Quick Fullscreen Trigger */}
         <div className="absolute bottom-3 right-3">
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white/20 hover:bg-white/30 text-white backdrop-blur-md border border-white/20 transition-all">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium bg-black/40 hover:bg-black/60 text-white backdrop-blur-md border border-white/20 transition-all">
             <Maximize2 className="w-3 h-3" />
             <span>Xem chi tiết</span>
           </span>
@@ -161,7 +170,7 @@ const PlanCard: React.FC<PlanCardProps> = ({ plan, onOpenDetail, onSelectPlan, i
         {/* Title overlay in image */}
         <div className="absolute bottom-3 left-3 max-w-[70%]">
           <h2 className="text-lg sm:text-xl font-black text-white tracking-tight leading-snug drop-shadow-md">
-            {plan.name}
+            {formatPlanName(plan.name)}
           </h2>
         </div>
       </div>
@@ -192,7 +201,7 @@ const PlanCard: React.FC<PlanCardProps> = ({ plan, onOpenDetail, onSelectPlan, i
         </div>
 
         {/* Quotas Bento Chips */}
-        <div className="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-2xl border border-slate-100">
+        <div className="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-md border border-slate-200/80">
           <div className="text-center">
             <Clock className="w-3.5 h-3.5 mx-auto text-emerald-600 mb-0.5" />
             <span className="text-[10px] text-slate-400 block font-bold uppercase">Hạn dùng</span>
@@ -242,14 +251,24 @@ const PlanCard: React.FC<PlanCardProps> = ({ plan, onOpenDetail, onSelectPlan, i
             disabled={isOrdering}
             onClick={(e) => onSelectPlan(plan, e)}
             className={cn(
-              "w-full h-11 rounded-xl font-bold text-xs tracking-wide flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer",
+              "w-full h-10 rounded-md font-bold text-xs tracking-wide flex items-center justify-center gap-1.5 transition-all shadow-2xs cursor-pointer",
               isVip
                 ? "bg-slate-900 hover:bg-black text-white"
-                : "bg-[#008b74] hover:bg-[#007360] text-white"
+                : "bg-[#008b74] hover:bg-[#007360] text-white",
+              isCurrentOrdering && "opacity-80 cursor-wait"
             )}
           >
-            <span>{isVip ? "Chọn HLV & báo giá" : "Tiếp tục mua gói"}</span>
-            <ChevronRight className="w-3.5 h-3.5" />
+            {isCurrentOrdering ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Đang tạo đơn hàng...</span>
+              </>
+            ) : (
+              <>
+                <span>{isVip ? "Chọn HLV & báo giá" : "Tiếp tục mua gói"}</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -262,6 +281,7 @@ interface DisciplinePlanSectionProps {
   onOpenDetail: (plan: Plan) => void;
   onSelectPlan: (plan: Plan, e?: React.MouseEvent) => void;
   isOrdering: boolean;
+  orderingPlanId?: string | null;
 }
 
 const DisciplinePlanSection: React.FC<DisciplinePlanSectionProps> = ({
@@ -269,6 +289,7 @@ const DisciplinePlanSection: React.FC<DisciplinePlanSectionProps> = ({
   onOpenDetail,
   onSelectPlan,
   isOrdering,
+  orderingPlanId = null,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScroll, setCanScroll] = useState(false);
@@ -316,15 +337,15 @@ const DisciplinePlanSection: React.FC<DisciplinePlanSectionProps> = ({
       {/* Section Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 pb-2 border-b border-slate-200/80">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-[#008b74] flex items-center justify-center shrink-0 shadow-xs">
-            <DisciplineIconComponent nameOrCode={section.name || section.code || section.id} className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[#008b74] flex items-center justify-center shrink-0 shadow-2xs">
+            <DisciplineIconComponent nameOrCode={section.name || section.code || section.id} className="w-4 h-4" />
           </div>
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
-              <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
                 {section.name}
               </h2>
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-slate-100 text-slate-700 border border-slate-200/80">
+              <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200/80">
                 {section.plans.length} gói
               </span>
             </div>
@@ -333,7 +354,7 @@ const DisciplinePlanSection: React.FC<DisciplinePlanSectionProps> = ({
         </div>
 
         {/* Top Header Navigation Arrows */}
-        <div className="flex items-center gap-2 self-end sm:self-auto">
+        <div className="flex items-center gap-1.5 self-end sm:self-auto">
           <button
             type="button"
             onClick={() => handleScroll("left")}
@@ -341,13 +362,13 @@ const DisciplinePlanSection: React.FC<DisciplinePlanSectionProps> = ({
             aria-label={`Xem gói ${section.name} trước`}
             title="Xem gói trước"
             className={cn(
-              "w-9 h-9 sm:w-10 sm:h-10 rounded-full border flex items-center justify-center transition-all duration-200 shadow-xs",
+              "w-8 h-8 rounded-md border flex items-center justify-center transition-all duration-200 shadow-2xs",
               canScroll
                 ? "bg-white border-slate-200 text-slate-700 hover:bg-slate-900 hover:text-white hover:border-slate-900 cursor-pointer active:scale-95"
                 : "bg-slate-50 border-slate-200/60 text-slate-300 cursor-not-allowed"
             )}
           >
-            <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+            <ChevronLeft className="w-4 h-4" />
           </button>
           <button
             type="button"
@@ -356,13 +377,13 @@ const DisciplinePlanSection: React.FC<DisciplinePlanSectionProps> = ({
             aria-label={`Xem gói ${section.name} tiếp theo`}
             title="Xem gói tiếp theo"
             className={cn(
-              "w-9 h-9 sm:w-10 sm:h-10 rounded-full border flex items-center justify-center transition-all duration-200 shadow-xs",
+              "w-8 h-8 rounded-md border flex items-center justify-center transition-all duration-200 shadow-2xs",
               canScroll
                 ? "bg-white border-slate-200 text-slate-700 hover:bg-slate-900 hover:text-white hover:border-slate-900 cursor-pointer active:scale-95"
                 : "bg-slate-50 border-slate-200/60 text-slate-300 cursor-not-allowed"
             )}
           >
-            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -375,16 +396,16 @@ const DisciplinePlanSection: React.FC<DisciplinePlanSectionProps> = ({
             type="button"
             onClick={() => handleScroll("left")}
             aria-label={`Cuộn trái ${section.name}`}
-            className="hidden md:flex absolute -left-4 top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full bg-white/95 backdrop-blur-md shadow-xl border border-slate-200/90 text-slate-800 hover:bg-slate-900 hover:text-white items-center justify-center transition-all duration-200 cursor-pointer active:scale-90"
+            className="hidden md:flex absolute -left-3 top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-md bg-white/95 backdrop-blur-md shadow-md border border-slate-200/90 text-slate-800 hover:bg-slate-900 hover:text-white items-center justify-center transition-all duration-200 cursor-pointer active:scale-95"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <ChevronLeft className="w-4 h-4" />
           </button>
         )}
 
         {/* Horizontally scrollable card track */}
         <div
           ref={scrollRef}
-          className="flex gap-5 sm:gap-6 overflow-x-auto scroll-smooth py-2 px-1 snap-x snap-mandatory items-stretch"
+          className="flex gap-4 sm:gap-5 overflow-x-auto scroll-smooth py-2 px-0.5 snap-x snap-mandatory items-stretch"
           style={{
             scrollbarWidth: "none",
             msOverflowStyle: "none",
@@ -397,6 +418,7 @@ const DisciplinePlanSection: React.FC<DisciplinePlanSectionProps> = ({
               onOpenDetail={onOpenDetail}
               onSelectPlan={onSelectPlan}
               isOrdering={isOrdering}
+              isCurrentOrdering={orderingPlanId === plan.id}
             />
           ))}
         </div>
@@ -407,9 +429,9 @@ const DisciplinePlanSection: React.FC<DisciplinePlanSectionProps> = ({
             type="button"
             onClick={() => handleScroll("right")}
             aria-label={`Cuộn phải ${section.name}`}
-            className="hidden md:flex absolute -right-4 top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full bg-white/95 backdrop-blur-md shadow-xl border border-slate-200/90 text-slate-800 hover:bg-slate-900 hover:text-white items-center justify-center transition-all duration-200 cursor-pointer active:scale-90"
+            className="hidden md:flex absolute -right-3 top-1/2 -translate-y-1/2 z-30 w-9 h-9 rounded-md bg-white/95 backdrop-blur-md shadow-md border border-slate-200/90 text-slate-800 hover:bg-slate-900 hover:text-white items-center justify-center transition-all duration-200 cursor-pointer active:scale-95"
           >
-            <ChevronRight className="w-5 h-5" />
+            <ChevronRight className="w-4 h-4" />
           </button>
         )}
       </div>
@@ -459,11 +481,23 @@ export const PlanCatalog: React.FC<PlanCatalogProps> = () => {
     });
   }, [rawPlans.data]);
 
+  const cache = useQueryClient();
+  const [orderingPlanId, setOrderingPlanId] = useState<string | null>(null);
+
   const order = useMutation({
     mutationFn: (plan: Plan) =>
       createCheckout(user!.id, { kind: "NEW_SUBSCRIPTION", planId: plan.id }),
-    onSuccess: (value) => navigate(`/portal/member/checkouts/${value.checkoutId}`),
+    onMutate: (plan) => {
+      setOrderingPlanId(plan.id);
+    },
+    onSuccess: (value) => {
+      cache.setQueryData(memberKeys.checkout(user!.id, value.checkoutId), value);
+      navigate(`/portal/member/checkouts/${value.checkoutId}`);
+    },
     onError: (error) => setActionError(errorText(error)),
+    onSettled: () => {
+      setOrderingPlanId(null);
+    },
   });
 
   function choose(plan: Plan, e?: React.MouseEvent) {
@@ -565,7 +599,7 @@ export const PlanCatalog: React.FC<PlanCatalogProps> = () => {
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 pb-16">
-      {/* FEATURED PLANS AUTO-SLIDING CAROUSEL */}
+      {/* FEATURED PLANS AUTO-SLIDING CAROUSEL (outside white box) */}
       {filteredPlans.length > 0 && (
         <section className="space-y-3">
           <PlanCarousel
@@ -577,118 +611,122 @@ export const PlanCatalog: React.FC<PlanCatalogProps> = () => {
         </section>
       )}
 
-      {/* FILTER & DISCIPLINE TABS CONTROLS */}
-      <section className="space-y-4">
-        {/* Discipline Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          <button
-            type="button"
-            onClick={() => setDisciplineId("")}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all duration-200 cursor-pointer whitespace-nowrap border",
-              !disciplineId
-                ? "bg-slate-900 text-white border-slate-900 shadow-md scale-[1.02]"
-                : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-900"
-            )}
-          >
-            <LayoutGrid className="w-3.5 h-3.5" />
-            <span>Tất cả bộ môn</span>
-          </button>
+      {/* WHITE CARD WRAPPER FOR LOWER CATALOG CONTENT */}
+      <div className="bg-white rounded-lg border border-slate-200/90 shadow-sm p-4 sm:p-6 md:p-8 space-y-8">
+        {/* FILTER & DISCIPLINE TABS CONTROLS */}
+        <section className="space-y-3">
+          {/* Discipline Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            <button
+              type="button"
+              onClick={() => setDisciplineId("")}
+              className={cn(
+                "flex items-center gap-2 px-3.5 py-2 rounded-md text-xs font-bold transition-all duration-150 cursor-pointer whitespace-nowrap border",
+                !disciplineId
+                  ? "bg-slate-900 text-white border-slate-900 shadow-2xs"
+                  : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:text-slate-900"
+              )}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Tất cả bộ môn</span>
+            </button>
 
-          {tabDisciplines.map((item) => {
-            const isActive = disciplineId === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setDisciplineId(item.id)}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all duration-200 cursor-pointer whitespace-nowrap border",
-                  isActive
-                    ? "bg-slate-900 text-white border-slate-900 shadow-md scale-[1.02]"
-                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-900"
-                )}
-              >
-                <DisciplineIconComponent
-                  nameOrCode={item.name || item.code || item.id}
-                  className={cn("w-3.5 h-3.5", isActive ? "text-emerald-400" : "text-slate-400")}
-                />
-                <span>{item.name}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Tier Selector Chips */}
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200/80 shadow-xs">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-bold text-slate-500 pl-2">Phân hạng:</span>
-            {[
-              { id: "", label: "Tất cả hạng" },
-              { id: "PLUS", label: "Gói Plus (Hội viên)" },
-              { id: "VIP", label: "Gói VIP (Kèm 1:1 HLV)" },
-              { id: "DROP_IN", label: "Gói Drop-in (Theo buổi)" },
-            ].map((t) => {
-              const active = tier === t.id;
+            {tabDisciplines.map((item) => {
+              const isActive = disciplineId === item.id;
               return (
                 <button
-                  key={t.id}
+                  key={item.id}
                   type="button"
-                  onClick={() => setTier(t.id)}
+                  onClick={() => setDisciplineId(item.id)}
                   className={cn(
-                    "px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer",
-                    active
-                      ? "bg-emerald-50 text-[#008b74] ring-1 ring-emerald-500/30 font-extrabold"
-                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                    "flex items-center gap-2 px-3.5 py-2 rounded-md text-xs font-bold transition-all duration-150 cursor-pointer whitespace-nowrap border",
+                    isActive
+                      ? "bg-slate-900 text-white border-slate-900 shadow-2xs"
+                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:text-slate-900"
                   )}
                 >
-                  {t.label}
+                  <DisciplineIconComponent
+                    nameOrCode={item.name || item.code || item.id}
+                    className={cn("w-3.5 h-3.5", isActive ? "text-emerald-400" : "text-slate-500")}
+                  />
+                  <span>{item.name}</span>
                 </button>
               );
             })}
           </div>
 
-          <div className="text-xs text-slate-500 font-medium pr-2">
-            Hiển thị: <strong>{filteredPlans.length}</strong> gói đang kích hoạt
+          {/* Tier Selector Chips */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50/80 p-2.5 rounded-md border border-slate-200/80 shadow-2xs">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs font-bold text-slate-500 pl-1.5">Phân hạng:</span>
+              {[
+                { id: "", label: "Tất cả hạng" },
+                { id: "PLUS", label: "Gói Plus" },
+                { id: "VIP", label: "Gói VIP (HLV 1:1)" },
+                { id: "DROP_IN", label: "Vé theo buổi" },
+              ].map((t) => {
+                const active = tier === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setTier(t.id)}
+                    className={cn(
+                      "px-2.5 py-1 rounded text-xs transition-all cursor-pointer font-semibold",
+                      active
+                        ? "bg-emerald-50 text-[#008b74] border border-emerald-300 font-bold"
+                        : "text-slate-600 hover:bg-slate-200/70 hover:text-slate-900"
+                    )}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="text-xs text-slate-500 font-medium pr-1.5">
+              Hiển thị: <strong>{filteredPlans.length}</strong> gói đang kích hoạt
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* STATE MESSAGES */}
-      <StateMessage
-        loading={rawPlans.isPending}
-        error={rawPlans.error}
-        onRetry={() => void rawPlans.refetch()}
-        empty={!rawPlans.isPending && filteredPlans.length === 0}
-      />
+        {/* STATE MESSAGES */}
+        <StateMessage
+          loading={rawPlans.isPending}
+          error={rawPlans.error}
+          onRetry={() => void rawPlans.refetch()}
+          empty={!rawPlans.isPending && filteredPlans.length === 0}
+        />
 
-      {actionError && (
-        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center justify-between">
-          <span>{actionError}</span>
-          <button
-            type="button"
-            onClick={() => setActionError("")}
-            className="text-rose-600 hover:text-rose-900 font-bold"
-          >
-            Đóng
-          </button>
-        </div>
-      )}
+        {actionError && (
+          <div className="p-3.5 rounded-md bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center justify-between">
+            <span>{actionError}</span>
+            <button
+              type="button"
+              onClick={() => setActionError("")}
+              className="text-rose-600 hover:text-rose-900 font-bold ml-2"
+            >
+              Đóng
+            </button>
+          </div>
+        )}
 
-      {/* DISCIPLINE SECTIONS (DIVIDED FROM TOP TO BOTTOM WITH HORIZONTAL SCROLL ROWS) */}
-      {disciplineSections.length > 0 && (
-        <div className="space-y-10">
-          {disciplineSections.map((section) => (
-            <DisciplinePlanSection
-              key={section.id}
-              section={section}
-              onOpenDetail={setSelectedPlanForModal}
-              onSelectPlan={choose}
-              isOrdering={order.isPending}
-            />
-          ))}
-        </div>
-      )}
+        {/* DISCIPLINE SECTIONS (DIVIDED FROM TOP TO BOTTOM WITH HORIZONTAL SCROLL ROWS) */}
+        {disciplineSections.length > 0 && (
+          <div className="space-y-10">
+            {disciplineSections.map((section) => (
+              <DisciplinePlanSection
+                key={section.id}
+                section={section}
+                onOpenDetail={setSelectedPlanForModal}
+                onSelectPlan={choose}
+                isOrdering={order.isPending}
+                orderingPlanId={orderingPlanId}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* FULL-SCREEN IMMERSIVE PLAN DETAIL MODAL */}
       <PlanDetailModal

@@ -140,7 +140,7 @@ export const CancellationModal: React.FC<CancellationModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby="cancellation-title"
-        className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-lg bg-white p-5 shadow-2xl sm:p-6"
+        className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-none bg-white p-5 shadow-2xl sm:p-6 border-2 border-slate-900"
       >
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">

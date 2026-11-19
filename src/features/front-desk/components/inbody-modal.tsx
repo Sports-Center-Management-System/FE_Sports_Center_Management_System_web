@@ -33,38 +33,21 @@ export const InbodyModal: React.FC<{
     setBusy(value);
   };
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#142923]/60 p-4"
-      role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !busyRef.current) onClose();
-      }}
-    >
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="inbody-dialog-title"
-        className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-md bg-white p-5 shadow-2xl sm:p-6"
-      >
-        <div className="mb-5 flex items-start justify-between gap-3 border-b border-[#e3eee7] pb-4">
-          <div>
-            <h2 id="inbody-dialog-title" className="text-lg font-semibold text-[#172b28]">
-              {log ? "Chỉnh sửa phiếu InBody" : "Nhập chỉ số InBody"}
-            </h2>
-            <p className="mt-1 text-sm text-[#61756f]">{memberName}</p>
-          </div>
-          <button
-            ref={closeRef}
-            type="button"
-            disabled={busy}
-            onClick={onClose}
-            title="Đóng"
-            aria-label="Đóng"
-            className="rounded p-1 text-[#61756f] hover:bg-[#edf5f0] disabled:opacity-50"
-          >
-            <X className="h-5 w-5" />
-          </button>
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#142923]/60 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busyRef.current) onClose(); }}>
+    <section role="dialog" aria-modal="true" aria-labelledby="inbody-dialog-title" className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-none bg-white p-5 shadow-2xl sm:p-6 border-2 border-slate-900">
+      <div className="flex items-start justify-between gap-3 border-b border-[#e3eee7] pb-4">
+        <div><h2 id="inbody-dialog-title" className="text-lg font-semibold text-[#172b28]">{log ? "Chỉnh sửa phiếu InBody" : "Nhập chỉ số InBody"}</h2><p className="mt-1 text-sm text-[#61756f]">{memberName}</p></div>
+        <button ref={closeRef} type="button" disabled={busy} onClick={onClose} title="Đóng" aria-label="Đóng" className="rounded p-1 text-[#61756f] hover:bg-[#edf5f0] disabled:opacity-50"><X className="h-5 w-5" /></button>
+      </div>
+      <form onSubmit={(event) => void submit(event)} className="mt-5 space-y-5 text-sm">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {fields.map((field) => <label key={field.key} className="block font-medium text-[#293f37]">
+            {field.label}{(field.key === "heightCm" || field.key === "weightKg") && <span className="text-[#b34031]"> *</span>}
+            <div className="relative mt-1.5"><input type="number" inputMode="decimal" step={field.integer ? "1" : "0.01"} min={field.min} max={field.max} value={form[field.key]}
+              onChange={(event) => { setForm((current) => ({ ...current, [field.key]: event.target.value })); setError(null); }}
+              className="h-10 w-full rounded-md border border-[#cbded4] bg-white px-3 pr-12 outline-none focus:border-[#008b74] focus:ring-2 focus:ring-[#008b74]/15" />
+              {field.unit && <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#71867b]">{field.unit}</span>}</div>
+          </label>)}
         </div>
         <InbodyEntryForm
           source={log}

@@ -48,6 +48,7 @@ export function ManagerPenaltiesPage() {
   const staff = useQuery({ queryKey: managerKeys.staff, queryFn: managerApi.staff })
   const schedules = useQuery({ queryKey: managerKeys.schedules, queryFn: managerApi.schedules })
   const [rejecting, setRejecting] = useState<CancellationRequest | null>(null)
+  const [detailItem, setDetailItem] = useState<CancellationRequest | null>(null)
   const [reviewing, setReviewing] = useState<CoachPenalty | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -58,9 +59,9 @@ export function ManagerPenaltiesPage() {
   const history = all.filter((item) => item.status !== 'PENDING')
   const penaltyRows = penalties.data ?? []
   const openPenalties = penaltyRows.filter((p) => !p.isReviewedByManager).length
-  const pendingPage = usePagination(pending, 15)
-  const historyPage = usePagination(history, 15)
-  const penaltyPage = usePagination(penaltyRows, 15)
+  const pendingPage = usePagination(pending, 10)
+  const historyPage = usePagination(history, 10)
+  const penaltyPage = usePagination(penaltyRows, 10)
 
   const refreshRequests = () => {
     void queryClient.invalidateQueries({ queryKey: managerKeys.cancellations })
@@ -109,7 +110,7 @@ export function ManagerPenaltiesPage() {
     ) : null
 
   return (
-    <>
+    <div className="rounded-md bg-white border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-6">
       <PageHeader
         title="Duyệt hủy ca & kỷ luật"
         description="Duyệt đơn hủy ca khẩn cấp của HLV và chốt quyết định kỷ luật."
@@ -138,7 +139,7 @@ export function ManagerPenaltiesPage() {
                     <Th>Buổi bị hủy</Th>
                     <Th>Lý do</Th>
                     <Th>Gửi lúc</Th>
-                    <Th className="text-right">Quyết định</Th>
+                    <Th className="text-right">Quyết định & Chi tiết</Th>
                   </tr>
                 </thead>
                 <tbody>
@@ -172,15 +173,9 @@ export function ManagerPenaltiesPage() {
                             size="sm"
                             tone="ghost"
                             className="ml-1.5"
-                            disabled={withdraw.isPending}
-                            title="Hủy đơn mà không duyệt hay từ chối, ví dụ khi HLV gửi nhầm"
-                            onClick={() =>
-                              window.confirm(
-                                'Hủy đơn này? Buổi tập vẫn giữ nguyên như chưa có đơn.',
-                              ) && withdraw.mutate(item.id)
-                            }
+                            onClick={() => setDetailItem(item)}
                           >
-                            Hủy đơn
+                            Xem chi tiết đơn
                           </Btn>
                         </Td>
                       </tr>
@@ -206,11 +201,12 @@ export function ManagerPenaltiesPage() {
                     <Th>Lý do</Th>
                     <Th>Kết quả</Th>
                     <Th>Xử lý lúc</Th>
+                    <Th className="text-right">Chi tiết</Th>
                   </tr>
                 </thead>
                 <tbody>
                   {history.length === 0 ? (
-                    <EmptyRow colSpan={5}>Chưa có đơn đã xử lý.</EmptyRow>
+                    <EmptyRow colSpan={6}>Chưa có đơn đã xử lý.</EmptyRow>
                   ) : (
                     historyPage.items.map((item) => (
                       <tr key={item.id}>
@@ -234,6 +230,15 @@ export function ManagerPenaltiesPage() {
                         </Td>
                         <Td className="whitespace-nowrap">
                           {formatDateTime(item.reviewedAt ?? item.createdAt)}
+                        </Td>
+                        <Td className="whitespace-nowrap text-right">
+                          <Btn
+                            size="sm"
+                            tone="ghost"
+                            onClick={() => setDetailItem(item)}
+                          >
+                            Xem chi tiết
+                          </Btn>
                         </Td>
                       </tr>
                     ))
@@ -311,6 +316,36 @@ export function ManagerPenaltiesPage() {
         </Panel>
       ) : null}
 
+      {detailItem ? (
+        <CancellationDetailModal
+          request={detailItem}
+          coachName={coachName(detailItem.coachId)}
+          targetName={target(detailItem)}
+          onClose={() => setDetailItem(null)}
+          onApprove={() => {
+            approve.mutate(detailItem.id)
+            setDetailItem(null)
+          }}
+          onReject={() => {
+            const req = detailItem
+            setDetailItem(null)
+            setRejecting(req)
+          }}
+          onWithdraw={() => {
+            if (
+              window.confirm(
+                'Hủy đơn này? Buổi tập vẫn giữ nguyên như chưa có đơn.',
+              )
+            ) {
+              withdraw.mutate(detailItem.id)
+              setDetailItem(null)
+            }
+          }}
+          isApproving={approve.isPending}
+          isWithdrawing={withdraw.isPending}
+        />
+      ) : null}
+
       {rejecting ? (
         <RejectForm
           request={rejecting}
@@ -333,7 +368,124 @@ export function ManagerPenaltiesPage() {
           }}
         />
       ) : null}
-    </>
+    </div>
+  )
+}
+
+function CancellationDetailModal({
+  request,
+  coachName,
+  targetName,
+  onClose,
+  onApprove,
+  onReject,
+  onWithdraw,
+  isApproving,
+  isWithdrawing,
+}: {
+  request: CancellationRequest
+  coachName: string
+  targetName: string
+  onClose: () => void
+  onApprove?: () => void
+  onReject?: () => void
+  onWithdraw?: () => void
+  isApproving?: boolean
+  isWithdrawing?: boolean
+}) {
+  const isPending = request.status === 'PENDING'
+
+  return (
+    <Modal
+      title="Chi tiết đơn hủy ca khẩn cấp"
+      onClose={onClose}
+      footer={
+        <div className="flex flex-wrap items-center justify-between w-full gap-2">
+          <div>
+            {isPending && onWithdraw && (
+              <Btn
+                size="sm"
+                tone="ghost"
+                disabled={isWithdrawing}
+                onClick={onWithdraw}
+                title="Hủy đơn mà không duyệt hay từ chối"
+              >
+                {isWithdrawing ? 'Đang hủy đơn…' : 'Hủy đơn này'}
+              </Btn>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Btn size="sm" onClick={onClose}>
+              Đóng
+            </Btn>
+            {isPending && onReject && (
+              <Btn size="sm" tone="danger" onClick={onReject}>
+                Từ chối
+              </Btn>
+            )}
+            {isPending && onApprove && (
+              <Btn size="sm" tone="primary" disabled={isApproving} onClick={onApprove}>
+                {isApproving ? 'Đang duyệt…' : 'Duyệt đơn'}
+              </Btn>
+            )}
+          </div>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        {/* Header Summary */}
+        <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-md space-y-2 text-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-slate-500 font-medium">Huấn luyện viên:</span>
+            <strong className="text-slate-900 text-sm font-semibold">{coachName}</strong>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-slate-500 font-medium">Buổi tập bị hủy:</span>
+            <span className="text-slate-800 font-medium">{targetName}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-slate-500 font-medium">Thời gian gửi đơn:</span>
+            <span className="text-slate-700 font-mono">{formatDateTime(request.createdAt)}</span>
+          </div>
+          <div className="flex items-center justify-between pt-1 border-t border-slate-200">
+            <span className="text-slate-500 font-medium">Trạng thái:</span>
+            <Pill tone={statusTone[request.status]}>
+              {cancellationStatusLabel[request.status]}
+            </Pill>
+          </div>
+        </div>
+
+        {/* Reason Message */}
+        <div className="space-y-1.5">
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+            Mô tả lý do hủy ca của HLV
+          </label>
+          <div className="p-4 rounded-md border border-slate-200 bg-white text-sm text-slate-800 whitespace-pre-line leading-relaxed shadow-2xs">
+            {request.reasonMessage || 'Không có mô tả chi tiết.'}
+          </div>
+        </div>
+
+        {/* If Rejected */}
+        {request.rejectionReason && (
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold uppercase tracking-wider text-rose-600">
+              Lý do từ chối của Quản lý
+            </label>
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-md text-xs text-rose-900 whitespace-pre-line">
+              {request.rejectionReason}
+            </div>
+          </div>
+        )}
+
+        {/* Review time */}
+        {request.reviewedAt && (
+          <p className="text-xs text-slate-400">
+            Đã xử lý lúc {formatDateTime(request.reviewedAt)}
+            {request.isFrontdeskOverride ? ' (do Lễ tân xử lý)' : ''}
+          </p>
+        )}
+      </div>
+    </Modal>
   )
 }
 

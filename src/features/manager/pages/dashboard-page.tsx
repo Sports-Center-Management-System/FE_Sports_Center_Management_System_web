@@ -1,6 +1,16 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
+import {
+  DollarSign,
+  UserPlus,
+  DoorOpen,
+  ClipboardList,
+  TrendingUp,
+  Award,
+  Calendar,
+  ChevronRight,
+} from 'lucide-react'
 import { money } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { managerApi, managerKeys } from '../api/manager-api'
@@ -18,7 +28,6 @@ import {
   EmptyRow,
   PageHeader,
   Panel,
-  Stat,
   StateMessage,
   Table,
   Td,
@@ -41,7 +50,6 @@ function split(invoice: Invoice) {
 function dailyRevenue(invoices: Invoice[], days: number): DayRevenue[] {
   const today = vnDay()
   const paid = invoices.filter((i) => i.status === 'PAID')
-  // Once the API hits its cap, anything older than the oldest returned invoice may be missing.
   const oldest =
     invoices.length >= INVOICE_CAP ? vnDay(invoices[invoices.length - 1].createdAt) : null
   const rows = new Map<string, DayRevenue>()
@@ -72,22 +80,28 @@ function RevenueTrend() {
   const partial = data.some((d) => !d.complete)
 
   return (
-    <Panel className="mb-6">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-4 py-3">
+    <div className="rounded-md border border-slate-200/90 bg-white p-5 shadow-2xs">
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 pb-4 mb-4">
         <div>
-          <h2 className="text-sm font-semibold text-slate-900">Doanh thu theo ngày</h2>
-          <p className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-50 text-[#008b74]">
+              <TrendingUp className="h-4 w-4" />
+            </span>
+            <h2 className="text-base font-bold text-slate-900">Doanh thu theo ngày</h2>
+          </div>
+          <p className="mt-2 text-2xl sm:text-3xl font-extrabold tabular-nums text-slate-900 font-mono">
             {money(base + pt)}
           </p>
-          <p className="text-xs text-slate-500">
-            {range} ngày gần nhất, {count} hóa đơn. Gói cơ bản {money(base)}, PT {money(pt)}.
+          <p className="text-xs text-slate-500 mt-0.5">
+            {range} ngày gần nhất, tổng cộng {count} hóa đơn (Hội viên: {money(base)} · PT: {money(pt)}).
           </p>
         </div>
+
         <div className="flex flex-wrap items-center gap-2">
           <div
             role="group"
             aria-label="Khoảng thời gian"
-            className="flex rounded-md border border-slate-200 p-0.5"
+            className="flex rounded-md border border-slate-200 p-0.5 bg-slate-50"
           >
             {RANGES.map((r) => (
               <button
@@ -96,9 +110,9 @@ function RevenueTrend() {
                 aria-pressed={range === r}
                 onClick={() => setRange(r)}
                 className={cn(
-                  'rounded px-2.5 py-1 text-sm',
+                  'rounded px-3 py-1 text-xs font-semibold transition-all cursor-pointer',
                   range === r
-                    ? 'bg-emerald-50 font-medium text-[#007461]'
+                    ? 'bg-white text-[#008b74] shadow-xs'
                     : 'text-slate-600 hover:text-slate-900',
                 )}
               >
@@ -109,9 +123,9 @@ function RevenueTrend() {
           <button
             type="button"
             onClick={() => setAsTable((v) => !v)}
-            className="rounded-md px-2.5 py-1 text-sm text-slate-600 hover:bg-slate-100"
+            className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer"
           >
-            {asTable ? 'Xem biểu đồ' : 'Xem dạng bảng'}
+            {asTable ? 'Xem biểu đồ trực quan' : 'Xem dạng bảng'}
           </button>
         </div>
       </div>
@@ -137,7 +151,7 @@ function RevenueTrend() {
             <tbody>
               {[...data].reverse().map((d) => (
                 <tr key={d.day}>
-                  <Td className="whitespace-nowrap">
+                  <Td className="whitespace-nowrap font-medium">
                     {formatDay(d.day)}
                     {d.complete ? null : (
                       <span className="ml-1 text-xs text-amber-700">(có thể thiếu)</span>
@@ -145,7 +159,9 @@ function RevenueTrend() {
                   </Td>
                   <Td className="text-right tabular-nums">{money(d.base)}</Td>
                   <Td className="text-right tabular-nums">{money(d.pt)}</Td>
-                  <Td className="text-right font-medium tabular-nums">{money(d.base + d.pt)}</Td>
+                  <Td className="text-right font-bold tabular-nums text-emerald-700">
+                    {money(d.base + d.pt)}
+                  </Td>
                   <Td className="text-right tabular-nums">{d.invoices}</Td>
                 </tr>
               ))}
@@ -153,17 +169,18 @@ function RevenueTrend() {
           </Table>
         </div>
       ) : (
-        <div className="px-4 pt-3">
+        <div className="pt-2">
           <RevenueChart data={data} />
         </div>
       )}
-      <p className="border-t border-slate-100 px-4 py-2 text-xs text-slate-400">
-        Tính từ hóa đơn đã thanh toán, theo giờ Việt Nam.
+
+      <p className="border-t border-slate-100 pt-3 mt-3 text-xs text-slate-400">
+        Tính từ hóa đơn đã thanh toán thành công theo giờ Việt Nam.
         {partial && firstComplete
-          ? ` Hệ thống chỉ trả ${INVOICE_CAP} hóa đơn gần nhất nên số liệu đầy đủ từ ${formatDay(firstComplete)}.`
+          ? ` Hệ thống hiển thị tối đa ${INVOICE_CAP} hóa đơn gần nhất.`
           : ''}
       </p>
-    </Panel>
+    </div>
   )
 }
 
@@ -192,40 +209,102 @@ export function ManagerDashboardPage() {
       : (disciplines.data?.find((d) => d.code.toUpperCase() === code.toUpperCase())?.name ?? code)
 
   return (
-    <>
+    <div className="rounded-md bg-white border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-6">
       <PageHeader
-        title="Tổng quan"
-        description={s ? `Số liệu ngày ${formatDay(s.date)}` : 'Số liệu trong ngày'}
+        title="Tổng quan Trung tâm"
+        description={s ? `Số liệu vận hành ngày ${formatDay(s.date)}` : 'Số liệu hoạt động trong ngày'}
       />
 
       {summary.isError ? (
-        <Panel className="mb-6">
+        <Panel className="mb-4">
           <StateMessage
             error={errorMessage(summary.error)}
             onRetry={() => void summary.refetch()}
           />
         </Panel>
       ) : (
-        <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
-          <Stat label="Doanh thu hôm nay" value={s ? money(s.dailyRevenue) : '…'} />
-          <Stat label="Hội viên mới" value={s?.newMembers ?? '…'} />
-          <Stat label="Lượt vào cổng" value={s?.gateEntries ?? '…'} />
-          <Stat label="Lấp đầy lớp hôm nay" value={s ? percent(s.occupancyRate) : '…'} />
-          <Stat label="Đơn hủy ca chờ duyệt" value={s?.pendingCancellations ?? '…'} />
+        <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-4">
+          {/* Card 1: Doanh thu */}
+          <div className="rounded-md border border-slate-200/90 bg-slate-50/70 p-4 transition-all hover:border-slate-300 hover:shadow-2xs">
+            <div className="flex items-center justify-between text-slate-500">
+              <span className="text-xs font-bold uppercase tracking-wider">Doanh thu hôm nay</span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-100/70 text-[#008b74]">
+                <DollarSign className="h-4 w-4" />
+              </span>
+            </div>
+            <p className="mt-2 text-2xl font-black tabular-nums text-slate-900 font-mono">
+              {s ? money(s.dailyRevenue) : '…'}
+            </p>
+            <p className="text-[11px] text-slate-500 mt-1">Đã chốt thanh toán</p>
+          </div>
+
+          {/* Card 2: Hội viên mới */}
+          <div className="rounded-md border border-slate-200/90 bg-slate-50/70 p-4 transition-all hover:border-slate-300 hover:shadow-2xs">
+            <div className="flex items-center justify-between text-slate-500">
+              <span className="text-xs font-bold uppercase tracking-wider">Hội viên mới</span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-md bg-sky-100/70 text-sky-700">
+                <UserPlus className="h-4 w-4" />
+              </span>
+            </div>
+            <p className="mt-2 text-2xl font-black tabular-nums text-slate-900 font-mono">
+              {s?.newMembers ?? '…'}
+            </p>
+            <p className="text-[11px] text-slate-500 mt-1">Đăng ký trong ngày</p>
+          </div>
+
+          {/* Card 3: Lượt vào cổng */}
+          <div className="rounded-md border border-slate-200/90 bg-slate-50/70 p-4 transition-all hover:border-slate-300 hover:shadow-2xs">
+            <div className="flex items-center justify-between text-slate-500">
+              <span className="text-xs font-bold uppercase tracking-wider">Lượt vào cổng</span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-md bg-violet-100/70 text-violet-700">
+                <DoorOpen className="h-4 w-4" />
+              </span>
+            </div>
+            <p className="mt-2 text-2xl font-black tabular-nums text-slate-900 font-mono">
+              {s?.gateEntries ?? '…'}
+            </p>
+            <p className="text-[11px] text-slate-500 mt-1">Check-in tự động & quầy</p>
+          </div>
+
+          {/* Card 4: Đơn hủy ca */}
+          <div className="rounded-md border border-slate-200/90 bg-slate-50/70 p-4 transition-all hover:border-slate-300 hover:shadow-2xs">
+            <div className="flex items-center justify-between text-slate-500">
+              <span className="text-xs font-bold uppercase tracking-wider">Hủy ca chờ duyệt</span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-md bg-amber-100/70 text-amber-700">
+                <ClipboardList className="h-4 w-4" />
+              </span>
+            </div>
+            <p className="mt-2 text-2xl font-black tabular-nums text-slate-900 font-mono">
+              {s?.pendingCancellations ?? '…'}
+            </p>
+            <p className="text-[11px] text-amber-700 font-semibold mt-1">
+              {(s?.pendingCancellations ?? 0) > 0 ? 'Cần xử lý phê duyệt' : 'Đã duyệt hết'}
+            </p>
+          </div>
         </div>
       )}
 
+      {/* Revenue Trend Chart */}
       <RevenueTrend />
 
+      {/* Bottom 2 Columns: Pending Requests & Discipline Revenue */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <Panel
-          title="Đơn hủy ca chờ duyệt"
-          actions={
-            <Link to="/portal/manager/penalties" className="text-sm text-[#007461] hover:underline">
-              Xem tất cả
+        {/* Pending Requests Table */}
+        <div className="rounded-md border border-slate-200/90 bg-white p-5 shadow-2xs space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-[#008b74]" />
+              <h2 className="text-sm font-bold text-slate-900">Đơn hủy ca chờ duyệt gần đây</h2>
+            </div>
+            <Link
+              to="/portal/manager/penalties"
+              className="inline-flex items-center gap-1 text-xs font-bold text-[#008b74] hover:text-[#007461]"
+            >
+              Xem tất cả ({pending.length})
+              <ChevronRight className="h-3.5 w-3.5" />
             </Link>
-          }
-        >
+          </div>
+
           {requests.isLoading || requests.isError ? (
             <StateMessage
               loading={requests.isLoading}
@@ -244,32 +323,42 @@ export function ManagerDashboardPage() {
               </thead>
               <tbody>
                 {pending.length === 0 ? (
-                  <EmptyRow colSpan={4}>Không có đơn nào đang chờ.</EmptyRow>
+                  <EmptyRow colSpan={4}>Không có đơn hủy ca nào đang chờ duyệt.</EmptyRow>
                 ) : (
-                  pending.slice(0, 6).map((item) => (
+                  pending.slice(0, 5).map((item) => (
                     <tr key={item.id}>
-                      <Td className="font-medium text-slate-900">
+                      <Td className="font-semibold text-slate-900">
                         {coachName.get(item.coachId) ?? 'HLV'}
                       </Td>
                       <Td>{item.targetType === 'GROUP_CLASS' ? 'Lớp nhóm' : 'PT 1-1'}</Td>
-                      <Td className="max-w-[260px] truncate">{item.reasonMessage}</Td>
-                      <Td className="whitespace-nowrap">{formatDateTime(item.createdAt)}</Td>
+                      <Td className="max-w-[240px] truncate">{item.reasonMessage}</Td>
+                      <Td className="whitespace-nowrap text-slate-500">
+                        {formatDateTime(item.createdAt)}
+                      </Td>
                     </tr>
                   ))
                 )}
               </tbody>
             </Table>
           )}
-        </Panel>
+        </div>
 
-        <Panel
-          title="Doanh thu theo môn"
-          actions={
-            <Link to="/portal/manager/reports" className="text-sm text-[#007461] hover:underline">
-              Báo cáo
+        {/* Revenue by Discipline */}
+        <div className="rounded-md border border-slate-200/90 bg-white p-5 shadow-2xs space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-2">
+              <Award className="h-4 w-4 text-[#008b74]" />
+              <h2 className="text-sm font-bold text-slate-900">Doanh thu theo bộ môn</h2>
+            </div>
+            <Link
+              to="/portal/manager/reports"
+              className="inline-flex items-center gap-1 text-xs font-bold text-[#008b74] hover:text-[#007461]"
+            >
+              Báo cáo chi tiết
+              <ChevronRight className="h-3.5 w-3.5" />
             </Link>
-          }
-        >
+          </div>
+
           {revenue.isLoading || revenue.isError ? (
             <StateMessage
               loading={revenue.isLoading}
@@ -277,31 +366,36 @@ export function ManagerDashboardPage() {
               onRetry={() => void revenue.refetch()}
             />
           ) : r ? (
-            <div className="p-4">
-              <p className="text-xs text-slate-500">Cộng dồn từ trước tới nay</p>
-              <p className="text-2xl font-semibold tabular-nums text-slate-900">
-                {money(r.totalRevenue)}
-              </p>
+            <div>
+              <div className="mb-4">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                  Tổng doanh thu lũy kế:
+                </span>
+                <span className="text-2xl font-black text-slate-900 font-mono">
+                  {money(r.totalRevenue)}
+                </span>
+              </div>
+
               {byDiscipline.length === 0 ? (
-                <p className="mt-4 text-sm text-slate-400">Chưa có hóa đơn đã thanh toán.</p>
+                <p className="text-sm text-slate-400 py-4 text-center">Chưa có giao dịch theo môn.</p>
               ) : (
-                <ul className="mt-4 space-y-3">
+                <ul className="space-y-3.5">
                   {byDiscipline.map(([code, amount]) => (
-                    <li key={code}>
-                      <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
-                        <span className="text-slate-700">{disciplineName(code)}</span>
-                        <span className="tabular-nums text-slate-900">
-                          {money(amount)}
-                          <span className="ml-1.5 text-xs text-slate-400">
+                    <li key={code} className="space-y-1">
+                      <div className="flex items-baseline justify-between text-xs">
+                        <span className="font-semibold text-slate-800">{disciplineName(code)}</span>
+                        <div className="flex items-baseline gap-2">
+                          <span className="font-mono font-bold text-slate-900">{money(amount)}</span>
+                          <span className="text-[10px] text-slate-400 font-medium">
                             {r.totalRevenue ? percent(amount / r.totalRevenue) : '0%'}
                           </span>
-                        </span>
+                        </div>
                       </div>
-                      <div className="h-2 rounded-sm bg-slate-100">
+                      <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
                         <div
-                          className="h-2 rounded-sm bg-[#008b74]"
+                          className="h-full rounded-full bg-[#008b74] transition-all duration-300"
                           style={{
-                            width: `${topDiscipline ? Math.max(2, (amount / topDiscipline) * 100) : 0}%`,
+                            width: `${topDiscipline ? Math.max(3, (amount / topDiscipline) * 100) : 0}%`,
                           }}
                         />
                       </div>
@@ -311,8 +405,10 @@ export function ManagerDashboardPage() {
               )}
             </div>
           ) : null}
-        </Panel>
+        </div>
       </div>
-    </>
+    </div>
   )
 }
+
+export default ManagerDashboardPage

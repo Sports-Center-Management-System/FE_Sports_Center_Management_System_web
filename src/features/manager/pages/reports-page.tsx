@@ -47,7 +47,7 @@ export function ManagerReportsPage() {
   const dssData = dss.data
 
   return (
-    <>
+    <div className="rounded-md bg-white border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-6">
       <PageHeader
         title="Báo cáo & Hỗ trợ Quyết định (DSS)"
         description="Tổng quan doanh thu, số liệu vận hành và hệ thống cảnh báo kỷ luật HLV."
@@ -55,7 +55,7 @@ export function ManagerReportsPage() {
 
       {/* DSS Operational Intelligence Banner */}
       {dssData && (
-        <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50/60 p-5 shadow-xs">
+        <div className="mb-6 rounded-md border border-amber-200 bg-amber-50/60 p-5 shadow-xs">
           <div className="flex items-center gap-2 mb-3">
             <ShieldAlert className="h-5 w-5 text-amber-700" />
             <h3 className="text-sm font-black text-amber-950 uppercase tracking-wide">
@@ -63,7 +63,7 @@ export function ManagerReportsPage() {
             </h3>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="rounded-xl border border-amber-200/80 bg-white p-3.5">
+            <div className="rounded-md border border-amber-200/80 bg-white p-3.5">
               <span className="text-xs text-slate-500 font-medium">Đơn hủy khẩn chờ duyệt</span>
               <div className="mt-1 flex items-baseline gap-2">
                 <span className="text-2xl font-black text-slate-900">
@@ -75,7 +75,7 @@ export function ManagerReportsPage() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-amber-200/80 bg-white p-3.5">
+            <div className="rounded-md border border-amber-200/80 bg-white p-3.5">
               <span className="text-xs text-slate-500 font-medium">Chế tài kỷ luật chưa xem</span>
               <div className="mt-1 flex items-baseline gap-2">
                 <span className="text-2xl font-black text-slate-900">
@@ -85,7 +85,7 @@ export function ManagerReportsPage() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-amber-200/80 bg-white p-3.5">
+            <div className="rounded-md border border-amber-200/80 bg-white p-3.5">
               <span className="text-xs text-slate-500 font-medium">HLV vi phạm ngưỡng hủy</span>
               <div className="mt-1 flex items-baseline gap-2">
                 <span className={`text-2xl font-black ${(dssData.flaggedCoaches?.length ?? 0) > 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
@@ -343,6 +343,6 @@ export function ManagerReportsPage() {
           )}
         </Panel>
       </div>
-    </>
+    </div>
   )
 }

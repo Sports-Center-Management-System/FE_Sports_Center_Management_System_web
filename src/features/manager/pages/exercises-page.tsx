@@ -144,7 +144,7 @@ export function ManagerExercisesPage() {
     disciplines.data?.find((d) => d.code.toUpperCase() === code.toUpperCase())?.name ?? code
 
   return (
-    <>
+    <div className="rounded-md bg-white border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-6">
       <PageHeader
         title="Bài tập & giáo án"
         description="Thư viện động tác chuẩn, giáo án mẫu theo khóa 12 buổi và giáo án HLV đã soạn cho hội viên."
@@ -163,7 +163,7 @@ export function ManagerExercisesPage() {
       ) : null}
       {tab === 'templates' ? <TemplatesTab units={units} disciplineName={disciplineName} /> : null}
       {tab === 'plans' ? <PlansTab units={units} /> : null}
-    </>
+    </div>
   )
 }
 

@@ -73,11 +73,11 @@ export const MyShiftsModal: React.FC<MyShiftsModalProps> = ({ isOpen, onClose })
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="flex w-full max-w-5xl flex-col rounded-2xl bg-white shadow-2xl overflow-hidden border border-slate-100 max-h-[90vh]">
+      <div className="flex w-full max-w-5xl flex-col rounded-none bg-white shadow-2xl overflow-hidden border-2 border-slate-900 max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-slate-50/50">
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 bg-slate-50/50">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <div className="flex h-10 w-10 items-center justify-center rounded-none bg-primary/10 text-primary">
               <Calendar className="h-5 w-5" />
             </div>
             <div>
@@ -89,7 +89,7 @@ export const MyShiftsModal: React.FC<MyShiftsModalProps> = ({ isOpen, onClose })
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+            className="rounded-none p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
           >
             <X className="h-5 w-5" />
           </button>

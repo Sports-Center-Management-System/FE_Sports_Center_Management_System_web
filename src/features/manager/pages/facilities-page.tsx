@@ -73,9 +73,9 @@ export function ManagerFacilitiesPage() {
       a.name.localeCompare(b.name),
   )
   const lockerRows = (lockers.data ?? []).filter((l) => !zoneFilter || l.zone === zoneFilter)
-  const roomPage = usePagination(roomRows, 15)
-  const equipmentPage = usePagination(equipmentRows, 15)
-  const lockerPage = usePagination(lockerRows, 20, zoneFilter)
+  const roomPage = usePagination(roomRows, 10)
+  const equipmentPage = usePagination(equipmentRows, 10)
+  const lockerPage = usePagination(lockerRows, 15, zoneFilter)
   const lockerCount = (status: string) =>
     (lockers.data ?? []).filter((l) => l.status === status).length
 
@@ -112,7 +112,7 @@ export function ManagerFacilitiesPage() {
     )
 
   return (
-    <>
+    <div className="rounded-md bg-white border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-6">
       <PageHeader
         title="Cơ sở vật chất"
         description="Phòng tập, thiết bị và tủ đồ đang sử dụng."
@@ -335,7 +335,7 @@ export function ManagerFacilitiesPage() {
           }}
         />
       ) : null}
-    </>
+    </div>
   )
 }
 

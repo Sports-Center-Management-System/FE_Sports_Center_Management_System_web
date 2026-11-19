@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { money } from "@/lib/api";
 import type { Plan } from "@/lib/types";
 import { getDisciplineGallery, type GalleryPhoto } from "./plan-images";
+import { formatPlanName, formatPlanDescription, formatTierLabel } from "../lib/plan-formatter";
 import {
   X,
   CheckCircle2,
@@ -132,7 +133,7 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
           {/* Top Left Floating Pill: Center Badge */}
           <div className="relative z-10 p-4 md:p-8 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-emerald-500/20 border border-emerald-400/40 backdrop-blur-md flex items-center justify-center text-emerald-400 font-black text-sm shadow-lg">
+              <div className="h-9 w-9 rounded-none bg-emerald-500/20 border border-emerald-400/40 backdrop-blur-md flex items-center justify-center text-emerald-400 font-bold text-sm shadow-md">
                 3TC
               </div>
               <div>
@@ -150,10 +151,10 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="lg:hidden p-2.5 rounded-full bg-black/60 hover:bg-black/90 text-white border border-white/20 transition-all cursor-pointer"
+              className="lg:hidden p-2 rounded-none bg-black/60 hover:bg-black/90 text-white border border-white/20 transition-all cursor-pointer"
               title="Đóng xem chi tiết"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
@@ -163,7 +164,7 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
               <button
                 type="button"
                 onClick={prevPhoto}
-                className="pointer-events-auto p-3 rounded-full bg-black/50 hover:bg-black/80 text-white border border-white/20 backdrop-blur-md transition-all transform hover:scale-110 active:scale-95 cursor-pointer shadow-xl"
+                className="pointer-events-auto p-2.5 rounded-none bg-black/60 hover:bg-black/85 text-white border border-white/20 backdrop-blur-md transition-all active:scale-95 cursor-pointer shadow-lg"
                 title="Ảnh trước (Phím Mũi tên trái)"
               >
                 <ChevronLeft className="w-5 h-5" />
@@ -171,7 +172,7 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
               <button
                 type="button"
                 onClick={nextPhoto}
-                className="pointer-events-auto p-3 rounded-full bg-black/50 hover:bg-black/80 text-white border border-white/20 backdrop-blur-md transition-all transform hover:scale-110 active:scale-95 cursor-pointer shadow-xl"
+                className="pointer-events-auto p-2.5 rounded-none bg-black/60 hover:bg-black/85 text-white border border-white/20 backdrop-blur-md transition-all active:scale-95 cursor-pointer shadow-lg"
                 title="Ảnh tiếp theo (Phím Mũi tên phải)"
               >
                 <ChevronRight className="w-5 h-5" />
@@ -180,11 +181,11 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
           )}
 
           {/* Bottom Stage Info & Interactive Thumbnails - Strictly filtered for this discipline */}
-          <div className="relative z-10 p-4 md:p-8 space-y-4">
+          <div className="relative z-10 p-4 md:p-8 space-y-3">
             {/* Active Photo Caption Box */}
-            <div className="max-w-xl bg-black/60 backdrop-blur-xl border border-white/15 p-4 rounded-2xl shadow-2xl space-y-1">
+            <div className="max-w-xl bg-black/60 backdrop-blur-xl border border-white/15 p-3.5 rounded-none shadow-lg space-y-1">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                <span className="text-[10px] font-mono uppercase font-bold tracking-wider px-2 py-0.5 rounded-none bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                   {activePhoto.tag}
                 </span>
                 <span className="text-[11px] text-slate-400">
@@ -200,16 +201,16 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
             </div>
 
             {/* Thumbnail Strip Switcher - Shows ONLY photos of this discipline */}
-            <div className="flex items-center gap-2.5 overflow-x-auto pb-1 scrollbar-none">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
               {photos.map((photo, idx) => (
                 <button
                   key={photo.id}
                   type="button"
                   onClick={() => setActivePhotoIndex(idx)}
                   className={cn(
-                    "relative group/thumb shrink-0 w-20 h-14 md:w-24 md:h-16 rounded-xl overflow-hidden border-2 transition-all cursor-pointer",
+                    "relative group/thumb shrink-0 w-20 h-14 md:w-24 md:h-16 rounded-none border transition-all cursor-pointer",
                     activePhotoIndex === idx
-                      ? "border-emerald-400 ring-2 ring-emerald-500/40 scale-105"
+                      ? "border-emerald-400 ring-2 ring-emerald-500/40"
                       : "border-white/20 hover:border-white/60 opacity-60 hover:opacity-100"
                   )}
                   title={photo.title}
@@ -217,7 +218,7 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
                   <img
                     src={photo.url}
                     alt={photo.title}
-                    className="w-full h-full object-cover group-hover/thumb:scale-110 transition-transform duration-300"
+                    className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-200"
                   />
                   {activePhotoIndex === idx && (
                     <div className="absolute inset-0 bg-emerald-500/20" />
@@ -234,14 +235,14 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
           <div className="flex items-start justify-between gap-4 mb-4">
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase bg-white/10 text-slate-200 border border-white/15">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-none text-xs font-bold tracking-wide uppercase bg-white/10 text-slate-200 border border-white/15">
                   <ModalDisciplineIcon name={plan.discipline?.name} className="w-3.5 h-3.5 text-emerald-400" />
                   {plan.discipline?.name || "Bộ môn"}
                 </span>
 
                 <span
                   className={cn(
-                    "px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase border",
+                    "px-2.5 py-1 rounded-none text-xs font-bold tracking-wider uppercase border",
                     isVip
                       ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
                       : isPlus
@@ -249,7 +250,7 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
                         : "bg-slate-500/20 text-slate-300 border-slate-500/40"
                   )}
                 >
-                  {isVip ? "VIP THƯỢNG HẠNG" : isPlus ? "PLUS TOÀN DIỆN" : plan.packageTier}
+                  {formatTierLabel(plan.packageTier)}
                 </span>
               </div>
             </div>
@@ -257,26 +258,25 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl bg-white/5 hover:bg-white/15 text-slate-300 hover:text-white border border-white/10 transition-all cursor-pointer shrink-0"
+              className="p-1.5 rounded-none bg-white/5 hover:bg-white/15 text-slate-300 hover:text-white border border-white/10 transition-all cursor-pointer shrink-0"
               title="Đóng (ESC)"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Main Title & Description */}
           <div className="space-y-3 mb-6">
             <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-snug">
-              {plan.name}
+              {formatPlanName(plan.name)}
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              {plan.description ||
-                "Gói dịch vụ hội viên tiêu chuẩn vàng mang đến trải nghiệm tập luyện chuyên sâu, dịch vụ chăm sóc thể chất toàn diện tại hệ thống 3TC Fitness."}
+              {formatPlanDescription(plan.description)}
             </p>
           </div>
 
           {/* Price Block */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 sm:p-5 mb-6 shadow-inner">
+          <div className="bg-white/5 border border-white/10 rounded-none p-4 sm:p-5 mb-6 shadow-inner">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
               Mức phí đầu tư sức khỏe:
             </span>
@@ -298,13 +298,13 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
 
           {/* Quotas & Key Metrics Bento Grid */}
           <div className="grid grid-cols-3 gap-2.5 mb-6">
-            <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+            <div className="bg-white/5 border border-white/10 rounded-none p-3 text-center">
               <Clock className="w-4 h-4 mx-auto text-emerald-400 mb-1" />
               <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Thời hạn</p>
               <p className="text-sm font-black text-white font-mono">{plan.durationDays} Ngày</p>
             </div>
 
-            <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+            <div className="bg-white/5 border border-white/10 rounded-none p-3 text-center">
               <Users className="w-4 h-4 mx-auto text-cyan-400 mb-1" />
               <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Lớp Nhóm</p>
               <p className="text-sm font-black text-white font-mono">
@@ -312,7 +312,7 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
               </p>
             </div>
 
-            <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+            <div className="bg-white/5 border border-white/10 rounded-none p-3 text-center">
               <UserCheck className="w-4 h-4 mx-auto text-amber-400 mb-1" />
               <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Kèm 1:1 PT</p>
               <p className="text-sm font-black text-white font-mono">
@@ -370,10 +370,10 @@ export const PlanDetailModal: React.FC<PlanDetailModalProps> = ({
               disabled={isOrdering}
               onClick={() => onSelectPlan(plan)}
               className={cn(
-                "w-full h-12 rounded-xl font-black text-sm tracking-wide flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xl",
+                "w-full h-11 rounded-none font-bold text-sm tracking-wide flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg",
                 isVip
-                  ? "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 active:scale-[0.98]"
-                  : "bg-emerald-500 hover:bg-emerald-400 text-slate-950 active:scale-[0.98]"
+                  ? "bg-amber-400 hover:bg-amber-300 text-slate-950 active:scale-[0.98]"
+                  : "bg-[#008b74] hover:bg-emerald-600 text-white active:scale-[0.98]"
               )}
             >
               <span>{isVip ? "Chọn HLV & báo giá" : "Tiếp tục mua gói"}</span>

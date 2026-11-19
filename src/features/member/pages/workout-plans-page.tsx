@@ -8,8 +8,12 @@ import {
   ArrowRight,
   BookOpen,
   ChevronRight,
+  ChevronLeft,
   Calendar,
   Filter,
+  Quote,
+  Swords,
+  Activity,
 } from 'lucide-react';
 import { WorkoutPlanDetailModal } from '@/components/common/workout-plan-detail-modal';
 import { apiClient } from '@/services/api-client';
@@ -103,15 +107,19 @@ export const WorkoutPlansPage: React.FC = () => {
   const [selectedPlan, setSelectedPlan] = useState<MemberWorkoutPlanItem | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<WorkoutTemplateSession | null>(null);
 
-  // My Plans Filters
+  // My Plans Filters & Pagination
   const [planSearch, setPlanSearch] = useState<string>('');
   const [planDateFilter, setPlanDateFilter] = useState<'ALL' | 'THIS_MONTH' | 'LAST_MONTH'>('ALL');
   const [dateSort, setDateSort] = useState<'DESC' | 'ASC'>('DESC');
+  const [plansPage, setPlansPage] = useState<number>(1);
+  const plansPageSize = 6;
 
-  // Template Tab state
+  // Template Tab state & Pagination
   const [templateDiscipline, setTemplateDiscipline] = useState<'BOXING' | 'YOGA'>('BOXING');
   const [templateWeekFilter, setTemplateWeekFilter] = useState<'ALL' | '1' | '2' | '3' | '4'>('ALL');
   const [templateSearch, setTemplateSearch] = useState<string>('');
+  const [templatePage, setTemplatePage] = useState<number>(1);
+  const templatePageSize = 6;
 
   // 1. Fetch member's real assigned workout plans
   const {
@@ -303,6 +311,20 @@ export const WorkoutPlansPage: React.FC = () => {
     });
   }, [rawTemplates, templateWeekFilter, templateSearch]);
 
+  // Paginated plans
+  const totalPlansPages = Math.max(1, Math.ceil(filteredAndSortedPlans.length / plansPageSize));
+  const paginatedPlans = useMemo(() => {
+    const start = (plansPage - 1) * plansPageSize;
+    return filteredAndSortedPlans.slice(start, start + plansPageSize);
+  }, [filteredAndSortedPlans, plansPage, plansPageSize]);
+
+  // Paginated templates
+  const totalTemplatePages = Math.max(1, Math.ceil(filteredTemplates.length / templatePageSize));
+  const paginatedTemplates = useMemo(() => {
+    const start = (templatePage - 1) * templatePageSize;
+    return filteredTemplates.slice(start, start + templatePageSize);
+  }, [filteredTemplates, templatePage, templatePageSize]);
+
   // Lock background scroll when any modal opens
   useEffect(() => {
     const isModalOpen = Boolean(selectedPlan || selectedTemplate);
@@ -332,48 +354,50 @@ export const WorkoutPlansPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="space-y-6 pb-16">
-      {/* ========================================================= */}
-      {/* PAGE HEADER                                               */}
-      {/* ========================================================= */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 text-white p-6 sm:p-8 rounded-[2rem] border border-slate-800 shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 space-y-1.5">
-          <div className="flex items-center gap-2">
-            <span className="p-2 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-              <Dumbbell className="w-5 h-5" />
-            </span>
-            <span className="text-xs font-black uppercase tracking-widest text-emerald-400">
-              Training Center
-            </span>
+    <div className="w-full max-w-5xl mx-auto py-4 sm:py-6 pb-20">
+      {/* Khung trắng bo góc 5% bao bọc tất cả component */}
+      <div className="bg-white rounded-md border border-slate-200 p-5 sm:p-7 space-y-6 shadow-xs">
+        {/* Header (đã bỏ nút quay lại) */}
+        <div className="pb-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              Giáo án &amp; Lộ trình tập luyện
+            </h1>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">
+              Theo dõi khối lượng tập luyện, số hiệp, mức tạ và lời dặn cá nhân hóa từ Huấn luyện viên
+            </p>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            Giáo Án & Lộ Trình Tập Luyện
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-400 max-w-xl">
-            Theo dõi khối lượng tập luyện, số hiệp, mức tạ và lời dặn cá nhân hóa từ Huấn luyện viên
-          </p>
+          <div className="h-10 w-10 rounded-md bg-emerald-50 text-[#008b74] flex items-center justify-center shrink-0 border border-emerald-100">
+            <Dumbbell className="w-5 h-5" />
+          </div>
         </div>
 
+        
+
+          
+        
+
         {/* Tab Switcher */}
-        <div className="relative z-10 inline-flex p-1.5 rounded-2xl bg-slate-950/80 border border-slate-800 shrink-0 self-start md:self-auto backdrop-blur-md">
+        <div className="flex border-b border-slate-200 gap-2">
           <button
             type="button"
-            onClick={() => setActiveTab('MY_PLANS')}
-            className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+            onClick={() => {
+              setActiveTab('MY_PLANS');
+              setPlansPage(1);
+            }}
+            className={`pb-3 px-2 text-xs font-bold border-b-2 flex items-center gap-2 cursor-pointer transition-colors ${
               activeTab === 'MY_PLANS'
-                ? 'bg-emerald-500 text-slate-950 shadow-md font-black'
-                : 'text-slate-400 hover:text-white hover:bg-white/5'
+                ? 'border-[#008b74] text-[#008b74]'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Dumbbell className="w-3.5 h-3.5" />
+            <Dumbbell className="w-4 h-4" />
             <span>Giáo án của tôi</span>
             <span
-              className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+              className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold ${
                 activeTab === 'MY_PLANS'
-                  ? 'bg-slate-950 text-emerald-300'
-                  : 'bg-slate-800 text-slate-300'
+                  ? 'bg-emerald-100 text-[#008b74]'
+                  : 'bg-slate-100 text-slate-500'
               }`}
             >
               {rawPlans.length}
@@ -382,439 +406,569 @@ export const WorkoutPlansPage: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => setActiveTab('TEMPLATES')}
-            className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+            onClick={() => {
+              setActiveTab('TEMPLATES');
+              setTemplatePage(1);
+            }}
+            className={`pb-3 px-2 text-xs font-bold border-b-2 flex items-center gap-2 cursor-pointer transition-colors ${
               activeTab === 'TEMPLATES'
-                ? 'bg-emerald-500 text-slate-950 shadow-md font-black'
-                : 'text-slate-400 hover:text-white hover:bg-white/5'
+                ? 'border-[#008b74] text-[#008b74]'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Layers className="w-3.5 h-3.5" />
+            <Layers className="w-4 h-4" />
             <span>Lộ trình 12 buổi mẫu</span>
             <span
-              className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+              className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold ${
                 activeTab === 'TEMPLATES'
-                  ? 'bg-slate-950 text-emerald-300'
-                  : 'bg-slate-800 text-slate-300'
+                  ? 'bg-emerald-100 text-[#008b74]'
+                  : 'bg-slate-100 text-slate-500'
               }`}
             >
               {rawTemplates.length || 12}
             </span>
           </button>
         </div>
-      </div>
 
-      {/* ========================================================= */}
-      {/* TAB 1: GIÁO ÁN CỦA TÔI (MY ASSIGNED WORKOUT PLANS)        */}
-      {/* ========================================================= */}
-      {activeTab === 'MY_PLANS' && (
-        <div className="space-y-5">
-          {/* Enhanced Search & Filter Dock */}
-          <div className="p-4 rounded-3xl bg-white border border-slate-200/90 shadow-xs space-y-3">
-            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-              {/* Search input */}
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  value={planSearch}
-                  onChange={(e) => setPlanSearch(e.target.value)}
-                  placeholder="Tìm theo tên HLV, tiêu đề, bài tập..."
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50/90 pl-10 pr-9 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-emerald-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/15 transition-all"
-                />
-                {planSearch && (
-                  <button
-                    type="button"
-                    onClick={() => setPlanSearch('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-0.5"
+        {/* ========================================================= */}
+        {/* TAB 1: GIÁO ÁN CỦA TÔI                                   */}
+        {/* ========================================================= */}
+        {activeTab === 'MY_PLANS' && (
+          <div className="space-y-5">
+            {/* Search & Filter Dock */}
+            <div className="p-3.5 sm:p-4 rounded-md bg-slate-50 border border-slate-200 space-y-3">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                {/* Search input */}
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                  <input
+                    type="text"
+                    value={planSearch}
+                    onChange={(e) => {
+                      setPlanSearch(e.target.value);
+                      setPlansPage(1);
+                    }}
+                    placeholder="Tìm theo tên HLV, tiêu đề, bài tập, ghi chú..."
+                    className="w-full rounded-md border border-slate-300 bg-white pl-9 pr-8 py-1.5 text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#008b74]"
+                  />
+                  {planSearch && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPlanSearch('');
+                        setPlansPage(1);
+                      }}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Sort selector */}
+                <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                  <span className="text-xs text-slate-500 font-medium">Sắp xếp:</span>
+                  <select
+                    value={dateSort}
+                    onChange={(e) => {
+                      setDateSort(e.target.value as 'DESC' | 'ASC');
+                      setPlansPage(1);
+                    }}
+                    className="h-8 px-2.5 text-xs font-bold rounded-md border border-slate-300 bg-white text-slate-800 focus:outline-none focus:border-[#008b74] cursor-pointer"
                   >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
+                    <option value="DESC">Mới nhất (Ngày tạo)</option>
+                    <option value="ASC">Cũ nhất (Ngày tạo)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Quick Date Chips */}
+              <div className="flex items-center justify-between pt-2.5 border-t border-slate-200/80 flex-wrap gap-2 text-xs">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mr-1 flex items-center gap-1">
+                    <Filter className="w-3 h-3" /> Lọc ngày:
+                  </span>
+                  {(
+                    [
+                      { key: 'ALL', label: 'Tất cả' },
+                      { key: 'THIS_MONTH', label: 'Tháng này' },
+                      { key: 'LAST_MONTH', label: 'Tháng trước' },
+                    ] as const
+                  ).map((chip) => {
+                    const active = planDateFilter === chip.key;
+                    return (
+                      <button
+                        key={chip.key}
+                        type="button"
+                        onClick={() => {
+                          setPlanDateFilter(chip.key);
+                          setPlansPage(1);
+                        }}
+                        className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer border ${
+                          active
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs'
+                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        {chip.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <span className="text-xs text-slate-500 font-medium">
+                  Hiển thị <strong className="text-slate-900 font-mono font-bold">{filteredAndSortedPlans.length}</strong> giáo án
+                </span>
+              </div>
+            </div>
+
+            {/* Content or Empty State */}
+            {isLoadingPlans ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3].map((n) => (
+                  <div
+                    key={n}
+                    className="p-5 rounded-md bg-white border border-slate-200 animate-pulse space-y-4 shadow-2xs"
+                  >
+                    <div className="flex justify-between items-center">
+                      <div className="h-4 w-24 bg-slate-200 rounded-md" />
+                      <div className="h-4 w-16 bg-slate-200 rounded-md" />
+                    </div>
+                    <div className="h-5 w-3/4 bg-slate-200 rounded-md" />
+                    <div className="space-y-2">
+                      <div className="h-4 w-full bg-slate-100 rounded-md" />
+                      <div className="h-4 w-5/6 bg-slate-100 rounded-md" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredAndSortedPlans.length === 0 ? (
+              /* Empty State */
+              <div className="p-8 sm:p-12 text-center rounded-md bg-slate-50/70 border border-dashed border-slate-200 space-y-4 max-w-lg mx-auto">
+                <div className="w-12 h-12 rounded-md bg-emerald-50 text-[#008b74] flex items-center justify-center mx-auto border border-emerald-100">
+                  <BookOpen className="w-6 h-6" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900">
+                    {rawPlans.length === 0
+                      ? 'Chưa có giáo án riêng từ Huấn luyện viên'
+                      : 'Không tìm thấy giáo án phù hợp với bộ lọc'}
+                  </h3>
+                  <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                    {rawPlans.length === 0
+                      ? 'Khi bạn hoàn thành ca tập PT 1:1 hoặc được huấn luyện viên chỉ định bài tập, giáo án chi tiết sẽ hiển thị tại đây.'
+                      : 'Thử tìm kiếm với từ khóa khác hoặc chuyển sang mốc thời gian "Tất cả".'}
+                  </p>
+                </div>
+
+                {rawPlans.length === 0 && (
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('TEMPLATES')}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-[#008b74] hover:bg-[#007360] text-white text-xs font-bold transition shadow-2xs active:scale-[0.98] cursor-pointer"
+                    >
+                      <Layers className="w-3.5 h-3.5" />
+                      <span>Xem lộ trình 12 buổi mẫu</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 )}
               </div>
+            ) : (
+              /* Plans Grid */
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {paginatedPlans.map((plan) => {
+                    const totalExercises = plan.exercises?.length || 0;
+                    const coachName = resolveCoachName(plan);
+                    const tagLabel = plan.template?.disciplineCode || 'Giáo án cá nhân 1:1';
 
-              {/* Sort selector */}
-              <div className="flex items-center gap-2 self-end md:self-auto shrink-0">
-                <span className="text-xs font-bold text-slate-500">Sắp xếp:</span>
-                <select
-                  value={dateSort}
-                  onChange={(e) => setDateSort(e.target.value as 'DESC' | 'ASC')}
-                  className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer"
-                >
-                  <option value="DESC">Mới nhất (Ngày tạo)</option>
-                  <option value="ASC">Cũ nhất (Ngày tạo)</option>
-                </select>
-              </div>
-            </div>
+                    return (
+                      <article
+                        key={plan.id}
+                        onClick={() => setSelectedPlan(plan)}
+                        className="group relative p-4 sm:p-5 rounded-md bg-white border border-slate-200 hover:border-slate-300 shadow-2xs transition-all flex flex-col justify-between gap-4 cursor-pointer"
+                      >
+                        <div className="space-y-3">
+                          {/* Top Badges & Date */}
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-[10px] font-bold uppercase tracking-wider">
+                              {tagLabel}
+                            </span>
 
-            {/* Quick Date Chips */}
-            <div className="flex items-center justify-between pt-2.5 border-t border-slate-100 flex-wrap gap-2">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[11px] font-extrabold text-slate-400 mr-1 flex items-center gap-1 uppercase tracking-wider">
-                  <Filter className="w-3 h-3" /> Lọc ngày:
-                </span>
-                {(
-                  [
-                    { key: 'ALL', label: 'Tất cả' },
-                    { key: 'THIS_MONTH', label: 'Tháng này' },
-                    { key: 'LAST_MONTH', label: 'Tháng trước' },
-                  ] as const
-                ).map((chip) => {
-                  const active = planDateFilter === chip.key;
-                  return (
-                    <button
-                      key={chip.key}
-                      type="button"
-                      onClick={() => setPlanDateFilter(chip.key)}
-                      className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-                        active
-                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-xs'
-                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                      }`}
-                    >
-                      {chip.label}
-                    </button>
-                  );
-                })}
-              </div>
+                            <span className="text-[11px] font-medium text-slate-400 flex items-center gap-1 font-mono">
+                              <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                              {vietnamDate(plan.createdAt)}
+                            </span>
+                          </div>
 
-              <span className="text-xs font-semibold text-slate-400">
-                Hiển thị <strong className="text-slate-800">{filteredAndSortedPlans.length}</strong> giáo án
-              </span>
-            </div>
-          </div>
+                          {/* Coach info bar */}
+                          <div className="flex items-center gap-2.5 p-2 rounded-md bg-slate-50 border border-slate-200">
+                            <div className="w-7 h-7 rounded-md bg-[#008b74] text-white text-xs font-bold flex items-center justify-center shrink-0">
+                              {coachName.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">
+                                Huấn luyện viên phụ trách
+                              </span>
+                              <p className="text-xs font-bold text-slate-900 truncate">
+                                {coachName}
+                              </p>
+                            </div>
+                          </div>
 
-          {/* Cards or Empty State */}
-          {isLoadingPlans ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {[1, 2, 3].map((n) => (
-                <div
-                  key={n}
-                  className="p-6 rounded-3xl bg-white border border-slate-200/80 animate-pulse space-y-4"
-                >
-                  <div className="flex justify-between items-center">
-                    <div className="h-5 w-24 bg-slate-200 rounded-lg" />
-                    <div className="h-4 w-16 bg-slate-200 rounded-lg" />
-                  </div>
-                  <div className="h-6 w-3/4 bg-slate-200 rounded-lg" />
-                  <div className="space-y-2">
-                    <div className="h-4 w-full bg-slate-100 rounded-md" />
-                    <div className="h-4 w-5/6 bg-slate-100 rounded-md" />
-                  </div>
+                          {/* Title & Notes */}
+                          <div>
+                            <h3 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-[#008b74] transition-colors leading-snug">
+                              {plan.title}
+                            </h3>
+                            {plan.notes && (
+                              <div className="mt-2 p-2.5 rounded-md bg-slate-50 border border-slate-200 text-xs text-slate-700 flex items-start gap-2">
+                                <Quote className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                                <p className="line-clamp-2 italic font-medium leading-relaxed">
+                                  {plan.notes}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Exercise Previews */}
+                          <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                            <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 pb-0.5 uppercase tracking-wider">
+                              <span>Nội dung bài tập</span>
+                              <span className="text-[#008b74] font-mono">{totalExercises} bài</span>
+                            </div>
+
+                            {plan.exercises?.slice(0, 3).map((ex, idx) => {
+                              const meta = parseExerciseInstructions(ex.exercise?.instructions);
+                              const { primary } = parseExerciseTitle(ex.exercise?.title);
+                              const unitStr = meta.unitVi || 'lần';
+
+                              return (
+                                <div
+                                  key={ex.id || idx}
+                                  className="p-2 rounded-md bg-slate-50/80 border border-slate-200/80 flex items-center justify-between gap-2 text-xs"
+                                >
+                                  <div className="min-w-0 flex items-center gap-2">
+                                    <span className="w-5 h-5 rounded-md bg-white text-slate-600 text-[10px] font-bold font-mono flex items-center justify-center shrink-0 border border-slate-200">
+                                      {idx + 1}
+                                    </span>
+                                    <span className="font-medium text-slate-800 truncate">
+                                      {primary}
+                                    </span>
+                                  </div>
+
+                                  <div className="flex items-center gap-1 shrink-0 text-[11px] font-bold font-mono">
+                                    <span className="text-[#008b74]">
+                                      {ex.sets || 3}h
+                                    </span>
+                                    <span className="text-slate-400">×</span>
+                                    <span className="text-slate-700">
+                                      {ex.reps || 10} {unitStr}
+                                    </span>
+                                    {ex.weightKg !== null && ex.weightKg !== undefined && Number(ex.weightKg) > 0 && (
+                                      <span className="text-amber-700 bg-amber-50 px-1 py-0.2 rounded-md border border-amber-200 text-[10px] ml-1">
+                                        {ex.weightKg}kg
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+
+                            {totalExercises > 3 && (
+                              <p className="text-[11px] font-medium text-slate-400 pt-0.5 text-center">
+                                + {totalExercises - 3} bài tập chi tiết khác
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Card Footer */}
+                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                          <span className="text-xs font-bold text-[#008b74] flex items-center gap-1 group-hover:underline">
+                            Xem chi tiết giáo án
+                            <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                          </span>
+                        </div>
+                      </article>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
-          ) : filteredAndSortedPlans.length === 0 ? (
-            /* Empty State */
-            <div className="p-8 sm:p-14 text-center rounded-3xl bg-white border border-slate-200/90 shadow-xs space-y-4 max-w-2xl mx-auto">
-              <div className="w-16 h-16 rounded-3xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-100 shadow-inner">
-                <BookOpen className="w-8 h-8" />
-              </div>
-              <div className="space-y-1.5">
-                <h3 className="text-base font-black text-slate-900">
-                  {rawPlans.length === 0
-                    ? 'Chưa có giáo án riêng từ Huấn luyện viên'
-                    : 'Không tìm thấy giáo án phù hợp với bộ lọc'}
-                </h3>
-                <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
-                  {rawPlans.length === 0
-                    ? 'Khi bạn hoàn thành ca tập PT 1-1 hoặc được huấn luyện viên chỉ định bài tập, giáo án và lời dặn chi tiết sẽ tự động xuất hiện tại đây.'
-                    : 'Thử tìm kiếm với từ khóa khác hoặc chuyển sang mốc thời gian "Tất cả".'}
-                </p>
-              </div>
 
-              {rawPlans.length === 0 && (
-                <div className="pt-2">
+                {/* Pagination Controls */}
+                {filteredAndSortedPlans.length > plansPageSize && (
+                  <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                    <span className="text-slate-500 font-medium">
+                      Hiển thị <strong className="text-slate-900 font-mono font-bold">{(plansPage - 1) * plansPageSize + 1}</strong> - <strong className="text-slate-900 font-mono font-bold">{Math.min(plansPage * plansPageSize, filteredAndSortedPlans.length)}</strong> trên tổng số <strong className="text-slate-900 font-mono font-bold">{filteredAndSortedPlans.length}</strong> giáo án
+                    </span>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        disabled={plansPage === 1}
+                        onClick={() => setPlansPage((prev) => Math.max(1, prev - 1))}
+                        className="px-2.5 py-1.5 rounded-md border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed font-medium text-slate-700 flex items-center gap-1 cursor-pointer"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                        <span>Trước</span>
+                      </button>
+
+                      {Array.from({ length: totalPlansPages }, (_, i) => i + 1).map((pageNum) => (
+                        <button
+                          key={pageNum}
+                          type="button"
+                          onClick={() => setPlansPage(pageNum)}
+                          className={`w-8 h-8 rounded-md text-xs font-bold font-mono transition-colors cursor-pointer ${
+                            plansPage === pageNum
+                              ? "bg-[#008b74] text-white"
+                              : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      ))}
+
+                      <button
+                        type="button"
+                        disabled={plansPage === totalPlansPages}
+                        onClick={() => setPlansPage((prev) => Math.min(totalPlansPages, prev + 1))}
+                        className="px-2.5 py-1.5 rounded-md border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed font-medium text-slate-700 flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>Sau</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* TAB 2: LỘ TRÌNH 12 BUỔI MẪU                               */}
+        {/* ========================================================= */}
+        {activeTab === 'TEMPLATES' && (
+          <div className="space-y-5">
+            {/* Controls Bar */}
+            <div className="p-3.5 sm:p-4 rounded-md bg-slate-50 border border-slate-200 space-y-3">
+              <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+                {/* Discipline Switcher - No emojis */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
                   <button
                     type="button"
-                    onClick={() => setActiveTab('TEMPLATES')}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#008b74] hover:bg-[#007360] text-white text-xs font-bold transition-all shadow-md active:scale-[0.98] cursor-pointer"
+                    onClick={() => {
+                      setTemplateDiscipline('BOXING');
+                      setTemplatePage(1);
+                    }}
+                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 border ${
+                      templateDiscipline === 'BOXING'
+                        ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                    }`}
                   >
-                    <Layers className="w-4 h-4" />
-                    <span>Khám phá lộ trình 12 buổi chuẩn</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <Swords className="w-3.5 h-3.5" />
+                    <span>Boxing (Lộ trình 12 buổi)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTemplateDiscipline('YOGA');
+                      setTemplatePage(1);
+                    }}
+                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 border ${
+                      templateDiscipline === 'YOGA'
+                        ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Activity className="w-3.5 h-3.5" />
+                    <span>Yoga (Lộ trình 12 buổi)</span>
                   </button>
                 </div>
-              )}
-            </div>
-          ) : (
-            /* Modern Athletic Bento Grid */
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {filteredAndSortedPlans.map((plan) => {
-                const totalExercises = plan.exercises?.length || 0;
-                const coachName = resolveCoachName(plan);
-                const tagLabel = plan.template?.disciplineCode || 'Giáo án cá nhân 1-1';
 
-                return (
-                  <article
-                    key={plan.id}
-                    onClick={() => setSelectedPlan(plan)}
-                    className="group relative p-6 rounded-3xl bg-white border border-slate-200/90 shadow-xs hover:border-emerald-400 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between gap-4 cursor-pointer"
+                {/* Search Bar */}
+                <div className="relative max-w-sm w-full">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                  <input
+                    type="text"
+                    value={templateSearch}
+                    onChange={(e) => {
+                      setTemplateSearch(e.target.value);
+                      setTemplatePage(1);
+                    }}
+                    placeholder="Tìm kiếm bài tập trong giáo trình..."
+                    className="w-full rounded-md border border-slate-300 bg-white pl-9 pr-8 py-1.5 text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#008b74]"
+                  />
+                  {templateSearch && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTemplateSearch('');
+                        setTemplatePage(1);
+                      }}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Week Filter */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pt-2.5 border-t border-slate-200/80 pb-0.5">
+                <span className="text-[11px] font-bold text-slate-500 mr-1 shrink-0 uppercase tracking-wider">
+                  Tuần học:
+                </span>
+                {(['ALL', '1', '2', '3', '4'] as const).map((w) => (
+                  <button
+                    key={w}
+                    type="button"
+                    onClick={() => {
+                      setTemplateWeekFilter(w);
+                      setTemplatePage(1);
+                    }}
+                    className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all shrink-0 cursor-pointer border ${
+                      templateWeekFilter === w
+                        ? 'bg-[#008b74] text-white border-[#008b74] shadow-2xs'
+                        : 'bg-white text-slate-600 hover:bg-slate-50 border-slate-200'
+                    }`}
                   >
-                    <div className="space-y-3.5">
-                      {/* Top Badges & Date */}
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-[10px] font-black uppercase tracking-wider">
-                          {tagLabel}
-                        </span>
+                    {w === 'ALL' ? 'Tất cả 4 tuần' : `Tuần ${w}`}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-                        <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                          {vietnamDate(plan.createdAt)}
-                        </span>
-                      </div>
-
-                      {/* Coach info bar: CLEARLY DISPLAYS ACTUAL COACH'S FULL NAME */}
-                      <div className="flex items-center gap-2.5 p-2.5 rounded-2xl bg-gradient-to-r from-slate-50 to-emerald-50/40 border border-slate-200/70">
-                        <div className="w-8 h-8 rounded-full bg-[#008b74] text-white text-xs font-black flex items-center justify-center shrink-0 shadow-xs ring-2 ring-emerald-500/20">
-                          {coachName.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="min-w-0">
-                          <span className="text-[10px] font-extrabold text-slate-400 block uppercase tracking-wider">
-                            Huấn luyện viên phụ trách
+            {/* Templates Grid */}
+            {isLoadingTemplates ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3].map((n) => (
+                  <div
+                    key={n}
+                    className="p-5 rounded-md bg-white border border-slate-200 animate-pulse space-y-4 shadow-2xs"
+                  >
+                    <div className="h-4 w-24 bg-slate-200 rounded-md" />
+                    <div className="h-5 w-3/4 bg-slate-200 rounded-md" />
+                    <div className="h-14 bg-slate-100 rounded-md" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {paginatedTemplates.map((tpl) => (
+                    <article
+                      key={tpl.id}
+                      onClick={() => setSelectedTemplate(tpl)}
+                      className="group relative p-4 sm:p-5 rounded-md bg-white border border-slate-200 hover:border-slate-300 shadow-2xs transition-all flex flex-col justify-between gap-4 cursor-pointer"
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-bold uppercase tracking-wider">
+                            {tpl.disciplineCode}
                           </span>
-                          <p className="text-xs font-black text-slate-900 truncate">
-                            {coachName}
-                          </p>
+                          <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 font-mono">
+                            Tuần {tpl.weekNumber}
+                          </span>
                         </div>
-                      </div>
 
-                      {/* Title & Notes */}
-                      <div>
-                        <h3 className="text-base font-black text-slate-900 group-hover:text-[#008b74] transition-colors leading-snug">
-                          {plan.title}
-                        </h3>
-                        {plan.notes && (
-                          <div className="mt-2 p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/60 text-[11px] text-amber-900 line-clamp-2 italic font-medium">
-                            🎯 "{plan.notes}"
+                        <div>
+                          <h4 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-[#008b74] transition-colors leading-snug">
+                            {tpl.title}
+                          </h4>
+                          {tpl.description && (
+                            <p className="mt-1 text-xs text-slate-500 line-clamp-2">
+                              {tpl.description}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Exercises Preview */}
+                        <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                          <div className="text-[11px] font-bold text-slate-400 pb-0.5 uppercase tracking-wider font-mono">
+                            {tpl.exercises?.length || 0} bài tập chuẩn hóa
                           </div>
-                        )}
-                      </div>
 
-                      {/* Exercise Previews */}
-                      <div className="space-y-1.5 pt-2 border-t border-slate-100">
-                        <div className="flex items-center justify-between text-[11px] font-black text-slate-400 pb-0.5 uppercase tracking-wider">
-                          <span>Nội dung bài tập</span>
-                          <span className="text-[#008b74]">{totalExercises} bài</span>
-                        </div>
-
-                        {plan.exercises?.slice(0, 3).map((ex, idx) => {
-                          const meta = parseExerciseInstructions(ex.exercise?.instructions);
-                          const { primary } = parseExerciseTitle(ex.exercise?.title);
-                          const unitStr = meta.unitVi || 'lần';
-
-                          return (
+                          {tpl.exercises?.slice(0, 3).map((ex, idx) => (
                             <div
                               key={ex.id || idx}
-                              className="p-2.5 rounded-xl bg-slate-50/90 border border-slate-200/60 flex items-center justify-between gap-2 text-xs"
+                              className="p-2 rounded-md bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2 text-xs"
                             >
-                              <div className="min-w-0 flex items-center gap-2">
-                                <span className="w-5 h-5 rounded-lg bg-white text-slate-600 text-[10px] font-black flex items-center justify-center shrink-0 border border-slate-200">
-                                  {idx + 1}
-                                </span>
-                                <span className="font-bold text-slate-800 truncate">
-                                  {primary}
-                                </span>
-                              </div>
-
-                              <div className="flex items-center gap-1.5 shrink-0 text-[11px] font-black">
-                                <span className="text-[#008b74]">
-                                  {ex.sets || 3}h
-                                </span>
-                                <span className="text-slate-400">×</span>
-                                <span className="text-slate-600">
-                                  {ex.reps || 10} {unitStr}
-                                </span>
-                                {ex.weightKg !== null && ex.weightKg !== undefined && Number(ex.weightKg) > 0 && (
-                                  <span className="text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200 text-[10px]">
-                                    {ex.weightKg}kg
-                                  </span>
-                                )}
-                              </div>
+                              <span className="font-medium text-slate-700 truncate">
+                                {ex.exercise?.title}
+                              </span>
+                              <span className="text-[11px] font-bold text-emerald-700 font-mono shrink-0">
+                                {ex.sets || 3}h × {ex.reps || 10}
+                              </span>
                             </div>
-                          );
-                        })}
-
-                        {totalExercises > 3 && (
-                          <p className="text-[11px] font-bold text-slate-400 pt-0.5 text-center">
-                            + {totalExercises - 3} bài tập chi tiết khác
-                          </p>
-                        )}
+                          ))}
+                        </div>
                       </div>
+
+                      <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                        <span className="text-xs font-bold text-[#008b74] group-hover:underline flex items-center gap-1">
+                          Xem chi tiết đề cương
+                          <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                        </span>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+
+                {/* Templates Pagination */}
+                {filteredTemplates.length > templatePageSize && (
+                  <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                    <span className="text-slate-500 font-medium">
+                      Hiển thị <strong className="text-slate-900 font-mono font-bold">{(templatePage - 1) * templatePageSize + 1}</strong> - <strong className="text-slate-900 font-mono font-bold">{Math.min(templatePage * templatePageSize, filteredTemplates.length)}</strong> trên tổng số <strong className="text-slate-900 font-mono font-bold">{filteredTemplates.length}</strong> buổi học
+                    </span>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        disabled={templatePage === 1}
+                        onClick={() => setTemplatePage((prev) => Math.max(1, prev - 1))}
+                        className="px-2.5 py-1.5 rounded-md border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed font-medium text-slate-700 flex items-center gap-1 cursor-pointer"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                        <span>Trước</span>
+                      </button>
+
+                      {Array.from({ length: totalTemplatePages }, (_, i) => i + 1).map((pageNum) => (
+                        <button
+                          key={pageNum}
+                          type="button"
+                          onClick={() => setTemplatePage(pageNum)}
+                          className={`w-8 h-8 rounded-md text-xs font-bold font-mono transition-colors cursor-pointer ${
+                            templatePage === pageNum
+                              ? "bg-[#008b74] text-white"
+                              : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      ))}
+
+                      <button
+                        type="button"
+                        disabled={templatePage === totalTemplatePages}
+                        onClick={() => setTemplatePage((prev) => Math.min(totalTemplatePages, prev + 1))}
+                        className="px-2.5 py-1.5 rounded-md border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed font-medium text-slate-700 flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>Sau</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
                     </div>
-
-                    {/* Card Footer */}
-                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                      <span className="text-xs font-black text-[#008b74] group-hover:underline flex items-center gap-1">
-                        Xem chi tiết giáo án
-                        <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                      </span>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ========================================================= */}
-      {/* TAB 2: LỘ TRÌNH 12 BUỔI MẪU (BOXING / YOGA)               */}
-      {/* ========================================================= */}
-      {activeTab === 'TEMPLATES' && (
-        <div className="space-y-5">
-          {/* Controls Bar */}
-          <div className="p-4 rounded-3xl bg-white border border-slate-200/90 shadow-xs space-y-3">
-            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-              {/* Discipline Switcher */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-                <button
-                  type="button"
-                  onClick={() => setTemplateDiscipline('BOXING')}
-                  className={`px-4 py-2 rounded-2xl text-xs font-black transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                    templateDiscipline === 'BOXING'
-                      ? 'bg-rose-600 text-white shadow-md'
-                      : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
-                  }`}
-                >
-                  <span>🥊</span>
-                  <span>Boxing (Lộ trình 12 buổi)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTemplateDiscipline('YOGA')}
-                  className={`px-4 py-2 rounded-2xl text-xs font-black transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
-                    templateDiscipline === 'YOGA'
-                      ? 'bg-indigo-600 text-white shadow-md'
-                      : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200'
-                  }`}
-                >
-                  <span>🧘</span>
-                  <span>Yoga (Lộ trình 12 buổi)</span>
-                </button>
-              </div>
-
-              {/* Search Bar */}
-              <div className="relative max-w-sm w-full">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                <input
-                  type="text"
-                  value={templateSearch}
-                  onChange={(e) => setTemplateSearch(e.target.value)}
-                  placeholder="Tìm kiếm bài tập trong giáo trình..."
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 pl-9 pr-8 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-emerald-500 focus:outline-hidden transition-all"
-                />
-                {templateSearch && (
-                  <button
-                    type="button"
-                    onClick={() => setTemplateSearch('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
+                  </div>
                 )}
               </div>
-            </div>
-
-            {/* Week Filter */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pt-2.5 border-t border-slate-100 pb-1">
-              <span className="text-[11px] font-black text-slate-400 mr-1 shrink-0 uppercase tracking-wider">
-                Tuần học:
-              </span>
-              {(['ALL', '1', '2', '3', '4'] as const).map((w) => (
-                <button
-                  key={w}
-                  type="button"
-                  onClick={() => setTemplateWeekFilter(w)}
-                  className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer border ${
-                    templateWeekFilter === w
-                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
-                      : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border-slate-200'
-                  }`}
-                >
-                  {w === 'ALL' ? 'Tất cả 4 tuần' : `Tuần ${w}`}
-                </button>
-              ))}
-            </div>
+            )}
           </div>
-
-          {/* Templates Grid */}
-          {isLoadingTemplates ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {[1, 2, 3].map((n) => (
-                <div
-                  key={n}
-                  className="p-6 rounded-3xl bg-white border border-slate-200 animate-pulse space-y-4"
-                >
-                  <div className="h-5 w-24 bg-slate-200 rounded-lg" />
-                  <div className="h-6 w-3/4 bg-slate-200 rounded-lg" />
-                  <div className="h-16 bg-slate-100 rounded-xl" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {filteredTemplates.map((tpl) => (
-                <article
-                  key={tpl.id}
-                  onClick={() => setSelectedTemplate(tpl)}
-                  className="group relative p-6 rounded-3xl bg-white border border-slate-200/90 shadow-xs hover:border-emerald-400 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between gap-4 cursor-pointer"
-                >
-                  <div className="space-y-3.5">
-                    <div className="flex items-center justify-between">
-                      <span className="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-black uppercase tracking-wider">
-                        {tpl.disciplineCode}
-                      </span>
-                      <span className="text-[11px] font-extrabold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                        Tuần {tpl.weekNumber}
-                      </span>
-                    </div>
-
-                    <div>
-                      <h4 className="text-base font-black text-slate-900 group-hover:text-emerald-600 transition-colors leading-snug">
-                        {tpl.title}
-                      </h4>
-                      {tpl.description && (
-                        <p className="mt-1.5 text-xs text-slate-500 line-clamp-2">
-                          {tpl.description}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Exercises Preview */}
-                    <div className="space-y-1.5 pt-2 border-t border-slate-100">
-                      <div className="text-[11px] font-black text-slate-400 pb-0.5 uppercase tracking-wider">
-                        {tpl.exercises?.length || 0} bài tập chuẩn hóa
-                      </div>
-
-                      {tpl.exercises?.slice(0, 3).map((ex, idx) => (
-                        <div
-                          key={ex.id || idx}
-                          className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/60 flex items-center justify-between gap-2 text-xs"
-                        >
-                          <span className="font-bold text-slate-700 truncate">
-                            {ex.exercise?.title}
-                          </span>
-                          <span className="text-[11px] font-black text-emerald-700 shrink-0">
-                            {ex.sets || 3} hiệp × {ex.reps || 10}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                    <span className="text-xs font-black text-emerald-600 group-hover:underline flex items-center gap-1">
-                      Xem chi tiết đề cương
-                      <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                    </span>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+        )}
+      </div>
 
       {/* ========================================================= */}
       {/* MODAL 1: CHI TIẾT GIÁO ÁN HỌC VIÊN                        */}
