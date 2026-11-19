@@ -1,7 +1,7 @@
 import { Navigate, createBrowserRouter } from "react-router";
 import { PublicLayout, MemberLayout, CoachLayout, ReceptionistLayout, ManagerLayout, ConsoleLayout } from "@/layouts";
 import { LoginPage, NotFoundPage } from "@/features/auth";
-import { PublicPlansPage, MockPaymentPage, LandingPage } from "@/features/public";
+import { PublicPlansPage, LandingPage } from "@/features/public";
 import { PlansPage, QuotePage } from "@/features/plans";
 import { CoachesPage } from "@/features/coaches";
 import { CheckoutPage, TransactionsPage } from "@/features/checkout";
@@ -82,7 +82,6 @@ export const router = createBrowserRouter([
     children: [
       { path: "plans", element: <PublicPlansPage /> },
       { path: "coaches", element: <CoachesPage /> },
-      { path: "mock-payment", element: <MockPaymentPage /> },
       {
         path: "forbidden",
         element: (
