@@ -66,6 +66,11 @@ export interface Checkout {
   priceSnapshot: Record<string, unknown>
   paymentId: string | null
   paymentUrl: string | null
+  qrCode?: string | null
+  orderCode?: number | null
+  accountNumber?: string | null
+  accountName?: string | null
+  bin?: string | null
   expiresAt: string
   subscriptionId: string | null
   invoiceId: string | null
