@@ -45,9 +45,9 @@ export const InbodyModal: React.FC<{
         role="dialog"
         aria-modal="true"
         aria-labelledby="inbody-dialog-title"
-        className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-md bg-white p-5 shadow-2xl sm:p-6"
+        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-none bg-white p-5 shadow-2xl sm:p-6 border-2 border-slate-900"
       >
-        <div className="mb-5 flex items-start justify-between gap-3 border-b border-[#e3eee7] pb-4">
+        <div className="flex items-start justify-between gap-3 border-b border-[#e3eee7] pb-4">
           <div>
             <h2 id="inbody-dialog-title" className="text-lg font-semibold text-[#172b28]">
               {log ? "Chỉnh sửa phiếu InBody" : "Nhập chỉ số InBody"}
@@ -66,28 +66,39 @@ export const InbodyModal: React.FC<{
             <X className="h-5 w-5" />
           </button>
         </div>
-        <InbodyEntryForm
-          source={log}
-          defaultMode="quick"
-          notesLabel="Lời dặn của chuyên viên"
-          notesPlaceholder="Ghi chú kết quả đo và hướng dẫn tiếp theo"
-          submitLabel={log ? "Lưu điều chỉnh" : "Lưu phiếu đo"}
-          onBusyChange={setBusyState}
-          onCancel={onClose}
-          describeError={(cause) =>
-            cause === EXPIRED ? EXPIRED.message : memberError(
-              cause,
-              log ? "Không thể cập nhật phiếu đo. Vui lòng thử lại." : "Không thể lưu phiếu đo. Vui lòng thử lại.",
-            )
-          }
-          onSubmit={async (payload) => {
-            if (log && Date.now() - new Date(log.measuredAt).getTime() > EDIT_WINDOW_MS)
-              throw EXPIRED;
-            if (log) await updateInbodyLog(log.id, payload);
-            else await createInbodyLog({ ...payload, userId: memberId, notes: payload.notes ?? undefined });
-            onSaved();
-          }}
-        />
+        <div className="mt-5">
+          <InbodyEntryForm
+            source={log}
+            defaultMode="quick"
+            notesLabel="Lời dặn của chuyên viên"
+            notesPlaceholder="Ghi chú kết quả đo và hướng dẫn tiếp theo"
+            submitLabel={log ? "Lưu điều chỉnh" : "Lưu phiếu đo"}
+            onBusyChange={setBusyState}
+            onCancel={onClose}
+            describeError={(cause) =>
+              cause === EXPIRED
+                ? EXPIRED.message
+                : memberError(
+                    cause,
+                    log
+                      ? "Không thể cập nhật phiếu đo. Vui lòng thử lại."
+                      : "Không thể lưu phiếu đo. Vui lòng thử lại.",
+                  )
+            }
+            onSubmit={async (payload) => {
+              if (log && Date.now() - new Date(log.measuredAt).getTime() > EDIT_WINDOW_MS)
+                throw EXPIRED;
+              if (log) await updateInbodyLog(log.id, payload);
+              else
+                await createInbodyLog({
+                  ...payload,
+                  userId: memberId,
+                  notes: payload.notes ?? undefined,
+                });
+              onSaved();
+            }}
+          />
+        </div>
       </section>
     </div>
   );

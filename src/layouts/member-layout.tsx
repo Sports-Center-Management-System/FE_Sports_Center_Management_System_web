@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { NotificationBell } from '@/components/common/notification-bell'
 import logo3tc from '@/assets/images/logo-3tc.png'
 import gymFacility from '@/assets/images/plan-gym-facility.jpg'
 
@@ -59,10 +60,13 @@ export const MemberLayout: React.FC = () => {
               MEMBER
             </span>
           </div>
-          <span className="flex items-center gap-2 text-xs font-semibold text-slate-600">
-            <Menu aria-hidden="true" className="h-5 w-5" />
-            Menu
-          </span>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 pl-1">
+              <Menu aria-hidden="true" className="h-5 w-5" />
+              Menu
+            </span>
+          </div>
         </summary>
         <div className="absolute inset-x-0 top-full max-h-[75vh] overflow-y-auto border-b border-slate-200 bg-white p-4 shadow-xl">
           <nav aria-label="Điều hướng hội viên" className="grid gap-1.5">
@@ -122,27 +126,34 @@ export const MemberLayout: React.FC = () => {
       <aside
         className={cn(
           'hidden h-full max-h-full overflow-hidden bg-white border-r border-slate-200/90 md:flex flex-col justify-between shadow-xs transition-all duration-300 ease-in-out shrink-0 select-none',
-          isCollapsed ? 'p-2.5 pb-2 w-[70px]' : 'p-3 pb-2 w-[240px]',
+          isCollapsed ? 'p-2.5 pb-2 w-[76px]' : 'p-3 pb-2 w-[260px]',
         )}
       >
         <div className="flex flex-col min-h-0 space-y-1.5 flex-1">
-          {/* Header Row: 'Khu vực Hội Viên' and Collapse Toggle Arrow */}
+          {/* Header Row: Logo 3TC Fitness and Collapse Toggle Arrow */}
           {!isCollapsed ? (
-            <div className="flex items-center justify-between px-1 pb-2 border-b border-slate-100">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
-                Khu vực Hội Viên
-              </span>
+            <div className="flex items-center justify-between px-1 pb-2.5 border-b border-slate-100">
+              <Link
+                to="/portal/member/plans"
+                className="flex items-center gap-2 hover:opacity-85 transition-opacity min-w-0"
+                title="3TC Fitness - Hội Viên"
+              >
+                
+                <span className=" px-20 py-0.5 text-[10px] font-extrabold tracking-wider text-emerald-800 uppercase">
+                      MEMBER
+                </span>
+              </Link>
               <button
                 type="button"
                 onClick={() => setIsCollapsed(true)}
                 title="Thu gọn menu"
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
             </div>
           ) : (
-            <div className="flex items-center justify-center pb-2 border-b border-slate-100">
+            <div className="flex flex-col items-center gap-2 pb-2.5 border-b border-slate-100">
               <button
                 type="button"
                 onClick={() => setIsCollapsed(false)}
@@ -151,6 +162,7 @@ export const MemberLayout: React.FC = () => {
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
+             
             </div>
           )}
 
@@ -259,16 +271,29 @@ export const MemberLayout: React.FC = () => {
         </div>
       </aside>
 
-      {/* Main Workspace Area */}
-      <main className="h-full min-h-0 overflow-y-auto p-4 sm:p-6 w-full min-w-0 relative isolate">
-        <div
-          className="inbody-backdrop"
-          style={{ backgroundImage: `url("${gymFacility}")` }}
-        />
-        <div className="relative">
-          <Outlet />
-        </div>
-      </main>
+      {/* Main Workspace Area with Header */}
+      <div className="h-full min-h-0 flex flex-col min-w-0 overflow-hidden">
+        <header className="hidden md:flex items-center justify-between px-6 py-2.5 bg-white border-b border-slate-200/90 shrink-0 z-20">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Hội viên · 3TC Fitness
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <NotificationBell />
+          </div>
+        </header>
+
+        <main className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 w-full min-w-0 relative isolate">
+          <div
+            className="inbody-backdrop"
+            style={{ backgroundImage: `url("${gymFacility}")` }}
+          />
+          <div className="relative">
+            <Outlet />
+          </div>
+        </main>
+      </div>
     </div>
   )
 }

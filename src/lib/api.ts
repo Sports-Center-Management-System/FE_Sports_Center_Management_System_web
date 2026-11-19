@@ -161,12 +161,32 @@ export const query = (params: Record<string, string | number | undefined | null>
     if (value !== undefined && value !== null && value !== '') result.set(name, String(value))
   return result.toString() ? `?${result}` : ''
 }
+const ERROR_TRANSLATIONS: Record<string, string> = {
+  INVALID_PT_SUBSCRIPTION: 'Gói tập hiện tại không hỗ trợ hoặc chưa chỉ định Huấn luyện viên kèm riêng 1:1.',
+  SUBSCRIPTION_NOT_FOUND: 'Không tìm thấy thông tin gói tập tương ứng.',
+  FORBIDDEN_RESOURCE: 'Bạn không có quyền thực hiện thao tác này.',
+  SESSION_MISSING: 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.',
+  NETWORK_UNAVAILABLE: 'Không thể kết nối máy chủ, vui lòng thử lại sau.',
+  REQUEST_FAILED: 'Yêu cầu xử lý không thành công.',
+  SUBSCRIPTION_EXPIRED: 'Gói tập của bạn đã hết hạn sử dụng.',
+  COACH_NOT_AVAILABLE: 'Huấn luyện viên hiện không có lịch trống vào khung giờ này.',
+  BOOKING_CONFLICT: 'Khung giờ này đã bị trùng với một lịch hẹn khác của bạn.',
+  CHECKOUT_NOT_FOUND: 'Không tìm thấy thông tin thanh toán.',
+}
+
 export function errorText(error: unknown): string {
-  return error instanceof ApiError
-    ? `${error.code}: ${error.message}`
-    : error instanceof Error
-      ? error.message
-      : 'Có lỗi xảy ra'
+  if (error instanceof ApiError) {
+    if (ERROR_TRANSLATIONS[error.code]) return ERROR_TRANSLATIONS[error.code]
+    if (ERROR_TRANSLATIONS[error.message]) return ERROR_TRANSLATIONS[error.message]
+    return error.message && error.message !== error.code ? error.message : `Lỗi hệ thống (${error.code})`
+  }
+  if (error instanceof Error) {
+    for (const [code, trans] of Object.entries(ERROR_TRANSLATIONS)) {
+      if (error.message.includes(code)) return trans
+    }
+    return error.message
+  }
+  return 'Đã có lỗi xảy ra, vui lòng thử lại sau.'
 }
 export function internalReturnTo(value: unknown): string {
   return typeof value === 'string' &&

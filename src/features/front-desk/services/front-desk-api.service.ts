@@ -16,6 +16,9 @@ export const getSchedules = async (): Promise<Schedule[]> =>
 export const getLockers = async (): Promise<Locker[]> =>
   (await apiClient.get<Locker[]>("/lockers")).data;
 
+export const releaseLocker = async (lockerId: string) =>
+  (await apiClient.put(`/lockers/${encodeURIComponent(lockerId)}/release`)).data;
+
 export const getCancellationRequests = async (): Promise<CancellationRequest[]> =>
   (await apiClient.get<CancellationRequest[]>("/cancellation-requests")).data;
 

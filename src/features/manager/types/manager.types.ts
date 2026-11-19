@@ -260,12 +260,27 @@ export interface EquipmentPayload {
   equipmentType: string
 }
 
+export interface CurrentLockerAssignment {
+  id: string
+  userId: string
+  assignedAt: string
+  notes?: string | null
+  user: {
+    id: string
+    fullName: string
+    phone: string | null
+    email: string
+    avatarUrl: string | null
+  }
+}
+
 export interface Locker {
   id: string
   lockerNumber: string
   zone: string
   status: LockerStatus
   isActive: boolean
+  currentAssignment?: CurrentLockerAssignment | null
 }
 
 export interface MemberDetail extends UserRow {

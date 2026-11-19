@@ -341,17 +341,16 @@ export function Tabs<T extends string>({
   )
 }
 
-/** Footer under a paged list; renders nothing when everything fits on one page. */
+/** Footer under a paged list */
 export function Pagination({ pager, note }: { pager: Pager; note?: string }) {
-  if (pager.pages <= 1 && !note) return null
-  const first = pager.total === 0 ? 0 : pager.page * pager.pageSize + 1
+  if (pager.total === 0) return null
+  const first = pager.page * pager.pageSize + 1
   const last = Math.min(pager.total, (pager.page + 1) * pager.pageSize)
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-4 py-2 text-xs text-slate-500">
       <span>
-        {pager.pages > 1 ? `${first}–${last} trên ${pager.total}` : null}
-        {pager.pages > 1 && note ? '. ' : null}
-        {note}
+        {pager.pages > 1 ? `Hiển thị ${first}–${last} trên ${pager.total} kết quả` : `Tổng cộng ${pager.total} kết quả`}
+        {note ? ` • ${note}` : null}
       </span>
       {pager.pages > 1 ? (
         <nav aria-label="Phân trang" className="flex items-center gap-1">
@@ -363,7 +362,7 @@ export function Pagination({ pager, note }: { pager: Pager; note?: string }) {
           >
             Trước
           </Btn>
-          <span className="px-1 tabular-nums" aria-current="page">
+          <span className="px-1 tabular-nums font-mono font-medium text-slate-700" aria-current="page">
             Trang {pager.page + 1}/{pager.pages}
           </span>
           <Btn

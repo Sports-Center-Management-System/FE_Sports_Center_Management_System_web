@@ -39,7 +39,7 @@ export const WorkoutPlanDetailModal: React.FC<WorkoutPlanDetailModalProps> = ({
 
   const content = (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 overflow-y-auto"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 overflow-y-auto"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -47,19 +47,19 @@ export const WorkoutPlanDetailModal: React.FC<WorkoutPlanDetailModalProps> = ({
       <div
         role="dialog"
         aria-modal="true"
-        className="w-full max-w-lg sm:max-w-xl max-h-[90vh] rounded-[2rem] bg-white shadow-2xl border border-slate-200/80 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+        className="w-full max-w-lg sm:max-w-xl max-h-[90vh] rounded-md bg-white shadow-xl border border-slate-200 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150"
       >
-        {/* Header: Clean light header with emerald dumbbell badge matching user design */}
-        <div className="flex items-start justify-between p-6 pb-4 sm:p-7 sm:pb-5 bg-white shrink-0 border-b border-slate-100">
-          <div className="flex items-center gap-3.5 min-w-0">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-              <Dumbbell className="h-6 w-6 text-white" />
+        {/* Header */}
+        <div className="flex items-start justify-between p-5 sm:p-6 bg-white shrink-0 border-b border-slate-200">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-md bg-emerald-50 text-[#008b74] flex items-center justify-center shrink-0 border border-emerald-100">
+              <Dumbbell className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-lg font-black text-slate-900 leading-tight truncate">
-                {title || 'giáo án buổi tập'}
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-tight truncate">
+                {title || 'Giáo án buổi tập'}
               </h3>
-              <p className="text-xs text-slate-500 font-medium truncate mt-1">
+              <p className="text-xs text-slate-500 font-medium truncate mt-0.5">
                 {coachName || 'Huấn luyện viên phụ trách'} · {exercises.length} bài tập
               </p>
             </div>
@@ -67,22 +67,22 @@ export const WorkoutPlanDetailModal: React.FC<WorkoutPlanDetailModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0 ml-3"
+            className="p-1.5 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0 ml-3"
             title="Đóng modal"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* Body: Scrollable exercise list */}
-        <div className="p-6 pt-4 sm:p-7 sm:pt-5 overflow-y-auto space-y-4 flex-1 bg-white">
+        <div className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1 bg-white">
           {/* Coach Notes */}
           {notes && (
-            <div className="p-4 sm:p-5 rounded-2xl border border-slate-200/80 bg-white shadow-2xs space-y-1">
-              <div className="text-xs font-black text-emerald-800 uppercase tracking-wider">
+            <div className="p-3.5 sm:p-4 rounded-md border border-slate-200 bg-slate-50 space-y-1">
+              <div className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
                 Lời dặn của HLV:
               </div>
-              <p className="text-sm font-semibold text-slate-700 leading-relaxed">
+              <p className="text-xs sm:text-sm font-medium text-slate-800 leading-relaxed">
                 {notes}
               </p>
             </div>
@@ -90,16 +90,16 @@ export const WorkoutPlanDetailModal: React.FC<WorkoutPlanDetailModalProps> = ({
 
           {/* Exercise Section */}
           <div className="space-y-3 pt-1">
-            <h4 className="text-xs font-black text-slate-500 uppercase tracking-wider">
-              DANH SÁCH BÀI TẬP ({exercises.length})
+            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Danh sách bài tập ({exercises.length})
             </h4>
 
             {exercises.length === 0 ? (
-              <div className="p-8 text-center text-xs font-medium text-slate-400 border border-dashed border-slate-200 rounded-2xl">
+              <div className="p-8 text-center text-xs font-medium text-slate-400 border border-dashed border-slate-200 rounded-md">
                 Chưa có bài tập nào trong giáo án này
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {exercises.map((ex, idx) => {
                   const rawTitle = ex.exercise?.title || ex.title || 'Bài tập';
                   const sets = ex.sets || 3;
@@ -114,19 +114,19 @@ export const WorkoutPlanDetailModal: React.FC<WorkoutPlanDetailModalProps> = ({
                   return (
                     <div
                       key={ex.id || idx}
-                      className="p-4 sm:p-4.5 rounded-2xl border border-slate-200/80 bg-white shadow-2xs flex items-center justify-between gap-4 hover:border-slate-300 transition-colors"
+                      className="p-3.5 rounded-md border border-slate-200 bg-white hover:border-slate-300 transition-colors flex items-center justify-between gap-3 shadow-2xs"
                     >
-                      {/* Left: Number circle + Exercise Name */}
-                      <div className="flex items-center gap-3.5 min-w-0">
-                        <span className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-800 font-black text-sm flex items-center justify-center shrink-0">
+                      {/* Left: Number badge + Exercise Name */}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="w-7 h-7 rounded-md bg-slate-100 text-slate-700 font-mono text-xs font-bold flex items-center justify-center shrink-0 border border-slate-200">
                           {idx + 1}
                         </span>
                         <div className="min-w-0">
-                          <h5 className="text-sm sm:text-base font-bold text-slate-900 leading-snug truncate">
+                          <h5 className="text-xs sm:text-sm font-bold text-slate-900 leading-snug truncate">
                             {rawTitle}
                           </h5>
                           {ex.coachFeedback && (
-                            <p className="text-xs font-medium text-slate-500 italic truncate mt-0.5">
+                            <p className="text-[11px] font-medium text-slate-500 italic truncate mt-0.5">
                               {ex.coachFeedback}
                             </p>
                           )}
@@ -135,10 +135,10 @@ export const WorkoutPlanDetailModal: React.FC<WorkoutPlanDetailModalProps> = ({
 
                       {/* Right: Specs (Sets x Reps, Weight & Rest) */}
                       <div className="text-right shrink-0">
-                        <div className="text-sm sm:text-base font-bold text-slate-900">
+                        <div className="text-xs sm:text-sm font-bold text-slate-900 font-mono">
                           {sets} hiệp × {reps} reps
                         </div>
-                        <div className="text-xs font-medium text-slate-400 mt-0.5">
+                        <div className="text-[11px] font-medium text-slate-500 mt-0.5">
                           {weightDisplay} · Nghỉ {restSeconds}s
                         </div>
                       </div>
@@ -150,12 +150,12 @@ export const WorkoutPlanDetailModal: React.FC<WorkoutPlanDetailModalProps> = ({
           </div>
         </div>
 
-        {/* Footer: Bottom Right Deep Black Rounded Button */}
-        <div className="p-6 pt-2 sm:p-7 sm:pt-2 bg-white flex justify-end shrink-0">
+        {/* Footer */}
+        <div className="p-4 sm:p-5 bg-slate-50 border-t border-slate-200 flex justify-end shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-2.5 rounded-full bg-slate-950 hover:bg-slate-800 text-white text-xs sm:text-sm font-black shadow-md transition active:scale-[0.98] cursor-pointer"
+            className="px-4 py-2 rounded-md bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition active:scale-[0.98] cursor-pointer"
           >
             Đóng giáo án
           </button>

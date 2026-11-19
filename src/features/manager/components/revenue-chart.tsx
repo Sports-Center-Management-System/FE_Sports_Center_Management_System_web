@@ -1,4 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { useMemo } from 'react'
+import {
+  ResponsiveContainer,
+  ComposedChart,
+  Bar,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from 'recharts'
 import { money } from '@/lib/api'
 import { formatDay } from '../lib/format'
 
@@ -12,190 +22,174 @@ export interface DayRevenue {
   complete: boolean
 }
 
-// Validated pair (dataviz validator, light surface): brand teal + orange, CVD ΔE 8.1.
-const SERIES = [
-  { key: 'base', label: 'Gói cơ bản', color: '#008b74' },
-  { key: 'pt', label: 'PT', color: '#eb6834' },
-] as const
-
-const HEIGHT = 240
-const MARGIN = { top: 12, right: 8, bottom: 26, left: 52 }
-const GAP = 2
-const RADIUS = 4
-const MAX_BAR = 24
-
-/** Compact Vietnamese money ticks: 500k, 1,5 tr, 12 tr. */
-function compact(value: number) {
-  if (value >= 1e6) return `${Number((value / 1e6).toFixed(1)).toLocaleString('vi-VN')} tr`
-  if (value >= 1e3) return `${Math.round(value / 1e3)}k`
+/** Format currency ticks into Vietnamese compact form: 500k, 1,2 tr, 10 tr */
+function compactVnd(value: number): string {
+  if (value >= 1e6) {
+    const tr = value / 1e6
+    return `${Number(tr.toFixed(1)).toLocaleString('vi-VN')} tr`
+  }
+  if (value >= 1e3) {
+    return `${Math.round(value / 1e3)}k`
+  }
   return String(value)
 }
 
-/** Clean tick step (1, 2, 2.5 or 5 × 10ⁿ) giving about four intervals up to `max`. */
-function niceTicks(max: number) {
-  if (max <= 0) return [0, 250_000, 500_000, 750_000, 1_000_000]
-  const raw = max / 4
-  const power = 10 ** Math.floor(Math.log10(raw))
-  const step = ([1, 2, 2.5, 5, 10].find((m) => m * power >= raw) ?? 10) * power
-  const count = Math.max(1, Math.ceil(max / step))
-  return Array.from({ length: count + 1 }, (_, k) => k * step)
-}
+function CustomTooltip({ active, payload }: any) {
+  if (!active || !payload || !payload.length) return null
 
-/** Column whose top corners are rounded and bottom is square. */
-function topRounded(x: number, y: number, w: number, h: number) {
-  const r = Math.min(RADIUS, h, w / 2)
-  return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`
-}
+  const item: DayRevenue = payload[0]?.payload
+  if (!item) return null
 
-export function RevenueChart({ data }: { data: DayRevenue[] }) {
-  const box = useRef<HTMLDivElement>(null)
-  const [width, setWidth] = useState(640)
-  const [active, setActive] = useState<number | null>(null)
-
-  useEffect(() => {
-    const el = box.current
-    if (!el) return
-    const observer = new ResizeObserver(([entry]) =>
-      setWidth(Math.max(280, entry.contentRect.width)),
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
-
-  const innerW = width - MARGIN.left - MARGIN.right
-  const innerH = HEIGHT - MARGIN.top - MARGIN.bottom
-  const ticks = niceTicks(Math.max(...data.map((d) => d.base + d.pt), 0))
-  const top = ticks[ticks.length - 1]
-  const y = (value: number) => MARGIN.top + innerH - (value / top) * innerH
-  const band = innerW / Math.max(data.length, 1)
-  const barW = Math.min(MAX_BAR, band * 0.6)
-  // Show at most ~8 date labels so they never collide.
-  const labelEvery = Math.max(1, Math.ceil(data.length / 8))
-  const hovered = active !== null ? data[active] : null
+  const total = item.base + item.pt
 
   return (
-    <div ref={box} className="relative">
-      <div className="mb-2 flex gap-4 text-xs text-slate-600" aria-hidden="true">
-        {SERIES.map((s) => (
-          <span key={s.key} className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-sm" style={{ background: s.color }} />
-            {s.label}
-          </span>
-        ))}
+    <div className="rounded-xl border border-slate-200/90 bg-white/95 p-3.5 shadow-xl backdrop-blur-md min-w-[200px]">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
+        <span className="text-xs font-bold text-slate-800">{formatDay(item.day)}</span>
+        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">
+          {item.invoices} hóa đơn
+        </span>
       </div>
-      <svg
-        width={width}
-        height={HEIGHT}
-        role="img"
-        aria-label={`Biểu đồ cột doanh thu ${data.length} ngày, chia gói cơ bản và PT`}
-        onMouseLeave={() => setActive(null)}
-      >
-        {ticks.map((t) => (
-          <g key={t}>
-            <line
-              x1={MARGIN.left}
-              x2={width - MARGIN.right}
-              y1={y(t)}
-              y2={y(t)}
-              stroke={t === 0 ? '#cbd5e1' : '#eef2f6'}
-            />
-            <text
-              x={MARGIN.left - 8}
-              y={y(t)}
-              dy="0.32em"
-              textAnchor="end"
-              className="fill-slate-400 text-[11px]"
-            >
-              {compact(t)}
-            </text>
-          </g>
-        ))}
-        {data.map((d, i) => {
-          const cx = MARGIN.left + band * i + band / 2
-          const x = cx - barW / 2
-          const baseH = (d.base / top) * innerH
-          const ptH = (d.pt / top) * innerH
-          const dim = active !== null && active !== i
-          const ptGap = d.base > 0 && d.pt > 0 ? GAP : 0
-          return (
-            <g key={d.day} opacity={dim ? 0.45 : 1}>
-              {d.base > 0 ? (
-                d.pt > 0 ? (
-                  <rect
-                    x={x}
-                    y={y(d.base)}
-                    width={barW}
-                    height={Math.max(baseH, 1)}
-                    fill={SERIES[0].color}
-                  />
-                ) : (
-                  <path
-                    d={topRounded(x, y(d.base), barW, Math.max(baseH, 1))}
-                    fill={SERIES[0].color}
-                  />
-                )
-              ) : null}
-              {d.pt > 0 ? (
-                <path
-                  d={topRounded(x, y(d.base) - ptH, barW, Math.max(ptH - ptGap, 1))}
-                  fill={SERIES[1].color}
-                />
-              ) : null}
-              {i % labelEvery === 0 || i === data.length - 1 ? (
-                <text
-                  x={cx}
-                  y={HEIGHT - 8}
-                  textAnchor="middle"
-                  className="fill-slate-400 text-[11px]"
-                >
-                  {formatDay(d.day).slice(0, 5)}
-                </text>
-              ) : null}
-              {/* Hit target: the whole day band, wider and taller than the mark. */}
-              <rect
-                x={MARGIN.left + band * i}
-                y={MARGIN.top}
-                width={band}
-                height={innerH}
-                fill="transparent"
-                tabIndex={0}
-                aria-label={`${formatDay(d.day)}: ${money(d.base + d.pt)}`}
-                onMouseEnter={() => setActive(i)}
-                onFocus={() => setActive(i)}
-                onBlur={() => setActive(null)}
-                className="outline-none focus-visible:fill-slate-900/5"
-              />
-            </g>
-          )
-        })}
-      </svg>
-      {hovered && active !== null ? (
-        <div
-          role="status"
-          className="pointer-events-none absolute top-2 z-10 w-52 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg"
-          style={{
-            left: Math.min(Math.max(MARGIN.left + band * active + band / 2 - 104, 0), width - 208),
-          }}
-        >
-          <p className="mb-1 font-medium text-slate-900">{formatDay(hovered.day)}</p>
-          {SERIES.map((s) => (
-            <p key={s.key} className="flex items-center justify-between gap-3 text-slate-600">
-              <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-sm" style={{ background: s.color }} />
-                {s.label}
-              </span>
-              <span className="tabular-nums">{money(hovered[s.key])}</span>
-            </p>
-          ))}
-          <p className="mt-1 flex justify-between border-t border-slate-100 pt-1 font-medium text-slate-900">
-            <span>Tổng, {hovered.invoices} hóa đơn</span>
-            <span className="tabular-nums">{money(hovered.base + hovered.pt)}</span>
-          </p>
-          {!hovered.complete ? (
-            <p className="mt-1 text-amber-700">Ngày này có thể thiếu hóa đơn cũ.</p>
-          ) : null}
+
+      <div className="space-y-1.5 text-xs">
+        <div className="flex items-center justify-between text-slate-600">
+          <span className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-[#008b74]" />
+            Gói cơ bản:
+          </span>
+          <span className="font-bold tabular-nums text-slate-900">{money(item.base)}</span>
         </div>
-      ) : null}
+
+        <div className="flex items-center justify-between text-slate-600">
+          <span className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-[#f97316]" />
+            Kèm PT 1:1:
+          </span>
+          <span className="font-bold tabular-nums text-slate-900">{money(item.pt)}</span>
+        </div>
+
+        <div className="border-t border-slate-100 pt-1.5 mt-1.5 flex items-center justify-between">
+          <span className="font-bold text-slate-800">Tổng doanh thu:</span>
+          <span className="font-black text-sm text-[#008b74] tabular-nums font-mono">
+            {money(total)}
+          </span>
+        </div>
+
+        {!item.complete && (
+          <p className="text-[10px] text-amber-600 pt-1 italic font-medium">
+            * Dữ liệu có thể thiếu do chạm giới hạn lưu trữ
+          </p>
+        )}
+      </div>
     </div>
   )
 }
+
+export function RevenueChart({ data }: { data: DayRevenue[] }) {
+  const chartData = useMemo(() => {
+    return data.map((d) => ({
+      ...d,
+      shortDay: d.day.slice(5), // MM-DD
+      total: d.base + d.pt,
+    }))
+  }, [data])
+
+  const maxVal = useMemo(() => {
+    return Math.max(...data.map((d) => d.base + d.pt), 1000000)
+  }, [data])
+
+  return (
+    <div className="w-full">
+      {/* Legend Header */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-4">
+          <span className="flex items-center gap-1.5 text-slate-600 font-semibold">
+            <span className="h-2.5 w-2.5 rounded-sm bg-[#008b74]" />
+            Gói tập hội viên
+          </span>
+          <span className="flex items-center gap-1.5 text-slate-600 font-semibold">
+            <span className="h-2.5 w-2.5 rounded-sm bg-[#f97316]" />
+            Buổi tập kèm PT
+          </span>
+        </div>
+      </div>
+
+      {/* Chart Canvas */}
+      <div className="h-[280px] w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart
+            data={chartData}
+            margin={{ top: 12, right: 12, bottom: 8, left: 8 }}
+          >
+            <defs>
+              <linearGradient id="colorBase" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#008b74" stopOpacity={0.9} />
+                <stop offset="100%" stopColor="#008b74" stopOpacity={0.4} />
+              </linearGradient>
+              <linearGradient id="colorPt" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#f97316" stopOpacity={0.9} />
+                <stop offset="100%" stopColor="#f97316" stopOpacity={0.4} />
+              </linearGradient>
+              <linearGradient id="areaTotal" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#008b74" stopOpacity={0.15} />
+                <stop offset="100%" stopColor="#008b74" stopOpacity={0.0} />
+              </linearGradient>
+            </defs>
+
+            <CartesianGrid
+              strokeDasharray="3 3"
+              vertical={false}
+              stroke="#f1f5f9"
+            />
+
+            <XAxis
+              dataKey="shortDay"
+              tickLine={false}
+              axisLine={{ stroke: '#e2e8f0' }}
+              tick={{ fill: '#64748b', fontSize: 11 }}
+              interval="preserveStartEnd"
+            />
+
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tick={{ fill: '#94a3b8', fontSize: 11 }}
+              tickFormatter={compactVnd}
+              domain={[0, Math.ceil(maxVal * 1.15)]}
+              width={56}
+            />
+
+            <Tooltip content={<CustomTooltip />} />
+
+            <Area
+              type="monotone"
+              dataKey="total"
+              stroke="#008b74"
+              strokeWidth={1.5}
+              fill="url(#areaTotal)"
+              dot={false}
+              activeDot={{ r: 4, fill: '#008b74', stroke: '#ffffff', strokeWidth: 2 }}
+            />
+
+            <Bar
+              dataKey="base"
+              stackId="a"
+              fill="url(#colorBase)"
+              radius={[0, 0, 0, 0]}
+              maxBarSize={28}
+            />
+
+            <Bar
+              dataKey="pt"
+              stackId="a"
+              fill="url(#colorPt)"
+              radius={[4, 4, 0, 0]}
+              maxBarSize={28}
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  )
+}
+export default RevenueChart

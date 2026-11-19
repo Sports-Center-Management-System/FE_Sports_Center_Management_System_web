@@ -136,6 +136,11 @@ export const managerApi = {
     post<Locker>('/lockers', body),
   setLockerStatus: (id: string, status: LockerStatus) =>
     put<Locker>(`/lockers/${id}/status`, { status }),
+  releaseLocker: (lockerId: string) =>
+    put<{ id: string; status: LockerStatus; releasedAssignmentId: string | null; returnedAt: string }>(
+      `/lockers/${lockerId}/release`,
+      {},
+    ),
   returnLocker: (assignmentId: string) =>
     put<{ id: string; returnedAt: string }>(`/lockers/assignments/${assignmentId}/return`, {}),
 

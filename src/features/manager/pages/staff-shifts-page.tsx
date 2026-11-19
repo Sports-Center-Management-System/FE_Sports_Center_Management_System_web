@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, Plus, Copy, Sparkles } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Copy, Sparkles, CalendarDays } from 'lucide-react'
 import { managerApi, managerKeys } from '../api/manager-api'
 import type { StaffShift } from '../types/manager.types'
 import { BulkShiftModal } from '../components/bulk-shift-modal'
 import { FridayCloneShiftModal } from '../components/friday-clone-shift-modal'
+import { MemberDatePickerModal } from '@/features/calendar/components/member-date-picker-modal'
 import {
   addDaysToDay,
   dayOnly,
@@ -38,6 +39,7 @@ export function ManagerStaffShiftsPage() {
   const [editing, setEditing] = useState<StaffShift | { day: string } | null>(null)
   const [showBulkModal, setShowBulkModal] = useState(false)
   const [showCloneModal, setShowCloneModal] = useState(false)
+  const [showDatePickerModal, setShowDatePickerModal] = useState(false)
 
   const names = new Map((staff.data ?? []).map((user) => [user.id, user.fullName]))
   const receptionists = (staff.data ?? []).filter(
@@ -58,7 +60,7 @@ export function ManagerStaffShiftsPage() {
   }).length
 
   return (
-    <>
+    <div className="rounded-md bg-white border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-6">
       <PageHeader
         title="Ca trực lễ tân"
         description="Xếp ca theo tuần. Ca trùng giờ của cùng một người sẽ bị từ chối."
@@ -82,7 +84,15 @@ export function ManagerStaffShiftsPage() {
       <Panel
         title={`Tuần ${formatDay(week)} – ${formatDay(addDaysToDay(week, 6))}`}
         actions={
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
+            <Btn
+              size="sm"
+              onClick={() => setShowDatePickerModal(true)}
+              className="inline-flex items-center gap-1.5"
+            >
+              <CalendarDays className="h-4 w-4 text-[#008b74]" />
+              <span>Chọn ngày / tuần</span>
+            </Btn>
             <Btn
               size="sm"
               tone="ghost"
@@ -185,7 +195,16 @@ export function ManagerStaffShiftsPage() {
         currentWeek={week}
         shiftCountThisWeek={shiftCountThisWeek}
       />
-    </>
+      <MemberDatePickerModal
+        isOpen={showDatePickerModal}
+        onClose={() => setShowDatePickerModal(false)}
+        currentWeek={week}
+        onSelectWeek={(selectedMonday) => {
+          setWeek(selectedMonday)
+          setShowDatePickerModal(false)
+        }}
+      />
+    </div>
   )
 }
 

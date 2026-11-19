@@ -172,7 +172,7 @@ export function ManagerBookingsPage() {
   }
 
   return (
-    <>
+    <div className="rounded-md bg-white border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-6">
       <PageHeader
         title="Lịch đặt chỗ"
         description="Lượt đặt lớp nhóm và PT 1-1 của hội viên. Đặt hoặc hủy hộ khi hội viên nhờ quầy."
@@ -320,7 +320,7 @@ export function ManagerBookingsPage() {
         />
       ) : null}
       {planFor ? <PlanModal booking={planFor} onClose={() => setPlanFor(null)} /> : null}
-    </>
+    </div>
   )
 }
 

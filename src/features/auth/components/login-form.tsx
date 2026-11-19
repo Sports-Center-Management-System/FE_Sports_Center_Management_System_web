@@ -61,13 +61,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     }
   };
 
-  // Quick helper to fill test accounts
-  const handleQuickFill = (testEmail: string) => {
-    setEmail(testEmail);
-    setPassword("Password123!");
-    setErrorMessage(null);
-  };
-
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Error alert banner */}
@@ -147,42 +140,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         )}
       </Button>
 
-      {/* Quick Demo Credentials Panel */}
-      <div className="pt-3 border-t border-slate-100">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-          Tài khoản kiểm thử nhanh:
-        </p>
-        <div className="grid grid-cols-2 gap-1.5">
-          <button
-            type="button"
-            onClick={() => handleQuickFill("coach.alex@sportscenter.com")}
-            className="px-2 py-1.5 text-left text-[11px] font-medium bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors cursor-pointer"
-          >
-            <span className="font-bold text-amber-700">HLV:</span> Coach Alex
-          </button>
-          <button
-            type="button"
-            onClick={() => handleQuickFill("member.john@example.com")}
-            className="px-2 py-1.5 text-left text-[11px] font-medium bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors cursor-pointer"
-          >
-            <span className="font-bold text-emerald-700">Hội viên:</span> Member John
-          </button>
-          <button
-            type="button"
-            onClick={() => handleQuickFill("manager@sportscenter.com")}
-            className="px-2 py-1.5 text-left text-[11px] font-medium bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors cursor-pointer"
-          >
-            <span className="font-bold text-slate-800">Quản lý:</span> Manager
-          </button>
-          <button
-            type="button"
-            onClick={() => handleQuickFill("receptionist@sportscenter.com")}
-            className="px-2 py-1.5 text-left text-[11px] font-medium bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors cursor-pointer"
-          >
-            <span className="font-bold text-sky-700">Lễ tân:</span> Desk Staff
-          </button>
-        </div>
-      </div>
+
 
       {/* Switch to Register link */}
       <div className="pt-2 text-center text-xs text-slate-500">

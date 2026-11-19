@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from '@/auth/session-context'
 import {
   CalendarDays,
@@ -16,13 +16,11 @@ import {
   UserCheck,
   Users,
   RefreshCw,
-  Plus,
-  Minus,
   CalendarRange,
   Maximize2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { errorText, get, money, query } from '@/lib/api'
+import { errorText } from '@/lib/api'
 import { createCheckout } from '@/lib/checkout'
 import { vietnamDate, vietnamDateTime } from '@/lib/date'
 import { memberKeys } from '@/lib/keys'
@@ -31,6 +29,8 @@ import { cn } from '@/lib/utils'
 import { getPlanImage } from '@/features/plans/components/plan-images'
 import { SubscriptionDetailModal } from './subscription-detail-modal'
 import {
+  formatSubscriptionPlanName,
+  formatSubscriptionTier,
   getSubscriptionBenefits,
   getSubscriptionExpiration,
   isActiveDropIn,
@@ -79,7 +79,6 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ item, discip
   const { user } = useSession()
   const navigate = useNavigate()
   const cache = useQueryClient()
-  const [sessions, setSessions] = useState(1)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [actionError, setActionError] = useState('')
   const benefits = getSubscriptionBenefits(item)
@@ -101,24 +100,9 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ item, discip
 
   const daysRemaining = calculateDaysRemaining(expiration)
 
-  const preview = useQuery({
-    queryKey: ['member', user!.id, 'addon-preview', item.id, sessions],
-    queryFn: () =>
-      get<{ ratePerSession: string; amount: string }>(
-        `/billing/subscriptions/${item.id}/pt-addon-preview${query({ sessions })}`,
-      ),
-    enabled: isActive && isVip && Boolean(item.assignedCoach),
-    retry: false,
-  })
-
   const checkout = useMutation({
-    mutationFn: (kind: 'RENEWAL' | 'PT_ADDON') =>
-      createCheckout(
-        user!.id,
-        kind === 'RENEWAL'
-          ? { kind, subscriptionId: item.id }
-          : { kind, subscriptionId: item.id, addonSessions: sessions },
-      ),
+    mutationFn: (kind: 'RENEWAL') =>
+      createCheckout(user!.id, { kind, subscriptionId: item.id }),
     onSuccess: (order) => {
       void cache.invalidateQueries({ queryKey: memberKeys.transactions(user!.id) })
       navigate(`/portal/member/checkouts/${order.checkoutId}`)
@@ -128,13 +112,13 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ item, discip
 
   return (
     <article
-      className="group relative flex flex-col justify-between bg-white dark:bg-[#131b26] rounded-3xl overflow-hidden border border-slate-200/90 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-emerald-500/40 transition-all duration-300 select-none"
+      className="group relative flex flex-col justify-between bg-white rounded-md overflow-hidden border border-slate-200 shadow-2xs hover:border-slate-300 transition-all select-none"
       aria-label={item.plan?.name ?? 'Gói tập'}
     >
       {/* 1. VISUAL COVER IMAGE HEADER */}
       <div
         onClick={() => setIsDetailOpen(true)}
-        className="relative h-48 sm:h-52 w-full overflow-hidden bg-slate-950 cursor-pointer group/img"
+        className="relative h-44 sm:h-48 w-full overflow-hidden bg-slate-950 cursor-pointer group/img"
       >
         <img
           src={planImg}
@@ -148,14 +132,14 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ item, discip
         <div className="absolute top-3 left-3 right-3 flex items-start justify-between gap-2">
           {/* Left: Discipline & Tier Badges */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-bold tracking-wide uppercase bg-black/60 text-white backdrop-blur-md border border-white/20">
-              <DisciplineIcon nameOrCode={disciplineName} className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10.5px] font-bold tracking-wide uppercase bg-black/60 text-white backdrop-blur-md border border-white/20">
+              <DisciplineIcon nameOrCode={disciplineName} className="w-3 h-3 text-emerald-400" />
               <span>{disciplineName}</span>
             </span>
 
             <span
               className={cn(
-                'px-2.5 py-1 rounded-full text-[10px] font-black tracking-wider uppercase border backdrop-blur-md',
+                'px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wider uppercase border backdrop-blur-md',
                 isVip
                   ? 'bg-amber-500/80 text-white border-amber-400'
                   : isPlus
@@ -163,14 +147,14 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ item, discip
                   : 'bg-slate-700/80 text-white border-slate-500',
               )}
             >
-              {isVip ? 'VIP ĐẶC QUYỀN' : isPlus ? 'PLUS TOÀN DIỆN' : item.packageTier}
+              {formatSubscriptionTier(item.packageTier)}
             </span>
           </div>
 
           {/* Right: Status Badge */}
           <span
             className={cn(
-              'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-bold border backdrop-blur-md shrink-0',
+              'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-bold border backdrop-blur-md shrink-0',
               isActive
                 ? 'bg-emerald-500/90 text-white border-emerald-400'
                 : isFrozen
@@ -199,8 +183,8 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ item, discip
 
         {/* Plan Name & Expiry Overlay */}
         <div className="absolute bottom-3 left-3 right-3">
-          <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-snug drop-shadow-md truncate">
-            {item.plan?.name ?? 'Gói tập'}
+          <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight leading-snug drop-shadow-md truncate">
+            {formatSubscriptionPlanName(item.plan?.name)}
           </h2>
           <div className="flex items-center gap-2 text-xs text-white/80 font-medium mt-0.5">
             <span className="font-semibold">{daysRemaining.text}</span>
@@ -211,20 +195,20 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ item, discip
       </div>
 
       {/* 2. CARD BODY */}
-      <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between space-y-4">
+      <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-4">
         {/* Bento Chips: Quota Grid with Used vs Remaining stats */}
-        <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-2xl border border-slate-100 dark:border-slate-800">
+        <div className="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-md border border-slate-200">
           {/* Lớp nhóm */}
           <div className="text-center">
-            <Users className="w-3.5 h-3.5 mx-auto text-cyan-600 dark:text-cyan-400 mb-0.5" />
-            <span className="text-[10px] text-slate-400 dark:text-slate-400 block font-bold uppercase tracking-wider">
+            <Users className="w-3.5 h-3.5 mx-auto text-slate-500 mb-0.5" />
+            <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">
               Lớp nhóm
             </span>
-            <strong className="text-sm sm:text-base text-slate-800 dark:text-slate-100 font-mono font-bold block">
+            <strong className="text-sm sm:text-base text-slate-900 font-mono font-bold block">
               {item.remainingGroupSessions ?? '—'}
               <span className="text-[10px] font-normal text-slate-400 ml-0.5">còn</span>
             </strong>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 block truncate">
+            <span className="text-[10px] text-slate-500 block truncate">
               {item.plan?.groupSessionQuota != null && item.remainingGroupSessions != null
                 ? `Đã dùng: ${Math.max(0, item.plan.groupSessionQuota - item.remainingGroupSessions)}`
                 : item.plan?.groupSessionQuota
@@ -234,9 +218,9 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ item, discip
             {item.plan?.groupSessionQuota != null &&
               item.plan.groupSessionQuota > 0 &&
               item.remainingGroupSessions != null && (
-                <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-slate-200">
                   <div
-                    className="h-full rounded-full bg-cyan-500 transition-all duration-300"
+                    className="h-full rounded-full bg-[#008b74] transition-all duration-300"
                     style={{
                       width: `${Math.min(
                         100,
@@ -249,16 +233,16 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ item, discip
           </div>
 
           {/* Kèm 1:1 */}
-          <div className="text-center border-x border-slate-200/70 dark:border-slate-800">
-            <UserCheck className="w-3.5 h-3.5 mx-auto text-amber-600 dark:text-amber-400 mb-0.5" />
-            <span className="text-[10px] text-slate-400 dark:text-slate-400 block font-bold uppercase tracking-wider">
+          <div className="text-center border-x border-slate-200">
+            <UserCheck className="w-3.5 h-3.5 mx-auto text-slate-500 mb-0.5" />
+            <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">
               Kèm 1:1
             </span>
-            <strong className="text-sm sm:text-base text-slate-800 dark:text-slate-100 font-mono font-bold block">
+            <strong className="text-sm sm:text-base text-slate-900 font-mono font-bold block">
               {item.remainingPtSessions ?? '—'}
               <span className="text-[10px] font-normal text-slate-400 ml-0.5">còn</span>
             </strong>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 block truncate">
+            <span className="text-[10px] text-slate-500 block truncate">
               {item.plan?.ptSessionQuota != null && item.remainingPtSessions != null
                 ? `Đã dùng: ${Math.max(0, item.plan.ptSessionQuota - item.remainingPtSessions)}`
                 : item.plan?.ptSessionQuota
@@ -268,9 +252,9 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ item, discip
             {item.plan?.ptSessionQuota != null &&
               item.plan.ptSessionQuota > 0 &&
               item.remainingPtSessions != null && (
-                <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-slate-200">
                   <div
-                    className="h-full rounded-full bg-amber-500 transition-all duration-300"
+                    className="h-full rounded-full bg-[#008b74] transition-all duration-300"
                     style={{
                       width: `${Math.min(
                         100,
@@ -284,11 +268,11 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ item, discip
 
           {/* Hạn dùng */}
           <div className="text-center">
-            <Clock className="w-3.5 h-3.5 mx-auto text-emerald-600 dark:text-emerald-400 mb-0.5" />
-            <span className="text-[10px] text-slate-400 dark:text-slate-400 block font-bold uppercase tracking-wider">
+            <Clock className="w-3.5 h-3.5 mx-auto text-slate-500 mb-0.5" />
+            <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">
               Hạn dùng
             </span>
-            <strong className="text-xs sm:text-sm text-slate-800 dark:text-slate-100 font-mono font-bold block mt-0.5 truncate">
+            <strong className="text-xs sm:text-sm text-slate-900 font-mono font-bold block mt-0.5 truncate">
               {daysRemaining.isExpired ? 'Hết hạn' : daysRemaining.text}
             </strong>
             <span className="text-[9.5px] text-slate-400 block truncate">
@@ -298,10 +282,10 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ item, discip
         </div>
 
         {/* Perks & Entitlements */}
-        <div className="space-y-2 text-xs text-slate-600 dark:text-slate-300 pt-1">
+        <div className="space-y-1.5 text-xs text-slate-600 pt-1">
           {benefits.unlimitedGym ? (
-            <p className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-medium">
-              <DoorOpen className="w-4 h-4 text-emerald-600 shrink-0" />
+            <p className="flex items-center gap-2 text-emerald-800 font-medium">
+              <DoorOpen className="w-3.5 h-3.5 text-[#008b74] shrink-0" />
               <span>Ra vào phòng tập tự do không giới hạn</span>
             </p>
           ) : (
@@ -317,8 +301,8 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ item, discip
           </p>
 
           {isVip && (
-            <p className="flex items-center gap-2 text-amber-800 dark:text-amber-300 font-semibold">
-              <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+            <p className="flex items-center gap-2 text-slate-800 font-medium">
+              <UserCheck className="w-3.5 h-3.5 text-[#008b74] shrink-0" />
               <span>Đặc quyền đặt lịch riêng cùng Huấn luyện viên</span>
             </p>
           )}
@@ -326,15 +310,15 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ item, discip
 
         {/* HLV Phụ trách */}
         {item.assignedCoach && (
-          <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300">
-              <UserCheck className="h-5 w-5" />
+          <div className="flex items-center gap-2.5 p-2.5 rounded-md bg-slate-50 border border-slate-200">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-200 text-slate-700 font-bold text-xs">
+              {item.assignedCoach.fullName.charAt(0)}
             </div>
             <div className="min-w-0">
-              <p className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 HLV phụ trách chính
               </p>
-              <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+              <p className="text-xs font-bold text-slate-900 truncate">
                 {item.assignedCoach.fullName}
               </p>
             </div>
@@ -342,21 +326,16 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ item, discip
         )}
 
         {/* Date Details Bar */}
-        <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+        <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100">
           <div className="flex items-center gap-1.5">
             <CalendarDays className="w-3.5 h-3.5 text-slate-400" />
             <span>Bắt đầu:</span>
-            <span className="font-semibold text-slate-700 dark:text-slate-200 tabular-nums">
+            <span className="font-semibold text-slate-700 tabular-nums font-mono">
               {displayDate(item.startDate)}
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <span>Hết hạn:</span>
-            <span className="font-semibold text-slate-700 dark:text-slate-200 tabular-nums">
-              {displayDate(expiration, isActiveDropIn(item))}
-            </span>
-          </div>
+          
         </div>
 
         {/* 3. CARD ACTION BUTTONS */}
@@ -367,7 +346,7 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ item, discip
               type="button"
               variant="mint"
               onClick={() => navigate('/portal/member/bookings')}
-              className="w-full h-10 rounded-xl font-bold text-xs tracking-wide flex items-center justify-center gap-2 bg-[#008b74] hover:bg-[#007461] text-white shadow-2xs transition-all cursor-pointer"
+              className="w-full h-9 rounded-md font-bold text-xs tracking-wide flex items-center justify-center gap-2 bg-[#008b74] hover:bg-[#007461] text-white shadow-2xs transition-all cursor-pointer"
             >
               <CalendarRange className="w-3.5 h-3.5" />
               <span>Đặt lịch học ngay</span>
@@ -379,7 +358,7 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ item, discip
             type="button"
             variant="outline"
             onClick={() => setIsDetailOpen(true)}
-            className="w-full h-9 rounded-xl font-bold text-xs tracking-wide flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-all cursor-pointer"
+            className="w-full h-9 rounded-md font-bold text-xs tracking-wide flex items-center justify-center gap-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-all cursor-pointer"
           >
             <Maximize2 className="w-3.5 h-3.5 text-slate-500" />
             <span>Xem chi tiết các buổi đã dùng</span>
@@ -393,74 +372,15 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ item, discip
               disabled={checkout.isPending}
               onClick={() => checkout.mutate('RENEWAL')}
               className={cn(
-                'w-full h-9 rounded-xl font-bold text-xs tracking-wide flex items-center justify-center gap-2 border transition-all cursor-pointer',
+                'w-full h-9 rounded-md font-bold text-xs tracking-wide flex items-center justify-center gap-2 border transition-all cursor-pointer',
                 isActive
-                  ? 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
+                  ? 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
                   : 'bg-emerald-600 hover:bg-emerald-700 text-white border-transparent shadow-xs',
               )}
             >
               <RefreshCw className={cn('w-3.5 h-3.5', checkout.isPending && 'animate-spin')} />
               <span>{isExpired ? 'Gia hạn gói tập ngay' : 'Gia hạn trước hạn'}</span>
             </Button>
-          )}
-
-          {/* VIP PT Addon Stepper Box */}
-          {isVip && isActive && (
-            <div className="mt-3 p-3.5 rounded-2xl border border-amber-200/90 dark:border-amber-800/60 bg-amber-50/50 dark:bg-amber-950/20 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-amber-950 dark:text-amber-200 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                  Mua thêm buổi PT 1:1
-                </span>
-
-                {/* Counter Stepper */}
-                <div className="flex items-center gap-1 bg-white dark:bg-slate-900 rounded-lg border border-amber-200 dark:border-amber-800 p-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setSessions((prev) => Math.max(1, prev - 1))}
-                    disabled={sessions <= 1}
-                    className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 rounded disabled:opacity-40 cursor-pointer"
-                  >
-                    <Minus className="w-3 h-3" />
-                  </button>
-                  <span className="w-7 text-center font-bold text-xs tabular-nums text-slate-900 dark:text-slate-100">
-                    {sessions}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setSessions((prev) => Math.min(100, prev + 1))}
-                    disabled={sessions >= 100}
-                    className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 rounded disabled:opacity-40 cursor-pointer"
-                  >
-                    <Plus className="w-3 h-3" />
-                  </button>
-                </div>
-              </div>
-
-              {preview.data && (
-                <div className="text-[11px] text-amber-900 dark:text-amber-300 font-medium flex items-center justify-between">
-                  <span>Dự kiến ({money(preview.data.ratePerSession)}/buổi):</span>
-                  <strong className="font-bold tabular-nums text-xs font-mono">
-                    {money(preview.data.amount)}
-                  </strong>
-                </div>
-              )}
-
-              {preview.error && (
-                <p className="text-[11px] text-rose-600 font-medium">{errorText(preview.error)}</p>
-              )}
-
-              <Button
-                type="button"
-                variant="mint"
-                size="sm"
-                disabled={checkout.isPending || !preview.data}
-                onClick={() => checkout.mutate('PT_ADDON')}
-                className="w-full h-8 text-xs font-bold rounded-lg bg-amber-600 hover:bg-amber-700 text-white transition-colors cursor-pointer"
-              >
-                Xác nhận mua {sessions} buổi PT
-              </Button>
-            </div>
           )}
 
           {actionError && (
@@ -471,7 +391,7 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ item, discip
         </div>
       </div>
 
-      {/* 4. FULL CINEMATIC DETAIL MODAL */}
+      {/* 4. DETAIL MODAL */}
       <SubscriptionDetailModal
         item={item}
         discipline={discipline}
@@ -483,12 +403,6 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({ item, discip
         }}
         onRenew={() => checkout.mutate('RENEWAL')}
         isRenewing={checkout.isPending}
-        ptSessions={sessions}
-        onPtSessionsChange={setSessions}
-        onBuyPtAddon={() => checkout.mutate('PT_ADDON')}
-        isBuyingPtAddon={checkout.isPending}
-        previewData={preview.data}
-        previewError={preview.error}
       />
     </article>
   )
