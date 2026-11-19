@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import {
   BarChart3,
   BookOpen,
@@ -20,7 +20,7 @@ import {
 import { useAuth } from '@/context/auth-context'
 import { cn } from '@/lib/utils'
 import { managerApi, managerKeys } from '@/features/manager/api/manager-api'
-import { connectRealtime } from '@/features/manager/lib/realtime'
+import { NotificationBell } from '@/components/common/notification-bell'
 import logo3tc from '@/assets/images/logo-3tc.png'
 
 const navGroups = [
@@ -46,23 +46,6 @@ const navGroups = [
   },
 ]
 
-function useCancellationRealtime() {
-  const queryClient = useQueryClient()
-  useEffect(() => {
-    const socket = connectRealtime()
-    if (!socket) return
-    const refresh = () => {
-      void queryClient.invalidateQueries({ queryKey: managerKeys.cancellations })
-      void queryClient.invalidateQueries({ queryKey: managerKeys.summary })
-    }
-    socket.on('cancellation.requested', refresh)
-    socket.on('cancellation.reviewed', refresh)
-    socket.on('cancellation.cancelled', refresh)
-    return () => {
-      socket.disconnect()
-    }
-  }, [queryClient])
-}
 
 function NavItems({
   pending,
@@ -133,7 +116,6 @@ export const ManagerLayout: React.FC = () => {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false)
-  useCancellationRealtime()
   const summary = useQuery({ queryKey: managerKeys.summary, queryFn: managerApi.summary })
   const pending = summary.data?.pendingCancellations ?? 0
 
@@ -158,10 +140,13 @@ export const ManagerLayout: React.FC = () => {
               QUẢN LÝ
             </span>
           </div>
-          <span className="flex items-center gap-2 text-xs font-semibold text-slate-600">
-            <Menu aria-hidden="true" className="h-5 w-5" />
-            Menu
-          </span>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+              <Menu aria-hidden="true" className="h-5 w-5" />
+              Menu
+            </span>
+          </div>
         </summary>
         <div className="absolute inset-x-0 top-full max-h-[75vh] overflow-y-auto border-b border-slate-200 bg-white p-4 shadow-xl">
           <nav aria-label="Điều hướng quản lý" className="grid gap-1">
@@ -319,12 +304,25 @@ export const ManagerLayout: React.FC = () => {
         </div>
       </aside>
 
-      {/* Main Workspace Area with Consistent Container */}
-      <main className="h-full min-h-0 min-w-0 overflow-y-auto bg-slate-50/70 p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl">
-          <Outlet />
-        </div>
-      </main>
+      {/* Main Workspace Area with Header & Container */}
+      <div className="h-full min-h-0 flex flex-col min-w-0 overflow-hidden">
+        <header className="hidden md:flex items-center justify-between px-6 py-2.5 bg-white border-b border-slate-200/90 shrink-0 z-20">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Bàn làm việc Quản lý
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <NotificationBell />
+          </div>
+        </header>
+
+        <main className="flex-1 min-h-0 min-w-0 overflow-y-auto bg-slate-50/70 p-4 sm:p-6 lg:p-8">
+          <div className="mx-auto max-w-7xl">
+            <Outlet />
+          </div>
+        </main>
+      </div>
     </div>
   )
 }

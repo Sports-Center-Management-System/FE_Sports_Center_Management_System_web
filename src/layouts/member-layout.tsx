@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { NotificationBell } from '@/components/common/notification-bell'
 import logo3tc from '@/assets/images/logo-3tc.png'
 import gymFacility from '@/assets/images/plan-gym-facility.jpg'
 
@@ -59,10 +60,13 @@ export const MemberLayout: React.FC = () => {
               MEMBER
             </span>
           </div>
-          <span className="flex items-center gap-2 text-xs font-semibold text-slate-600">
-            <Menu aria-hidden="true" className="h-5 w-5" />
-            Menu
-          </span>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 pl-1">
+              <Menu aria-hidden="true" className="h-5 w-5" />
+              Menu
+            </span>
+          </div>
         </summary>
         <div className="absolute inset-x-0 top-full max-h-[75vh] overflow-y-auto border-b border-slate-200 bg-white p-4 shadow-xl">
           <nav aria-label="Điều hướng hội viên" className="grid gap-1.5">
@@ -267,16 +271,29 @@ export const MemberLayout: React.FC = () => {
         </div>
       </aside>
 
-      {/* Main Workspace Area */}
-      <main className="h-full min-h-0 overflow-y-auto p-4 sm:p-6 w-full min-w-0 relative isolate">
-        <div
-          className="inbody-backdrop"
-          style={{ backgroundImage: `url("${gymFacility}")` }}
-        />
-        <div className="relative">
-          <Outlet />
-        </div>
-      </main>
+      {/* Main Workspace Area with Header */}
+      <div className="h-full min-h-0 flex flex-col min-w-0 overflow-hidden">
+        <header className="hidden md:flex items-center justify-between px-6 py-2.5 bg-white border-b border-slate-200/90 shrink-0 z-20">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Hội viên · 3TC Fitness
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <NotificationBell />
+          </div>
+        </header>
+
+        <main className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 w-full min-w-0 relative isolate">
+          <div
+            className="inbody-backdrop"
+            style={{ backgroundImage: `url("${gymFacility}")` }}
+          />
+          <div className="relative">
+            <Outlet />
+          </div>
+        </main>
+      </div>
     </div>
   )
 }

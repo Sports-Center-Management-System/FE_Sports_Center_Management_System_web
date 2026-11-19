@@ -2,12 +2,11 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { QRCodeSVG } from "qrcode.react";
-import { io } from "socket.io-client";
 import logo3tc from "@/assets/images/logo-3tc.png";
 import { useSession } from "@/auth/session-context";
 import { StateMessage } from "@/components/feedback/state-message";
 import { Button } from "@/components/ui/button";
-import { apiOrigin, errorText, get, money, post, readTokens } from "@/lib/api";
+import { errorText, get, money, post } from "@/lib/api";
 import { clearRetryKey, retryKey } from "@/lib/checkout";
 import { vietnamDate } from "@/lib/date";
 import { memberKeys } from "@/lib/keys";
@@ -84,26 +83,22 @@ export const CheckoutPage: React.FC = () => {
   const assignedCoach = coaches.data?.find((c) => c.id === snapshot?.coachId);
 
   useEffect(() => {
-    const token = readTokens()?.accessToken;
-    if (!token) return;
-    const socket = io(`${apiOrigin()}/realtime`, {
-      auth: { token },
-      transports: ["websocket", "polling"],
-    });
-
-    const invalidate = (event: { checkoutId?: string }) => {
-      if (event.checkoutId === checkoutId)
-        void cache.invalidateQueries({ queryKey: memberKeys.checkout(user!.id, checkoutId) });
+    const handleRealtimeEvent = (event: Event) => {
+      const customEvent = event as CustomEvent<{ type: string; data: Record<string, unknown> }>;
+      if (
+        customEvent.detail?.type === "checkout.updated" ||
+        customEvent.detail?.type === "checkout.paid"
+      ) {
+        const data = customEvent.detail.data as { checkoutId?: string };
+        if (!data?.checkoutId || data.checkoutId === checkoutId) {
+          void cache.invalidateQueries({ queryKey: memberKeys.checkout(user!.id, checkoutId) });
+        }
+      }
     };
 
-    socket.on("checkout.updated", invalidate);
-    socket.on("connect", () => {
-      void cache.invalidateQueries({ queryKey: memberKeys.checkout(user!.id, checkoutId) });
-    });
-
+    window.addEventListener("app:realtime-event", handleRealtimeEvent);
     return () => {
-      socket.off("checkout.updated", invalidate);
-      socket.disconnect();
+      window.removeEventListener("app:realtime-event", handleRealtimeEvent);
     };
   }, [checkoutId, user, cache]);
 

@@ -64,6 +64,11 @@ export function ManagerFacilitiesPage() {
     onSuccess: invalidate(managerKeys.lockers),
     onError,
   })
+  const lockerRelease = useMutation({
+    mutationFn: (lockerId: string) => managerApi.releaseLocker(lockerId),
+    onSuccess: invalidate(managerKeys.lockers),
+    onError,
+  })
 
   const roomRows = rooms.data ?? []
   const roomName = new Map(roomRows.map((r) => [r.id, r.name]))
@@ -283,7 +288,33 @@ export function ManagerFacilitiesPage() {
                         </Td>
                         <Td className="text-right">
                           {locker.status === 'OCCUPIED' ? (
-                            <span className="text-xs text-slate-400">Đang có hội viên dùng</span>
+                            <div className="flex items-center justify-end gap-3">
+                              <div className="text-right">
+                                <span className="block text-xs font-semibold text-slate-800">
+                                  {locker.currentAssignment?.user.fullName || 'Hội viên'}
+                                </span>
+                                {locker.currentAssignment?.user.phone && (
+                                  <span className="block text-[11px] text-slate-500 tabular-nums">
+                                    {locker.currentAssignment.user.phone}
+                                  </span>
+                                )}
+                              </div>
+                              <Btn
+                                size="sm"
+                                disabled={lockerRelease.isPending}
+                                onClick={() => {
+                                  if (
+                                    window.confirm(
+                                      `Xác nhận trả tủ ${locker.lockerNumber} hộ hội viên ${locker.currentAssignment?.user.fullName || ''}?`,
+                                    )
+                                  ) {
+                                    lockerRelease.mutate(locker.id)
+                                  }
+                                }}
+                              >
+                                Trả tủ hộ
+                              </Btn>
+                            </div>
                           ) : (
                             <Btn
                               size="sm"

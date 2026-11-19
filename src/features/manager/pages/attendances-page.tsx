@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { managerApi, managerKeys } from '../api/manager-api'
 import type { GateCheckinResult, LockerZone, UserRow } from '../types/manager.types'
 import { errorMessage, formatDateTime, formatTime, zoneLabel } from '../lib/format'
-import { connectRealtime } from '../lib/realtime'
 import { useUserNames } from '../lib/use-user-names'
 import { MemberPicker } from '../components/member-picker'
 import {
@@ -42,18 +41,24 @@ export function ManagerAttendancesPage() {
   const feedName = useUserNames(feed.map((e) => e.memberId))
 
   useEffect(() => {
-    const socket = connectRealtime()
-    if (!socket) return
-    socket.on('gate.checked-in', (data: Omit<GateEvent, 'at'>) => {
-      setFeed((current) =>
-        current.some((e) => e.attendanceId === data.attendanceId)
-          ? current
-          : [{ ...data, at: new Date().toISOString() }, ...current].slice(0, FEED_LIMIT),
-      )
-      void queryClient.invalidateQueries({ queryKey: managerKeys.summary })
-    })
+    const handleRealtimeEvent = (event: Event) => {
+      const customEvent = event as CustomEvent<{ type: string; data: Record<string, unknown> }>
+      if (customEvent.detail?.type === 'gate.checked-in') {
+        const data = customEvent.detail.data as unknown as Omit<GateEvent, 'at'>
+        if (data?.attendanceId) {
+          setFeed((current) =>
+            current.some((e) => e.attendanceId === data.attendanceId)
+              ? current
+              : [{ ...data, at: new Date().toISOString() }, ...current].slice(0, FEED_LIMIT),
+          )
+          void queryClient.invalidateQueries({ queryKey: managerKeys.summary })
+        }
+      }
+    }
+
+    window.addEventListener('app:realtime-event', handleRealtimeEvent)
     return () => {
-      socket.disconnect()
+      window.removeEventListener('app:realtime-event', handleRealtimeEvent)
     }
   }, [queryClient])
 

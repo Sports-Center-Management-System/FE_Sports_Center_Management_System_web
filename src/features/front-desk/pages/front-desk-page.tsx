@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { io } from "socket.io-client";
 import { Link } from "react-router";
 import { AlertTriangle, ReceiptText, RefreshCw, ScanLine, UsersRound, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useNotification } from "@/context/notification-context";
 import { CancellationModal } from "../components/cancellation-modal";
 import { OnBehalfCancellationModal } from "../components/on-behalf-cancellation-modal";
 import {
@@ -20,6 +20,7 @@ import {
   getMemberAttendances,
   getSchedules,
   getUser,
+  releaseLocker,
 } from "../services/front-desk-api.service";
 import type {
   CancellationRequest,
@@ -33,6 +34,7 @@ import type {
 const getLoadError = (section: string): string => `Không thể tải ${section}. Vui lòng thử lại.`;
 
 export const FrontDeskPage: React.FC = () => {
+  const { isConnected } = useNotification();
   const [now, setNow] = useState(() => new Date());
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [lockers, setLockers] = useState<Locker[]>([]);
@@ -47,7 +49,6 @@ export const FrontDeskPage: React.FC = () => {
   const [lockerError, setLockerError] = useState<string | null>(null);
   const [requestsError, setRequestsError] = useState<string | null>(null);
   const [checkinError, setCheckinError] = useState<string | null>(null);
-  const [realtimeStatus, setRealtimeStatus] = useState<"connecting" | "connected" | "offline">("connecting");
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const seenRequests = useRef(new Set<string>());
@@ -169,55 +170,51 @@ export const FrontDeskPage: React.FC = () => {
     return () => { window.clearInterval(clock); window.clearInterval(poll); };
   }, [refresh]);
 
+  const handleReleaseLocker = async (lockerId: string) => {
+    try {
+      await releaseLocker(lockerId);
+      setNotice("Đã hoàn tất trả tủ hộ hội viên thành công.");
+      await loadLockers();
+    } catch {
+      setNotice("Không thể trả tủ hộ. Vui lòng thử lại.");
+    }
+  };
+
   useEffect(() => {
-    let activeToken = localStorage.getItem("access_token");
-    const socket = io(import.meta.env.VITE_REALTIME_URL || "/realtime", {
-      path: "/socket.io",
-      autoConnect: false,
-      auth: { token: activeToken },
-    });
-    const updateToken = () => {
-      activeToken = localStorage.getItem("access_token");
-      socket.auth = { token: activeToken };
-    };
-    const tokenWatch = window.setInterval(() => {
-      const token = localStorage.getItem("access_token");
-      if (token === activeToken) return;
-      activeToken = token;
-      socket.auth = { token };
-      socket.disconnect();
-      if (token) socket.connect();
-    }, 10_000);
-    socket.io.on("reconnect_attempt", updateToken);
-    socket.on("connect", () => { setRealtimeStatus("connected"); refresh(); });
-    socket.on("disconnect", () => setRealtimeStatus("offline"));
-    socket.on("connect_error", () => setRealtimeStatus("offline"));
-    socket.on("gate.checked-in", (event: GateCheckinEvent) => { void handleGateCheckin(event); });
-    socket.on("cancellation.requested", (request: CancellationRequest) => {
-      if (!request?.id || request.status !== "PENDING") return;
-      setRequests((current) => [request, ...current.filter((item) => item.id !== request.id)]);
-      if (!seenRequests.current.has(request.id)) {
-        seenRequests.current.add(request.id);
-        setSelected((current) => current ?? request);
-        playAlert();
+    const handleRealtimeEvent = (event: Event) => {
+      const customEvent = event as CustomEvent<{ type: string; data: Record<string, unknown> }>;
+      const { type, data } = customEvent.detail || {};
+
+      if (type === "gate.checked-in") {
+        void handleGateCheckin(data as unknown as GateCheckinEvent);
+      } else if (type === "cancellation.requested") {
+        const request = data as unknown as CancellationRequest;
+        if (!request?.id || request.status !== "PENDING") return;
+        setRequests((current) => [request, ...current.filter((item) => item.id !== request.id)]);
+        if (!seenRequests.current.has(request.id)) {
+          seenRequests.current.add(request.id);
+          setSelected((current) => current ?? request);
+          playAlert();
+        }
+        void loadRequests();
+      } else if (type === "cancellation.reviewed") {
+        const request = data as unknown as CancellationRequest;
+        if (!request?.id) return;
+        setRequests((current) => current.filter((item) => item.id !== request.id));
+        setSelected((current) => (current?.id === request.id ? null : current));
+        void loadRequests();
+      } else if (type === "schedule.updated") {
+        void loadSchedules();
+      } else if (type === "locker.changed") {
+        void loadLockers();
       }
-      void loadRequests();
-    });
-    socket.on("cancellation.reviewed", (request: CancellationRequest) => {
-      if (!request?.id) return;
-      setRequests((current) => current.filter((item) => item.id !== request.id));
-      setSelected((current) => current?.id === request.id ? null : current);
-      void loadRequests();
-    });
-    socket.on("schedule.updated", () => { void loadSchedules(); });
-    socket.connect();
-    return () => {
-      window.clearInterval(tokenWatch);
-      socket.io.off("reconnect_attempt", updateToken);
-      socket.removeAllListeners();
-      socket.disconnect();
     };
-  }, [refresh, handleGateCheckin, loadRequests, loadSchedules, playAlert]);
+
+    window.addEventListener("app:realtime-event", handleRealtimeEvent);
+    return () => {
+      window.removeEventListener("app:realtime-event", handleRealtimeEvent);
+    };
+  }, [handleGateCheckin, loadRequests, loadSchedules, loadLockers, playAlert]);
 
   useEffect(() => () => { void audioContext.current?.close(); }, []);
 
@@ -255,7 +252,7 @@ export const FrontDeskPage: React.FC = () => {
             <AlertTriangle className="h-4 w-4 text-rose-600" />
             <span>Nộp đơn hủy thay HLV</span>
           </Button>
-          <span className={`rounded-xl px-2.5 py-1 text-xs font-semibold ${realtimeStatus === "connected" ? "bg-emerald-50 text-[#008b74] border border-emerald-200/70" : "bg-amber-50 text-amber-800 border border-amber-200/70"}`}>{realtimeStatus === "connected" ? "Realtime đang hoạt động" : realtimeStatus === "connecting" ? "Đang kết nối..." : "Mất kết nối realtime"}</span>
+          <span className={`rounded-xl px-2.5 py-1 text-xs font-semibold ${isConnected ? "bg-emerald-50 text-[#008b74] border border-emerald-200/70" : "bg-amber-50 text-amber-800 border border-amber-200/70"}`}>{isConnected ? "Realtime đang hoạt động" : "Mất kết nối realtime"}</span>
           <Button type="button" variant="outline" onClick={() => void toggleSound()} title={soundEnabled ? "Tắt âm báo" : "Bật âm báo"} aria-label={soundEnabled ? "Tắt âm báo" : "Bật âm báo"} className="h-9 w-9 p-0 rounded-xl border-slate-200">{soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}</Button>
           <Button type="button" variant="outline" onClick={refresh} title="Tải lại dữ liệu" aria-label="Tải lại dữ liệu" className="h-9 w-9 p-0 rounded-xl border-slate-200"><RefreshCw className="h-4 w-4" /></Button>
         </div>
@@ -270,9 +267,9 @@ export const FrontDeskPage: React.FC = () => {
           <div className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs"><p className="text-xs font-semibold text-slate-500">Hủy ca chờ xử lý</p><p className="mt-1.5 text-2xl font-black text-rose-600">{requestsLoading || requestsError ? "—" : requests.length}</p></div>
         </div>
         <div className="grid gap-6 xl:grid-cols-2">
-          <RecentCheckins rows={checkins} now={now} loading={realtimeStatus === "connecting"} error={checkinError ?? (realtimeStatus === "offline" ? "Mất kết nối realtime. Các lượt mới sẽ hiển thị khi kết nối lại." : null)} />
+          <RecentCheckins rows={checkins} now={now} loading={!isConnected} error={checkinError ?? (!isConnected ? "Mất kết nối realtime. Các lượt mới sẽ hiển thị khi kết nối lại." : null)} />
           <UpcomingClasses schedules={schedules} now={now} loading={scheduleLoading} error={scheduleError} />
-          <LockerAvailability lockers={lockers} loading={lockerLoading} error={lockerError} />
+          <LockerAvailability lockers={lockers} loading={lockerLoading} error={lockerError} onRelease={handleReleaseLocker} />
           <PendingCancellations requests={requests} loading={requestsLoading} error={requestsError} onOpen={setSelected} />
         </div>
       </div>

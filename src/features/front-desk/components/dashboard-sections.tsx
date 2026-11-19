@@ -78,19 +78,146 @@ export const UpcomingClasses: React.FC<BaseSectionProps & { schedules: Schedule[
   );
 };
 
-export const LockerAvailability: React.FC<BaseSectionProps & { lockers: Locker[] }> = ({ lockers, loading, error }) => {
+export const LockerAvailability: React.FC<
+  BaseSectionProps & {
+    lockers: Locker[];
+    onRelease?: (lockerId: string) => Promise<void>;
+  }
+> = ({ lockers, loading, error, onRelease }) => {
+  const [viewMode, setViewMode] = React.useState<"zones" | "occupied">("zones");
+  const [releasingId, setReleasingId] = React.useState<string | null>(null);
   const zones = getLockerZones(lockers);
+  const occupiedLockers = lockers.filter((l) => l.status === "OCCUPIED");
+
+  const handleRelease = async (locker: Locker) => {
+    if (!onRelease) return;
+    const memberName = locker.currentAssignment?.user?.fullName || "hội viên";
+    if (!window.confirm(`Xác nhận trả tủ ${locker.lockerNumber} thay cho ${memberName}?`)) return;
+    try {
+      setReleasingId(locker.id);
+      await onRelease(locker.id);
+    } finally {
+      setReleasingId(null);
+    }
+  };
+
   return (
     <section className="min-w-0 rounded-lg border border-[#dceee8] bg-white p-5 shadow-sm">
-      <div className="flex items-center gap-2 text-base font-semibold text-[#10221f]"><DoorOpen className="h-5 w-5 text-[#008b74]" />Tủ đồ còn trống</div>
-      {error ? <p role="alert" className="mt-5 text-sm text-[#aa3428]">{error}</p> : loading ? <div className="mt-5 space-y-3"><div className="h-12 animate-pulse rounded bg-[#edf7f3]" /><div className="h-12 animate-pulse rounded bg-[#edf7f3]" /></div> : zones.length ? (
-        <dl className="mt-5 divide-y divide-[#e4f0ec]">
-          {zones.map(([name, count]) => <div key={name} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
-            <dt className="min-w-0 text-sm font-medium text-[#10221f]">{name}</dt>
-            <dd className="shrink-0 text-sm"><strong className="text-lg text-[#008b74]">{count.available}</strong><span className="ml-1 text-[#6a7d78]">trống / {count.total} tủ</span></dd>
-          </div>)}
-        </dl>
-      ) : <p className="mt-5 py-8 text-center text-sm text-[#6a7d78]">Chưa có tủ đồ đang hoạt động.</p>}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-base font-semibold text-[#10221f]">
+          <DoorOpen className="h-5 w-5 text-[#008b74]" />
+          Tình trạng tủ đồ
+        </div>
+        <div className="flex items-center gap-1 rounded-lg bg-slate-100 p-0.5 text-xs font-medium">
+          <button
+            type="button"
+            onClick={() => setViewMode("zones")}
+            className={`rounded-md px-2.5 py-1 transition-colors ${
+              viewMode === "zones"
+                ? "bg-white font-bold text-slate-900 shadow-2xs"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            Khu vực
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("occupied")}
+            className={`rounded-md px-2.5 py-1 transition-colors ${
+              viewMode === "occupied"
+                ? "bg-white font-bold text-slate-900 shadow-2xs"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            Đang dùng ({occupiedLockers.length})
+          </button>
+        </div>
+      </div>
+
+      {error ? (
+        <p role="alert" className="mt-5 text-sm text-[#aa3428]">
+          {error}
+        </p>
+      ) : loading ? (
+        <div className="mt-5 space-y-3">
+          <div className="h-12 animate-pulse rounded bg-[#edf7f3]" />
+          <div className="h-12 animate-pulse rounded bg-[#edf7f3]" />
+        </div>
+      ) : viewMode === "zones" ? (
+        zones.length ? (
+          <dl className="mt-5 divide-y divide-[#e4f0ec]">
+            {zones.map(([name, count]) => (
+              <div
+                key={name}
+                className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
+              >
+                <dt className="min-w-0 text-sm font-medium text-[#10221f]">{name}</dt>
+                <dd className="shrink-0 text-sm">
+                  <strong className="text-lg text-[#008b74]">{count.available}</strong>
+                  <span className="ml-1 text-[#6a7d78]">trống / {count.total} tủ</span>
+                </dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <p className="mt-5 py-8 text-center text-sm text-[#6a7d78]">
+            Chưa có tủ đồ đang hoạt động.
+          </p>
+        )
+      ) : occupiedLockers.length ? (
+        <div className="mt-5 overflow-x-auto">
+          <table className="w-full min-w-[500px] text-left text-sm">
+            <thead>
+              <tr className="border-b border-[#e4f0ec] text-xs text-[#6a7d78]">
+                <th className="pb-3 font-semibold">Mã tủ</th>
+                <th className="pb-3 font-semibold">Khu vực</th>
+                <th className="pb-3 font-semibold">Hội viên</th>
+                <th className="pb-3 font-semibold">Thời gian mượn</th>
+                <th className="pb-3 font-semibold text-right">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              {occupiedLockers.map((locker) => {
+                const user = locker.currentAssignment?.user;
+                const assignedAt = locker.currentAssignment?.assignedAt;
+                return (
+                  <tr key={locker.id} className="border-b border-[#eef6f2] last:border-0">
+                    <td className="py-2.5 font-bold text-[#10221f]">{locker.lockerNumber}</td>
+                    <td className="py-2.5 text-xs text-slate-600">{locker.zone}</td>
+                    <td className="py-2.5">
+                      <div className="font-medium text-slate-900">
+                        {user?.fullName || "—"}
+                      </div>
+                      {user?.phone && (
+                        <div className="text-[11px] text-slate-500">{user.phone}</div>
+                      )}
+                    </td>
+                    <td className="py-2.5 text-xs text-slate-600">
+                      {assignedAt ? formatTime(assignedAt) : "—"}
+                    </td>
+                    <td className="py-2.5 text-right">
+                      {onRelease && (
+                        <button
+                          type="button"
+                          onClick={() => void handleRelease(locker)}
+                          disabled={releasingId === locker.id}
+                          className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100 hover:border-rose-300 disabled:opacity-50 cursor-pointer"
+                        >
+                          {releasingId === locker.id ? "Đang trả..." : "Trả tủ hộ"}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="mt-5 py-8 text-center text-sm text-[#6a7d78]">
+          Hiện không có tủ đồ nào đang được mượn.
+        </p>
+      )}
     </section>
   );
 };

@@ -1,9 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router';
-import { useQueryClient } from '@tanstack/react-query';
-import { io } from 'socket.io-client';
 import { useAuth } from '@/context/auth-context';
-import { apiOrigin, readTokens } from '@/lib/api';
+import { NotificationBell } from '@/components/common/notification-bell';
 import {
   CalendarCheck,
   Clock,
@@ -35,52 +33,7 @@ const coachNavLinks = [
 export const CoachLayout: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
-
-  useEffect(() => {
-    const tokens = readTokens()
-    if (!tokens?.accessToken) return
-
-    const socket = io(`${apiOrigin()}/realtime`, {
-      transports: ['websocket', 'polling'],
-      auth: { token: tokens.accessToken },
-    })
-
-    const invalidateSchedule = () => {
-      queryClient.invalidateQueries({ queryKey: ['coach', 'today-schedule'] })
-      queryClient.invalidateQueries({ queryKey: ['coach', 'multi-day-schedule'] })
-      queryClient.invalidateQueries({ queryKey: ['coach', 'availability'] })
-    }
-
-    const invalidateRequests = () => {
-      queryClient.invalidateQueries({ queryKey: ['coach', 'cancellation-requests'] })
-      queryClient.invalidateQueries({ queryKey: ['coach', 'penalties'] })
-      queryClient.invalidateQueries({ queryKey: ['coach', 'today-schedule'] })
-      queryClient.invalidateQueries({ queryKey: ['coach', 'multi-day-schedule'] })
-    }
-
-    socket.on('cancellation.reviewed', invalidateRequests)
-    socket.on('cancellation.cancelled', invalidateRequests)
-    socket.on('cancellation.requested', invalidateRequests)
-    socket.on('schedule.updated', invalidateSchedule)
-    socket.on('attendance.updated', invalidateSchedule)
-    socket.on('booking.updated', invalidateSchedule)
-    socket.on('booking.created', invalidateSchedule)
-    socket.on('booking.cancelled', invalidateSchedule)
-
-    return () => {
-      socket.off('cancellation.reviewed', invalidateRequests)
-      socket.off('cancellation.cancelled', invalidateRequests)
-      socket.off('cancellation.requested', invalidateRequests)
-      socket.off('schedule.updated', invalidateSchedule)
-      socket.off('attendance.updated', invalidateSchedule)
-      socket.off('booking.updated', invalidateSchedule)
-      socket.off('booking.created', invalidateSchedule)
-      socket.off('booking.cancelled', invalidateSchedule)
-      socket.disconnect()
-    }
-  }, [queryClient, user?.id])
 
   const handleLogout = async () => {
     navigate('/auth/login', { replace: true })
@@ -103,10 +56,13 @@ export const CoachLayout: React.FC = () => {
               COACH
             </span>
           </div>
-          <span className="flex items-center gap-2 text-xs font-semibold text-slate-600">
-            <Menu aria-hidden="true" className="h-5 w-5" />
-            Menu
-          </span>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+              <Menu aria-hidden="true" className="h-5 w-5" />
+              Menu
+            </span>
+          </div>
         </summary>
         <div className="absolute inset-x-0 top-full max-h-[70vh] overflow-y-auto border-b border-slate-200 bg-white p-4 shadow-lg">
           <nav aria-label="Điều hướng huấn luyện viên" className="grid gap-1">
@@ -266,10 +222,23 @@ export const CoachLayout: React.FC = () => {
         </div>
       </aside>
 
-      {/* Main Workspace Area */}
-      <main className="h-full min-h-0 overflow-y-auto p-4 sm:p-8 w-full min-w-0 bg-[#f8fafc]">
-        <Outlet />
-      </main>
+      {/* Main Workspace Area with Header */}
+      <div className="h-full min-h-0 flex flex-col min-w-0 overflow-hidden">
+        <header className="hidden md:flex items-center justify-between px-6 py-2.5 bg-white border-b border-slate-200/90 shrink-0 z-20">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Huấn luyện viên · 3TC Fitness
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <NotificationBell />
+          </div>
+        </header>
+
+        <main className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-8 w-full min-w-0 bg-[#f8fafc]">
+          <Outlet />
+        </main>
+      </div>
     </div>
   )
 }

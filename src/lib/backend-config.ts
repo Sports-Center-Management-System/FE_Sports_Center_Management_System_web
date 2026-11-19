@@ -1,4 +1,4 @@
-/** Shared by Vite, HTTP clients and Socket.IO. The env value is a backend origin. */
+/** Shared by Vite, HTTP clients and Server-Sent Events (SSE). The env value is a backend origin. */
 export function resolveBackendConfig(value = '', useProxy = false) {
   const input = value.trim()
   let origin = ''

@@ -38,11 +38,29 @@ export interface Schedule {
   coach: { fullName: string };
 }
 
+export interface LockerUserSummary {
+  id: string;
+  fullName: string;
+  phone: string | null;
+  email: string;
+  avatarUrl: string | null;
+}
+
+export interface CurrentLockerAssignment {
+  id: string;
+  userId: string;
+  assignedAt: string;
+  notes?: string | null;
+  user: LockerUserSummary;
+}
+
 export interface Locker {
   id: string;
+  lockerNumber: string;
   zone: string;
   status: "AVAILABLE" | "OCCUPIED" | "MAINTENANCE";
   isActive: boolean;
+  currentAssignment?: CurrentLockerAssignment | null;
 }
 
 export interface CancellationRequest {

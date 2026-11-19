@@ -61,13 +61,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     }
   };
 
-  // Quick helper to fill test accounts
-  const handleQuickFill = (testEmail: string) => {
-    setEmail(testEmail);
-    setPassword("Password123!");
-    setErrorMessage(null);
-  };
-
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Error alert banner */}

@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { getMyShifts } from '@/features/front-desk/services/front-desk-api.service'
 import { MyShiftsModal } from '@/features/front-desk/components/my-shifts-modal'
+import { NotificationBell } from '@/components/common/notification-bell'
 import logo3tc from '@/assets/images/logo-3tc.png'
 import gymFacility from '@/assets/images/plan-gym-facility.jpg'
 
@@ -76,10 +77,13 @@ export const ReceptionistLayout: React.FC = () => {
               LỄ TÂN
             </span>
           </div>
-          <span className="flex items-center gap-2 text-xs font-semibold text-slate-600">
-            <Menu aria-hidden="true" className="h-5 w-5" />
-            Menu
-          </span>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+              <Menu aria-hidden="true" className="h-5 w-5" />
+              Menu
+            </span>
+          </div>
         </summary>
         <div className="absolute inset-x-0 top-full max-h-[75vh] overflow-y-auto border-b border-slate-200 bg-white p-4 shadow-xl">
           {/* Mobile Shift Status & Action */}
@@ -348,6 +352,9 @@ export const ReceptionistLayout: React.FC = () => {
               <Calendar className="h-3.5 w-3.5 text-emerald-600" />
               <span>Lịch trực của tôi</span>
             </Button>
+
+            {/* Real-time Notification Bell */}
+            <NotificationBell />
           </div>
         </header>
 
