@@ -44,7 +44,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         beMessage = err.message;
       }
 
-      if (
+      if (err instanceof AxiosError && (err.code === "ECONNABORTED" || err.message?.includes("timeout"))) {
+        setErrorMessage("Máy chủ đang khởi động lại từ trạng thái nghỉ (Render free-tier cold start). Vui lòng đợi vài giây và bấm Đăng nhập lại.");
+      } else if (
         beMessage === "INVALID_CREDENTIALS" ||
         (typeof beMessage === "string" && beMessage.includes("INVALID_CREDENTIALS"))
       ) {
@@ -59,18 +61,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     }
   };
 
-  // Quick helper to fill test accounts
-  const handleQuickFill = (testEmail: string) => {
-    setEmail(testEmail);
-    setPassword("Password123!");
-    setErrorMessage(null);
-  };
-
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Error alert banner */}
       {errorMessage && (
-        <div className="flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 animate-in fade-in-50">
+        <div className="flex items-start gap-2.5 border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 animate-in fade-in-50">
           <AlertCircle className="h-4 w-4 shrink-0 text-rose-600 mt-0.5" />
           <p className="flex-1 leading-relaxed font-medium">{errorMessage}</p>
         </div>
@@ -90,7 +85,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="member@example.com"
-            className="pl-10"
+            className="pl-10 rounded-none bg-slate-50 border-slate-200 focus:bg-white"
           />
         </div>
       </div>
@@ -111,7 +106,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Tối thiểu 6 ký tự"
-            className="pl-10 pr-10"
+            className="pl-10 pr-10 rounded-none bg-slate-50 border-slate-200 focus:bg-white"
           />
           <button
             type="button"
@@ -133,7 +128,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         type="submit"
         variant="mint"
         disabled={isSubmitting}
-        className="w-full rounded-xl py-3 text-xs font-bold shadow-md shadow-emerald-700/10 flex items-center justify-center gap-2 mt-2"
+        className="w-full rounded-none py-2.5 text-xs font-bold flex items-center justify-center gap-2 mt-2 shadow-xs"
       >
         {isSubmitting ? (
           <span>Đang xác thực...</span>
@@ -145,35 +140,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         )}
       </Button>
 
-      {/* Quick Demo Credentials Panel */}
-      <div className="pt-2 border-t border-slate-100">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-          Tài khoản kiểm thử nhanh (Demo):
-        </p>
-        <div className="flex flex-wrap gap-1.5">
-          <button
-            type="button"
-            onClick={() => handleQuickFill("member.john@example.com")}
-            className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-emerald-50 text-[#008b74] border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer"
-          >
-            Hội viên (Member)
-          </button>
-          <button
-            type="button"
-            onClick={() => handleQuickFill("manager@sportscenter.com")}
-            className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 transition-colors cursor-pointer"
-          >
-            Giám Đốc (Manager)
-          </button>
-          <button
-            type="button"
-            onClick={() => handleQuickFill("receptionist@sportscenter.com")}
-            className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200 hover:bg-sky-100 transition-colors cursor-pointer"
-          >
-            Lễ Tân (Desk)
-          </button>
-        </div>
-      </div>
+
 
       {/* Switch to Register link */}
       <div className="pt-2 text-center text-xs text-slate-500">
@@ -181,7 +148,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         <button
           type="button"
           onClick={onSwitchToRegister}
-          className="font-bold text-white hover:underline inline-flex items-center gap-0.5 ml-1 cursor-pointer"
+          className="font-bold text-[#008b74] hover:underline inline-flex items-center gap-0.5 ml-1 cursor-pointer"
         >
           Đăng ký ngay
           <ArrowRight className="h-3 w-3" />

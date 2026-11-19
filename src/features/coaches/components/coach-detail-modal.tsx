@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   X,
-  Clock,
   ShieldCheck,
   CheckCircle2,
   Phone,
@@ -12,12 +11,16 @@ import {
   Tag,
   DollarSign,
   ChevronRight,
-  Check,
   FileText,
-  Calendar,
+  AlertTriangle,
+  CreditCard,
+  Loader2,
 } from "lucide-react";
-import { money } from "@/lib/api";
+import { money, get } from "@/lib/api";
+import { createCheckout } from "@/lib/checkout";
+import type { Plan } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/auth-context";
 import type { Coach, CoachAvailabilitySlot } from "../types/coach.types";
 import { coachApiService } from "../services/coach-api.service";
 import { DisciplineIcon } from "./discipline-icon";
@@ -34,11 +37,13 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
   coach,
   isOpen,
   onClose,
-  onSelectSlot,
+  onSelectSlot: _onSelectSlot,
 }) => {
   const navigate = useNavigate();
-  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
-  const [bookSuccess, setBookSuccess] = useState(false);
+  const { isAuthenticated, user } = useAuth();
+
+  const [selectedDisciplineId, setSelectedDisciplineId] = useState<string>('');
+  const [bookingError, setBookingError] = useState<string | null>(null);
 
   // 1. Fetch full coach detail
   const coachDetailQuery = useQuery({
@@ -50,17 +55,96 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
 
   const activeCoach = coachDetailQuery.data || coach;
 
-  // 2. Fetch real availability slots from API
-  const availabilityQuery = useQuery({
-    queryKey: ["coach-availability", coach?.id],
-    queryFn: () => (coach?.id ? coachApiService.getAvailability(coach.id) : Promise.resolve([])),
-    enabled: Boolean(isOpen && coach?.id),
+  // Fetch member's subscriptions to match the best active PT package
+  const memberSubscriptionsQuery = useQuery({
+    queryKey: ['member-subscriptions', user?.id],
+    queryFn: () => get<any[]>('/memberships/subscriptions'),
+    enabled: Boolean(isOpen && isAuthenticated),
+    staleTime: 30000,
   });
 
-  const slots =
-    availabilityQuery.data && availabilityQuery.data.length > 0
-      ? availabilityQuery.data
-      : activeCoach?.coachAvailabilities || [];
+  // Find member's active PT subscriptions matching this coach
+  const matchingSubscriptions = useMemo(() => {
+    const list = memberSubscriptionsQuery.data || [];
+    return list.filter((s: any) => {
+      if (s.status !== 'ACTIVE') return false;
+      if ((s.remainingPtSessions ?? 0) <= 0) return false;
+      if (s.assignedCoachId && s.assignedCoachId !== activeCoach?.id) return false;
+      if (
+        activeCoach?.disciplineIds?.length &&
+        !activeCoach.disciplineIds.includes(s.disciplineId)
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [memberSubscriptionsQuery.data, activeCoach]);
+
+  const activeSubscription = useMemo(() => {
+    if (matchingSubscriptions.length === 0) return null;
+    if (selectedDisciplineId) {
+      return (
+        matchingSubscriptions.find((s: any) => s.disciplineId === selectedDisciplineId) ||
+        matchingSubscriptions[0]
+      );
+    }
+    return matchingSubscriptions[0];
+  }, [matchingSubscriptions, selectedDisciplineId]);
+
+  // Fetch VIP plans to directly bind checkout
+  const plansQuery = useQuery({
+    queryKey: ["catalog", "all"],
+    queryFn: () => get<Plan[]>("/memberships/plans", true),
+    enabled: Boolean(isOpen),
+  });
+
+  const targetVipPlan = useMemo(() => {
+    if (!activeCoach || !plansQuery.data) return null;
+    const discIds =
+      activeCoach.coachProfile?.coachSpecialties?.map((s) => s.specialty.disciplineId) ||
+      activeCoach.disciplineIds ||
+      [];
+    return (
+      plansQuery.data.find(
+        (p) => p.packageTier === "VIP" && p.isActive && discIds.includes(p.disciplineId)
+      ) || plansQuery.data.find((p) => p.packageTier === "VIP" && p.isActive) || null
+    );
+  }, [activeCoach, plansQuery.data]);
+
+  const checkoutMutation = useMutation({
+    mutationFn: async () => {
+      setBookingError(null);
+      if (!user) {
+        navigate("/auth/login", { state: { from: "/portal/member/coaches" } });
+        return null;
+      }
+      if (!activeCoach) return null;
+      if (!targetVipPlan) {
+        throw new Error("Đang tải danh mục gói tập VIP, vui lòng thử lại sau giây lát.");
+      }
+      return createCheckout(user.id, {
+        kind: "NEW_SUBSCRIPTION",
+        planId: targetVipPlan.id,
+        coachId: activeCoach.id,
+      });
+    },
+    onSuccess: (order) => {
+      if (order?.checkoutId) {
+        onClose();
+        navigate(`/portal/member/checkouts/${order.checkoutId}`);
+      }
+    },
+    onError: (err: any) => {
+      setBookingError(err?.message || "Không thể tạo đơn thanh toán, vui lòng thử lại.");
+    },
+  });
+
+  // Reset modal state on open/coach change
+  useEffect(() => {
+    if (isOpen) {
+      setBookingError(null);
+    }
+  }, [isOpen, coach?.id]);
 
   // Handle ESC key
   useEffect(() => {
@@ -93,30 +177,21 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
   const hasAvatar = Boolean(activeCoach.avatarUrl && activeCoach.avatarUrl.trim());
   const bio = activeCoach.bio || activeCoach.coachProfile?.bio;
 
-  const handleConfirmBooking = () => {
-    const chosenSlot = slots.find((s) => s.id === selectedSlotId);
-    if (onSelectSlot && chosenSlot) {
-      onSelectSlot(activeCoach, chosenSlot);
-    } else {
-      setBookSuccess(true);
-      setTimeout(() => {
-        navigate(`/portal/member/bookings?coachId=${activeCoach.id}`);
-        onClose();
-      }, 1000);
-    }
-  };
+  const sessionRate =
+    activeRate && activeRate.ratePerSession > 0 ? Number(activeRate.ratePerSession) : 0;
+  const weeklyRate = sessionRate * 3; // Chu kỳ tuần tiêu chuẩn 3 buổi kèm riêng
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
       <div
-        className="relative w-full max-w-5xl max-h-[92vh] overflow-y-auto bg-white rounded-[2rem] shadow-2xl border border-slate-200/90 flex flex-col lg:flex-row overflow-hidden"
+        className="relative w-full max-w-5xl max-h-[92vh] overflow-y-auto bg-white rounded-md shadow-2xl border border-slate-200 flex flex-col lg:flex-row overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Floating Close Button */}
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-slate-900/60 hover:bg-slate-900 text-white backdrop-blur-md flex items-center justify-center cursor-pointer transition-all shadow-lg ring-1 ring-white/20"
+          className="absolute top-4 right-4 z-20 w-9 h-9 rounded-md bg-slate-900/60 hover:bg-slate-900 text-white backdrop-blur-md flex items-center justify-center cursor-pointer transition-all shadow-md ring-1 ring-white/20"
         >
           <X className="w-5 h-5" />
         </button>
@@ -133,7 +208,7 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
               />
             ) : (
               <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-center p-6 select-none">
-                <div className="w-28 h-28 rounded-full bg-slate-800/80 border-2 border-emerald-500/40 flex items-center justify-center text-emerald-400 font-black text-4xl shadow-2xl mb-3">
+                <div className="w-24 h-24 rounded-md bg-slate-800/80 border-2 border-emerald-500/40 flex items-center justify-center text-emerald-400 font-black text-4xl shadow-2xl mb-3">
                   {getInitials(activeCoach.fullName)}
                 </div>
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
@@ -150,7 +225,7 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
             <div className="flex items-center gap-2">
               <span
                 className={cn(
-                  "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase backdrop-blur-md border",
+                  "inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold tracking-wide uppercase backdrop-blur-md border",
                   discColor
                 )}
               >
@@ -158,7 +233,7 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
                 <span>{targetCode}</span>
               </span>
 
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 backdrop-blur-md">
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 backdrop-blur-md">
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>HLV Đạt Chuẩn</span>
               </span>
@@ -176,7 +251,7 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
 
           {/* Bottom stats & contact box */}
           <div className="relative z-10 pt-8 space-y-4">
-            <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-slate-900/80 backdrop-blur-md border border-white/10 text-center">
+            <div className="grid grid-cols-3 gap-2 p-3 rounded-md bg-slate-900/80 backdrop-blur-md border border-white/10 text-center">
               <div>
                 <span className="text-[10px] font-bold text-slate-400 block uppercase">
                   Kinh nghiệm
@@ -206,13 +281,13 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
             {/* Contact chips from real BE user table */}
             <div className="flex flex-wrap gap-2 text-[11px] text-slate-400">
               {activeCoach.email && (
-                <span className="inline-flex items-center gap-1 bg-slate-900/60 px-2.5 py-1 rounded-lg border border-white/10">
+                <span className="inline-flex items-center gap-1 bg-slate-900/60 px-2.5 py-1 rounded-md border border-white/10">
                   <Mail className="w-3 h-3 text-slate-400" />
                   <span>{activeCoach.email}</span>
                 </span>
               )}
               {activeCoach.phone && (
-                <span className="inline-flex items-center gap-1 bg-slate-900/60 px-2.5 py-1 rounded-lg border border-white/10">
+                <span className="inline-flex items-center gap-1 bg-slate-900/60 px-2.5 py-1 rounded-md border border-white/10">
                   <Phone className="w-3 h-3 text-slate-400" />
                   <span>{activeCoach.phone}</span>
                 </span>
@@ -226,25 +301,33 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
           <div className="space-y-6">
             {/* 1. PRICING RATE BOX */}
             {activeRate ? (
-              <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50/80 border border-emerald-200/80 space-y-3 shadow-xs">
+              <div className="p-5 rounded-md bg-white border border-slate-200 space-y-3 shadow-xs">
                 <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-emerald-800">
-                    <DollarSign className="w-4 h-4 text-emerald-600" />
-                    <span>Biểu phí dạy kèm 1:1 (Coach Rate)</span>
+                  <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-900">
+                    <DollarSign className="w-4 h-4 text-[#008b74]" />
+                    <span>Biểu phí dạy kèm 1:1</span>
                   </span>
-                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md border border-emerald-300/60">
+                  <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
                     Hiệu lực: {activeRate.effectiveFrom ? new Date(activeRate.effectiveFrom).toLocaleDateString("vi-VN") : "Hiện hành"}
                   </span>
                 </div>
 
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-[#008b74]">
-                    {money(activeRate.ratePerSession)}
-                  </span>
-                  <span className="text-sm font-bold text-slate-600">/ buổi dạy kèm (60 phút)</span>
+                <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-black text-[#008b74]">
+                      {money(activeRate.ratePerSession)}
+                    </span>
+                    <span className="text-xs font-semibold text-slate-600">/ buổi (60 phút)</span>
+                  </div>
+                  {sessionRate > 0 && (
+                    <div className="text-left sm:text-right">
+                      <span className="text-[11px] font-semibold text-slate-500 uppercase block">Gói tháng (12 buổi):</span>
+                      <span className="text-base font-extrabold text-slate-900">{money(weeklyRate * 4)}/tháng</span>
+                    </div>
+                  )}
                 </div>
 
-                <div className="text-xs text-slate-600 space-y-1 pt-1 border-t border-emerald-200/50">
+                <div className="text-xs text-slate-600 space-y-1 pt-2 border-t border-slate-100">
                   <p className="flex items-center gap-1.5 font-medium">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                     <span>Kèm 1:1 theo giáo án cá nhân hóa, đo chỉ số InBody & theo dõi tiến độ</span>
@@ -256,14 +339,14 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="p-4 rounded-2xl bg-slate-100 border border-slate-200 text-slate-500 text-xs font-medium text-center">
+              <div className="p-4 rounded-md bg-slate-100 border border-slate-200 text-slate-500 text-xs font-medium text-center">
                 Huấn luyện viên chưa có biểu phí thiết lập trong hệ thống.
               </div>
             )}
 
             {/* Bio info if available */}
             {bio && (
-              <div className="p-4 rounded-xl bg-white border border-slate-200/80 space-y-1.5">
+              <div className="p-4 rounded-md bg-white border border-slate-200 space-y-1.5 shadow-xs">
                 <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                   <FileText className="w-3.5 h-3.5 text-slate-400" />
                   <span>Giới thiệu bản thân</span>
@@ -276,118 +359,84 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
             <div className="space-y-2.5">
               <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                 <Tag className="w-3.5 h-3.5 text-slate-400" />
-                <span>Chuyên môn kỹ thuật (Coach Specialties)</span>
+                <span>Chuyên môn kỹ thuật</span>
               </h4>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {specialties.length > 0 ? (
-                  specialties.map((item, idx) => (
+                  specialties.map((item: any, idx: number) => (
                     <div
                       key={idx}
-                      className="p-3 rounded-xl bg-white border border-slate-200/90 shadow-2xs space-y-1 hover:border-emerald-500/40 transition-colors"
+                      className="p-3 rounded-md bg-white border border-slate-200 shadow-xs space-y-1"
                     >
                       <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-lg bg-emerald-50 text-[#008b74] flex items-center justify-center font-bold text-xs shrink-0">
+                        <span className="w-6 h-6 rounded-md bg-emerald-50 text-[#008b74] flex items-center justify-center font-bold text-xs shrink-0">
                           {idx + 1}
                         </span>
                         <span className="text-xs font-bold text-slate-900">
                           {item.specialty.name}
                         </span>
                       </div>
-                      {item.specialty.code && (
-                        <p className="text-[10px] text-slate-400 pl-8 font-mono">
-                          Mã môn: {item.specialty.code}
-                        </p>
-                      )}
+                      
                     </div>
                   ))
                 ) : (
-                  <div className="col-span-2 text-xs text-slate-500 bg-white p-3 rounded-xl border border-slate-200">
+                  <div className="col-span-2 text-xs text-slate-500 bg-white p-3 rounded-md border border-slate-200">
                     Chuyên môn chính: Huấn luyện cá nhân thể chất chuyên sâu theo bộ môn {targetCode}.
                   </div>
                 )}
               </div>
             </div>
 
-            {/* 3. AVAILABILITY SLOTS */}
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Khung giờ dạy kèm mở rảnh (Availability Slots)</span>
-                </h4>
-                <span className="text-[11px] text-slate-400 font-medium">
-                  {availabilityQuery.isPending ? "Đang tải khung giờ..." : "Chọn 1 khung giờ để đăng ký"}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {slots.length > 0 ? (
-                  slots.map((slot) => {
-                    const isSelected = selectedSlotId === slot.id;
-                    const formatSlotTime = (t: string) => {
-                      if (!t) return "";
-                      if (t.includes("T")) {
-                        const d = new Date(t);
-                        if (!isNaN(d.getTime())) {
-                          return d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
-                        }
-                      }
-                      return t.slice(0, 5);
-                    };
-                    const displayTime =
-                      slot.timeRange ||
-                      `${formatSlotTime(slot.startTime)} - ${formatSlotTime(slot.endTime)}`;
-
-                    return (
-                      <button
-                        key={slot.id}
-                        type="button"
-                        disabled={slot.isBooked}
-                        onClick={() => setSelectedSlotId(slot.id)}
-                        className={cn(
-                          "p-2.5 rounded-xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[58px]",
-                          slot.isBooked
-                            ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-60"
-                            : isSelected
-                              ? "!bg-emerald-600 !border-emerald-600 !text-white shadow-md scale-[1.02]"
-                              : "bg-white border-slate-200 text-slate-800 hover:border-emerald-400 hover:bg-emerald-50/30"
-                        )}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-extrabold">{displayTime}</span>
-                          {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
-                        </div>
-                        <span
-                          className={cn(
-                            "text-[10px] font-semibold",
-                            slot.isBooked
-                              ? "text-slate-400"
-                              : isSelected
-                                ? "text-emerald-100"
-                                : "text-emerald-600"
-                          )}
-                        >
-                          {slot.isBooked ? "Đã được đặt" : "Trống (Có thể đặt)"}
-                        </span>
-                      </button>
-                    );
-                  })
-                ) : (
-                  <div className="col-span-full p-4 rounded-xl bg-white border border-slate-200 text-slate-500 text-xs font-medium text-center">
-                    Hiện chưa có khung giờ rảnh nào mở trong hệ thống cho HLV này.
+            {/* ACTIVE PACKAGE STATUS FOR LOGGED-IN MEMBERS */}
+            {isAuthenticated && (
+              <div className="space-y-2">
+                {matchingSubscriptions.length > 1 ? (
+                  <div className="p-3 rounded-md bg-slate-50 border border-slate-200 text-xs space-y-1.5 shadow-xs">
+                    <label className="text-[11px] font-bold text-slate-900 block">
+                      Gói tập &amp; bộ môn áp dụng cho buổi học kèm này:
+                    </label>
+                    <select
+                      value={activeSubscription?.disciplineId || ''}
+                      onChange={(e) => setSelectedDisciplineId(e.target.value)}
+                      className="w-full p-2 bg-white border border-slate-300 rounded-md text-slate-800 font-semibold focus:outline-hidden text-xs"
+                    >
+                      {matchingSubscriptions.map((sub: any) => (
+                        <option key={sub.id} value={sub.disciplineId}>
+                          {sub.plan?.name || sub.planName || 'Gói PT'} ({sub.discipline?.code || 'PT'}) — Còn {sub.remainingPtSessions} buổi PT
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                )}
+                ) : matchingSubscriptions.length === 1 && activeSubscription ? (
+                  <div className="p-3 rounded-md bg-emerald-50 border border-emerald-200 text-xs flex items-center justify-between shadow-xs">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span className="font-semibold text-emerald-950">
+                        Gói tập: <span className="font-bold">{activeSubscription.plan?.name || 'Gói PT'}</span>
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-200">
+                      Còn {activeSubscription.remainingPtSessions} buổi PT
+                    </span>
+                  </div>
+                ) : null}
               </div>
-            </div>
+            )}
           </div>
 
           {/* BOTTOM ACTIONS BAR */}
-          <div className="pt-4 border-t border-slate-200 space-y-2">
-            {bookSuccess && (
-              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-in fade-in">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Đã ghi nhận khung giờ! Đang chuyển đến giao diện xếp lịch...</span>
+          <div className="pt-4 border-t border-slate-200 space-y-3">
+            {/* Error Message if booking fails */}
+            {bookingError && (
+              <div className="p-3.5 rounded-md bg-rose-50 border border-rose-200 text-rose-800 text-xs space-y-1 animate-in fade-in">
+                <div className="flex items-center gap-1.5 font-bold text-rose-700">
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                  <span>Thông báo:</span>
+                </div>
+                <p className="text-[11.5px] leading-relaxed text-rose-700 pl-5">
+                  {bookingError}
+                </p>
               </div>
             )}
 
@@ -395,23 +444,29 @@ export const CoachDetailModal: React.FC<CoachDetailModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-5 py-3 rounded-2xl border border-slate-300 bg-white text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="px-5 py-3 rounded-md border border-slate-300 bg-white text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 Đóng
               </button>
 
               <button
                 type="button"
-                onClick={handleConfirmBooking}
-                className="flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-2xl text-xs font-extrabold bg-[#008b74] hover:bg-[#007360] text-white shadow-md transition-all active:scale-[0.98] cursor-pointer"
+                disabled={checkoutMutation.isPending}
+                onClick={() => checkoutMutation.mutate()}
+                className="flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-md text-xs font-bold uppercase tracking-wider bg-[#008b74] hover:bg-[#007360] text-white shadow-xs transition-all active:scale-[0.98] cursor-pointer disabled:opacity-75 disabled:cursor-wait"
               >
-                <Calendar className="w-4 h-4" />
-                <span>
-                  {selectedSlotId
-                    ? "Xác nhận đặt khung giờ này"
-                    : "Đặt lịch học kèm với HLV này"}
-                </span>
-                <ChevronRight className="w-4 h-4" />
+                {checkoutMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>ĐANG CHUYỂN TỚI THANH TOÁN...</span>
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-4 h-4" />
+                    <span>Thanh toán </span>
+                    <ChevronRight className="w-4 h-4" />
+                  </>
+                )}
               </button>
             </div>
           </div>

@@ -60,6 +60,7 @@ export interface CalendarBooking {
   scheduleId?: string | null
   coachAvailabilityId?: string | null
   type?: 'GROUP_CLASS' | 'PERSONAL_TRAINING'
+  bookingType?: 'GROUP_CLASS' | 'PERSONAL_TRAINING'
   disciplineId?: string
   isLateCancellation?: boolean
   createdAt?: string

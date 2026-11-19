@@ -1,5 +1,6 @@
 import { get, put } from "@/lib/api";
 import type {
+  GenderType,
   UserProfile,
   UpdateProfileDto,
   MemberSubscriptionItem,
@@ -34,7 +35,7 @@ interface RawUserResponse {
   isActive?: boolean;
   avatarUrl?: string | null;
   createdAt?: string;
-  gender?: string;
+  gender?: GenderType;
   fitnessGoals?: string;
   medicalHistory?: string;
   heightCm?: number | string;

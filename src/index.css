@@ -1,8 +1,54 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.inbody-backdrop {
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 auto;
+  height: 640px;
+  background-position: center top;
+  background-size: cover;
+  pointer-events: none;
+}
+.inbody-backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(248, 250, 252, 0.1),
+    rgba(248, 250, 252, 0.1) 65%,
+    #f8fafc
+  );
+}
+
+/* Custom sleek scrollbars for modern look across Windows & Mac */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.7);
+}
+
+/* Hide scrollbar utility for clean horizontal pill bars */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
 
 @layer base {
   :root {
@@ -36,12 +82,67 @@
 
     --radius: 0.75rem;
 
-    font-family: 'DM Sans', system-ui, sans-serif;
+    /* Coach Calendar Design Tokens */
+    --coach-page-bg: #f8fafc;
+    --coach-surface: #ffffff;
+    --coach-ink: #0f172a;
+    --coach-ink-muted: #64748b;
+    --coach-accent-teal: #0d9488;
+    --coach-accent-teal-soft: #f0fdfa;
+    --coach-pt-stripe: #7c3aed;
+    --coach-pt-bg: #faf5ff;
+    --coach-pt-text: #4c1d95;
+    --coach-class-stripe: #059669;
+    --coach-class-bg: #ecfdf5;
+    --coach-class-text: #064e3b;
+    --coach-avail-stripe: #d97706;
+    --coach-avail-bg: #fffbeb;
+    --coach-avail-text: #78350f;
+    --coach-completed-bg: #f8fafc;
+    --coach-completed-text: #64748b;
+
+    font-family: 'Merriweather', 'Lora', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
     color: #18302e;
     background: #f5f7f4;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
+  }
+
+  .dark {
+    --coach-page-bg: #0b0f17;
+    --coach-surface: #131b26;
+    --coach-ink: #f8fafc;
+    --coach-ink-muted: #94a3b8;
+    --coach-accent-teal: #14b8a6;
+    --coach-accent-teal-soft: rgba(20, 184, 166, 0.08);
+    --coach-pt-stripe: #a855f7;
+    --coach-pt-bg: rgba(88, 28, 135, 0.25);
+    --coach-pt-text: #f3e8ff;
+    --coach-class-stripe: #10b981;
+    --coach-class-bg: rgba(6, 78, 59, 0.25);
+    --coach-class-text: #ecfdf5;
+    --coach-avail-stripe: #f59e0b;
+    --coach-avail-bg: rgba(180, 83, 9, 0.15);
+    --coach-avail-text: #fef3c7;
+    --coach-completed-bg: rgba(30, 41, 59, 0.4);
+    --coach-completed-text: #94a3b8;
+  }
+
+  html, body {
+    min-height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  #root {
+    min-height: 100%;
+    width: 100%;
   }
 }
 
@@ -101,7 +202,7 @@ p {
 h1,
 h2,
 h3 {
-  font-family: Manrope, system-ui, sans-serif;
+  font-family: 'Merriweather', 'Lora', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
   line-height: 1.2;
 }
 h1 {
@@ -135,7 +236,7 @@ small {
   margin-bottom: 0.55rem;
 }
 .brand {
-  font-family: Manrope, sans-serif;
+  font-family: 'Merriweather', 'Lora', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
   font-size: 1.25rem;
   font-weight: 800;
   letter-spacing: -0.07em;
@@ -300,13 +401,13 @@ small {
   margin-top: auto;
 }
 .price {
-  font-family: Manrope, sans-serif;
+  font-family: 'Merriweather', 'Lora', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
   font-weight: 800;
   font-size: 1.6rem;
   color: #104e45;
 }
 .price small {
-  font-family: 'DM Sans', sans-serif;
+  font-family: inherit;
   font-weight: 500;
   font-size: 0.8rem;
 }

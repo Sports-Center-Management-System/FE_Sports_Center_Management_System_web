@@ -40,7 +40,7 @@ export const planGallery: GalleryPhoto[] = [
     tag: "Đặc quyền Boxing VIP",
     category: "BOXING",
     description:
-      "Võ đài tiêu chuẩn thi đấu chuyên nghiệp, hệ thống bao cát đa trọng lượng cùng không gian truyền cảm hứng thể thao đỉnh cao.",
+      "Võ đài tiêu chuẩn thi đấu chuyên nghiệp.",
   },
   {
     id: "boxing-training",
@@ -89,7 +89,7 @@ export const planGallery: GalleryPhoto[] = [
     tag: "Tươi trẻ & Tràn đầy sức sống",
     category: "YOGA",
     description:
-      "Luyện tập tư thế Rắn Hổ Mang (Cobra Pose) mở rộng lồng ngực, giải tỏa căng thẳng và khơi thông nguồn năng lượng tích cực cùng cộng đồng yêu Yoga.",
+      "Lớp thưa giãn , hồi phục tinh thần cơ thể",
   },
   {
     id: "yoga-wheel",

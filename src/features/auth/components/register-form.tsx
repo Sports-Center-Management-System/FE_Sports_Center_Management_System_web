@@ -93,7 +93,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
     <form onSubmit={handleSubmit} className="space-y-3.5">
       {/* Error alert banner */}
       {errorMessage && (
-        <div className="flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 animate-in fade-in-50">
+        <div className="flex items-start gap-2.5 border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 animate-in fade-in-50">
           <AlertCircle className="h-4 w-4 shrink-0 text-rose-600 mt-0.5" />
           <p className="flex-1 leading-relaxed font-medium">{errorMessage}</p>
         </div>
@@ -102,7 +102,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
       {/* Full Name */}
       <div>
         <label className="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1">
-          Họ và tên
+          Họ và tên <span className="text-rose-500">*</span>
         </label>
         <div className="relative">
           <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
@@ -113,7 +113,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             placeholder="Nguyễn Văn A"
-            className="pl-10"
+            className="pl-10 rounded-none bg-slate-50 border-slate-200 focus:bg-white"
           />
         </div>
       </div>
@@ -121,7 +121,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
       {/* Phone Number */}
       <div>
         <label className="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1">
-          Số điện thoại
+          Số điện thoại <span className="text-rose-500">*</span>
         </label>
         <div className="relative">
           <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
@@ -132,7 +132,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="0912345678"
-            className="pl-10"
+            className="pl-10 rounded-none bg-slate-50 border-slate-200 focus:bg-white"
           />
         </div>
       </div>
@@ -140,7 +140,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
       {/* Email */}
       <div>
         <label className="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1">
-          Địa chỉ Email
+          Địa chỉ Email <span className="text-rose-500">*</span>
         </label>
         <div className="relative">
           <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
@@ -151,7 +151,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="hoivien@example.com"
-            className="pl-10"
+            className="pl-10 rounded-none bg-slate-50 border-slate-200 focus:bg-white"
           />
         </div>
       </div>
@@ -161,7 +161,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         {/* Password */}
         <div>
           <label className="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1">
-            Mật khẩu
+            Mật khẩu <span className="text-rose-500">*</span>
           </label>
           <div className="relative">
             <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
@@ -172,7 +172,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Tối thiểu 6 ký tự"
-              className="pl-10 pr-9"
+              className="pl-10 pr-9 rounded-none bg-slate-50 border-slate-200 focus:bg-white"
             />
             <button
               type="button"
@@ -188,7 +188,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         {/* Confirm Password */}
         <div>
           <label className="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1">
-            Xác nhận mật khẩu
+            Xác nhận mật khẩu <span className="text-rose-500">*</span>
           </label>
           <div className="relative">
             <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
@@ -199,7 +199,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Nhập lại mật khẩu"
-              className="pl-10 pr-4"
+              className="pl-10 pr-4 rounded-none bg-slate-50 border-slate-200 focus:bg-white"
             />
           </div>
         </div>
@@ -210,7 +210,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         type="submit"
         variant="mint"
         disabled={isSubmitting}
-        className="w-full rounded-xl py-3 text-xs font-bold shadow-md shadow-emerald-700/10 flex items-center justify-center gap-2 mt-2"
+        className="w-full rounded-none py-2.5 text-xs font-bold flex items-center justify-center gap-2 mt-2 shadow-xs"
       >
         {isSubmitting ? (
           <span>Đang tạo tài khoản...</span>
@@ -228,7 +228,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         <button
           type="button"
           onClick={onSwitchToLogin}
-          className="font-bold text-white hover:underline inline-flex items-center gap-1 ml-1 cursor-pointer"
+          className="font-bold text-[#008b74] hover:underline inline-flex items-center gap-1 ml-1 cursor-pointer"
         >
           <ArrowLeft className="h-3 w-3" />
           Đăng nhập ngay

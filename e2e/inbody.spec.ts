@@ -42,6 +42,8 @@ test.beforeEach(async ({ page }) => {
     route.fulfill({ contentType: 'text/css', body: '' }),
   )
   await page.addInitScript(() => {
+    // The app signs out when this per-tab marker is missing (closed tab).
+    sessionStorage.setItem('sportscenter.active_tab_session', 'true')
     localStorage.setItem(
       'sportscenter.member.tokens',
       JSON.stringify({ accessToken: 'test-access', refreshToken: 'test-refresh' }),
@@ -73,22 +75,21 @@ for (const [label, width] of [
     page.on('console', (message) => {
       if (message.type() === 'error') errors.push(message.text())
     })
-    const modelResponse = page.waitForResponse(
-      (response) =>
-        response.url().endsWith('/models/inbody-human.glb') &&
-        response.request().method() === 'GET',
-    )
     await page.goto('/portal/member/progress')
-    await expect(page.getByRole('heading', { name: 'Chỉ số cơ thể' })).toBeInViewport()
-    expect((await modelResponse).status()).toBe(200)
-    const viewer = page.getByRole('region', { name: 'Tổng quan cơ thể 3D', exact: true })
+    const viewer = page.getByRole('region', { name: 'Bản đồ cơ thể', exact: true })
+    await expect(viewer.getByRole('heading', { name: 'Bản đồ cơ thể' })).toBeInViewport()
     const chart = page.getByRole('region', { name: 'Sơ đồ quá trình cải thiện', exact: true })
     const latest = page.getByRole('region', { name: 'Lần đo mới nhất', exact: true })
     const comparison = page.getByRole('region', { name: 'So sánh các lần đo', exact: true })
     const history = page.getByRole('region', { name: 'Lịch sử InBody', exact: true })
-    await expect(viewer.locator('canvas')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Góc nhìn trước' })).toBeEnabled()
-    await expect(chart.locator('.recharts-line-curve')).toHaveCount(1)
+    await expect(viewer.getByRole('group', { name: 'Sơ đồ cơ nam, mặt trước' })).toBeVisible()
+    await expect(viewer.getByRole('button', { name: 'Mặt trước' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    // Weight, body fat, muscle and BMI side by side, each a smooth line.
+    await expect(chart.locator('.recharts-area-curve')).toHaveCount(4)
+    await expect(chart.getByRole('region', { name: 'Biểu đồ mỡ cơ thể' })).toContainText('18,2 %')
     const boxes = await Promise.all(
       [viewer, chart, latest, comparison, history].map((locator) => locator.boundingBox()),
     )
@@ -96,7 +97,9 @@ for (const [label, width] of [
     if (width >= 1280) {
       expect(Math.abs(viewerBox.y - chartBox.y)).toBeLessThan(2)
       expect(chartBox.x).toBeGreaterThan(viewerBox.x + viewerBox.width)
-      expect(Math.abs(viewerBox.height - chartBox.height)).toBeLessThan(2)
+      // Charts and the shape card share the column beside the body map, ending level with it.
+      const side = (await page.locator('.inbody-overview-side').boundingBox())!
+      expect(Math.abs(viewerBox.height - side.height)).toBeLessThan(2)
     } else {
       expect(chartBox.y).toBeGreaterThan(viewerBox.y + viewerBox.height)
     }
@@ -113,8 +116,11 @@ for (const [label, width] of [
         .evaluate((element) => element.scrollWidth <= element.clientWidth),
     ).toBe(true)
     expect(
-      await chart.locator('.inbody-chart-plot').evaluate((element) => element.clientHeight),
-    ).toBeGreaterThanOrEqual(340)
+      await chart
+        .locator('.inbody-chart-plot')
+        .first()
+        .evaluate((element) => element.clientHeight),
+    ).toBeGreaterThanOrEqual(100)
     await expect(latest.getByText('68,4')).toBeVisible()
     await expect(latest.getByText('−1,8 kg')).toBeVisible()
     await expect(history.getByText('3 lần đo')).toBeVisible()
@@ -126,24 +132,14 @@ for (const [label, width] of [
       true,
     )
 
-    await page.getByRole('button', { name: 'Góc nhìn bên' }).click()
-    await expect(page.getByRole('button', { name: 'Góc nhìn bên' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
-    await page.getByRole('button', { name: 'Tự xoay mô hình' }).click()
-    await expect(page.getByRole('button', { name: 'Tự xoay mô hình' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
-    await page.getByRole('button', { name: 'Đặt lại camera' }).click()
-    await expect(page.getByRole('button', { name: 'Góc nhìn trước' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
-    await chart.getByLabel('Chọn chỉ số theo dõi').selectOption('bodyFatPct')
-    await expect(chart.getByText('Theo từng lần đo · Mỡ cơ thể (%)')).toBeVisible()
-    await expect(chart.locator('.recharts-line-curve')).toHaveCount(1)
+    await viewer.getByRole('button', { name: 'Mặt sau' }).click()
+    await expect(viewer.getByRole('group', { name: 'Sơ đồ cơ nam, mặt sau' })).toBeVisible()
+    await viewer.getByRole('button', { name: 'Nữ' }).click()
+    await expect(viewer.getByRole('group', { name: 'Sơ đồ cơ nữ, mặt sau' })).toBeVisible()
+    await viewer.getByRole('button', { name: 'Mặt trước' }).click()
+    await viewer.locator('path[data-slug="chest"]').first().hover()
+    await expect(viewer.getByRole('status')).toContainText('Cơ ngực')
+    await expect(viewer.getByRole('status')).toContainText('31,6 kg')
     await page
       .locator('main')
       .last()
@@ -159,14 +155,14 @@ for (const [label, width] of [
   })
 }
 
-test('empty progress retains the model and does not invent measurements', async ({ page }) => {
+test('empty progress keeps the body map and does not invent measurements', async ({ page }) => {
   await serveProgress(page, [])
   await page.goto('/portal/member/progress')
   await expect(
     page.getByText('Bạn chưa có lần đo InBody nào. Các chỉ số sẽ xuất hiện sau lần đo đầu tiên.'),
   ).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Sơ đồ quá trình cải thiện' })).toBeVisible()
-  await expect(page.locator('.inbody-chart-plot')).toHaveText(
+  await expect(page.locator('.inbody-chart-plot').first()).toHaveText(
     'Chưa có dữ liệu cân nặng để hiển thị biểu đồ.',
   )
   await expect(
@@ -188,25 +184,74 @@ test('single, missing and undated measurements keep existing data semantics', as
   await expect(
     page.getByRole('region', { name: 'Lịch sử InBody', exact: true }).locator('tbody tr'),
   ).toHaveCount(2)
-  await page.getByLabel('Chọn chỉ số theo dõi').selectOption('bodyFatPct')
-  await expect(page.locator('.inbody-chart-plot')).toHaveText(
-    'Chưa có dữ liệu mỡ cơ thể để hiển thị biểu đồ.',
-  )
+  await expect(
+    page.getByRole('region', { name: 'Biểu đồ mỡ cơ thể' }).locator('.inbody-chart-plot'),
+  ).toHaveText('Chưa có dữ liệu mỡ cơ thể để hiển thị biểu đồ.')
 })
 
-test('missing model keeps chart, latest measurement, comparison and history available', async ({
+test('body map reshapes per measurement, remembers gender and shows segment data', async ({
   page,
 }) => {
-  await page.route('**/models/inbody-human.glb', (route) =>
-    route.fulfill({ status: 404, body: '' }),
-  )
+  await serveProgress(page, [
+    { ...logs[1], weightKg: '95', bodyFatPct: '31', bmi: '31' },
+    {
+      ...logs[0],
+      heightCm: '175',
+      segmentalLean: { rightArm: '3.4', leftArm: '3.0', trunk: '26.1', rightLeg: null },
+      analysis: { bodyShape: 'TYPE_D' },
+    },
+  ])
   await page.goto('/portal/member/progress')
-  await expect(page.getByText('3D body model chưa được cấu hình')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Góc nhìn trước' })).toBeDisabled()
-  await expect(page.getByRole('heading', { name: 'Sơ đồ quá trình cải thiện' })).toBeVisible()
+  const viewer = page.getByRole('region', { name: 'Bản đồ cơ thể', exact: true })
+  const waist = () =>
+    viewer
+      .locator('[data-shape="core"]')
+      .evaluate((element) =>
+        Number(/scaleX\(([\d.]+)\)/.exec((element as SVGGElement).style.transform)?.[1]),
+      )
+  const leanWaist = await waist()
+  // Options are newest first; index 1 is the earlier, heavier measurement.
+  await viewer.getByLabel('Lần đo').selectOption({ index: 1 })
+  await expect.poll(waist).toBeGreaterThan(leanWaist)
+  await viewer.getByLabel('Lần đo').selectOption({ index: 0 })
+  // The asset's left path is the member's right arm when facing the viewer.
+  await viewer.locator('path[data-slug="biceps"][data-side="left"]').first().hover()
+  await expect(viewer.getByRole('status')).toContainText('Cơ tay trước phải')
+  await expect(viewer.getByRole('status')).toContainText('3,4 kg')
+  // The left arm is 12,5% weaker than the right: flagged in red and called out above the map.
+  await expect(viewer.getByRole('note')).toContainText('Tay trái yếu hơn bên còn lại 12,5%')
+  await page.mouse.move(0, 0)
   await expect(
-    page.getByRole('region', { name: 'Lần đo mới nhất', exact: true }).getByText('68,4'),
+    viewer.locator('path[data-slug="biceps"][data-side="right"]').first(),
+  ).toHaveAttribute('fill', '#ef4444')
+  const shape = page.getByRole('region', { name: 'Hình thái cơ thể' })
+  await expect(shape).toContainText('Dáng chữ D')
+  await expect(shape.getByRole('img', { name: /Cân nặng \d+% so với chuẩn/ })).toBeVisible()
+  await viewer.getByRole('button', { name: 'Nữ' }).click()
+  await page.reload()
+  await expect(
+    page
+      .getByRole('region', { name: 'Bản đồ cơ thể', exact: true })
+      .getByRole('button', { name: 'Nữ' }),
+  ).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('body map follows the gender in the member profile', async ({ page }) => {
+  await page.addInitScript(() => {
+    const user = JSON.parse(localStorage.getItem('auth_user') ?? '{}')
+    localStorage.setItem('auth_user', JSON.stringify({ ...user, gender: 'FEMALE' }))
+  })
+  await page.goto('/portal/member/progress')
+  const viewer = page.getByRole('region', { name: 'Bản đồ cơ thể', exact: true })
+  await expect(viewer.getByRole('group', { name: 'Sơ đồ cơ nữ, mặt trước' })).toBeVisible()
+  await expect(viewer.getByText('Dáng người theo giới tính trong hồ sơ của bạn.')).toBeVisible()
+  // Viewing the other figure is allowed but never overrides the profile.
+  await viewer.getByRole('button', { name: 'Nam' }).click()
+  await expect(viewer.getByRole('group', { name: 'Sơ đồ cơ nam, mặt trước' })).toBeVisible()
+  await page.reload()
+  await expect(
+    page
+      .getByRole('region', { name: 'Bản đồ cơ thể', exact: true })
+      .getByRole('group', { name: 'Sơ đồ cơ nữ, mặt trước' }),
   ).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'So sánh', exact: true })).toBeVisible()
-  await expect(page.getByText('3 lần đo', { exact: true })).toBeVisible()
 })

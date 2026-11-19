@@ -41,10 +41,16 @@
    ```
    Cập nhật các giá trị cấu hình kết nối:
    ```env
-   VITE_API_BASE_URL="http://localhost:3000/api/v1"
-   VITE_SOCKET_SERVER_URL="http://localhost:3000"
-   VITE_APP_TITLE="Sports Center Portal"
+   VITE_API_BASE_URL=https://be-sports-center-management-system.onrender.com
+   VITE_PUBLIC_WEB_URL=
+   VITE_ENABLE_MOCK_PAYMENT=false
    ```
+
+   `VITE_API_BASE_URL` là domain backend, không thêm `/docs` hoặc `/api/v1`.
+   Dev gọi `/api/v1` và Socket.IO qua Vite proxy đến backend trong env. Muốn chạy
+   backend local thì đổi giá trị trong `.env.local` thành `http://localhost:3000`.
+   HTTP và Socket.IO dùng chung domain backend; không cần `VITE_SOCKET_SERVER_URL`.
+   Khởi động lại Vite sau khi thay đổi env.
 
 4. **Khởi chạy môi trường phát triển (Dev Server):**
    ```bash
@@ -57,6 +63,21 @@
    npm run build
    npm run preview
    ```
+
+### Deploy frontend
+
+* Build command: `npm ci && npm run build`. Thư mục publish/output: `dist`.
+* `.env.production` chứa domain Render mặc định công khai và tắt mock payment.
+  Trên hosting, đặt `VITE_API_BASE_URL` nếu cần ghi đè domain backend.
+* Các biến `VITE_*` được đưa vào JavaScript khi build: không chứa mật khẩu,
+  secret hoặc thông tin Basic Auth của Swagger. Thay env phải build/deploy lại.
+* Production và `npm run preview` gọi backend trực tiếp. Backend phải cho phép
+  origin FE qua CORS, gồm domain deploy và `http://localhost:4173` nếu dùng preview.
+  Cấu hình CORS cho Socket.IO cũng cần cho phép origin FE. Vite proxy chỉ phục vụ dev.
+* Hosting cần rewrite các URL giao diện như `/auth/login` và `/portal/member`
+  về `/index.html` để refresh hoặc mở link trực tiếp không bị 404.
+* `VITE_PUBLIC_WEB_URL` chỉ dùng cho link QR demo; để trống sẽ dùng domain FE
+  đang mở. Giữ `VITE_ENABLE_MOCK_PAYMENT=false` trên production.
 
 ---
 

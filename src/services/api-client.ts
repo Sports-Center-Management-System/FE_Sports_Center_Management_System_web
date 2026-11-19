@@ -1,21 +1,32 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { readTokens, saveTokens, clearTokens } from "@/lib/api";
+import { resolveBackendConfig } from "@/lib/backend-config";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api/v1";
+const { apiBaseUrl: BASE_URL } = resolveBackendConfig(
+  import.meta.env.VITE_API_BASE_URL,
+  import.meta.env.DEV,
+);
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 10000,
+  timeout: 60000,
 });
 
 // Request interceptor to inject stored Bearer token
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const tokens = readTokens();
-  if (tokens?.accessToken && config.headers) {
-    config.headers.Authorization = `Bearer ${tokens.accessToken}`;
+  const isAuthEndpoint =
+    config.url?.includes("/auth/login") ||
+    config.url?.includes("/auth/register") ||
+    config.url?.includes("/auth/refresh");
+
+  if (!isAuthEndpoint) {
+    const tokens = readTokens();
+    if (tokens?.accessToken && config.headers) {
+      config.headers.Authorization = `Bearer ${tokens.accessToken}`;
+    }
   }
   return config;
 });
@@ -25,6 +36,15 @@ let failedQueue: Array<{
   resolve: (value?: unknown) => void;
   reject: (reason?: unknown) => void;
 }> = [];
+
+export const resetApiClientState = () => {
+  isRefreshing = false;
+  failedQueue = [];
+};
+
+if (typeof window !== "undefined") {
+  window.addEventListener("session-changed", resetApiClientState);
+}
 
 const processQueue = (error: Error | null, token: string | null = null) => {
   failedQueue.forEach((prom) => {
